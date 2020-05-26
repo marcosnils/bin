@@ -22,6 +22,11 @@ func newUpdateCmd() *updateCmd {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			//TODO update should check all binaries with a
+			//certain configured parallelism and report
+			//which could be potentially upgraded.
+			//It's very likely that we have to extend the provider
+			//interface to support this use-case
 			return nil
 		},
 	}

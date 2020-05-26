@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -31,14 +32,20 @@ func newInstallCmd() *installCmd {
 		SilenceErrors: true,
 		Args:          cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			url := args[0]
+			u := args[0]
 			//TODO make this path optional
 			path := args[1]
 
 			//TODO check if binary already exists in config
 			// and triger the update process if that's the case
 
-			p, err := providers.New(url)
+			purl, err := url.Parse(u)
+
+			if err != nil {
+				return err
+			}
+
+			p, err := providers.New(purl)
 			if err != nil {
 				return err
 			}
@@ -57,6 +64,7 @@ func newInstallCmd() *installCmd {
 				Path:    filepath.Join(path, pResult.Name),
 				Version: pResult.Version,
 				Hash:    fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
+				URL:     purl.String(),
 			})
 
 			if err != nil {

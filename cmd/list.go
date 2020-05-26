@@ -27,24 +27,18 @@ func newListCmd() *listCmd {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//TODO print a nice table :)
-			// initialize tabwriter
 			w := new(tabwriter.Writer)
-
-			// minwidth, tabwidth, padding, padchar, flags
-			w.Init(os.Stdout, 8, 8, 0, '\t', 0)
+			w.Init(os.Stdout, 8, 8, 2, '\t', 0)
 
 			defer w.Flush()
 
 			cfg := config.Get()
 
-			fmt.Fprintf(w, "\n %s\t%s\t", "Path", "Version")
+			fmt.Fprintf(w, "\n %s\t%s\t%s\t", "Path", "Version", "URL")
 			for _, b := range cfg.Bins {
-				fmt.Fprintf(w, "\n %s\t%s\t", b.Path, b.Version)
+				fmt.Fprintf(w, "\n %s\t%s\t%s\t", b.Path, b.Version, b.URL)
 			}
-
 			fmt.Fprintf(w, "\n")
-
 			return nil
 		},
 	}

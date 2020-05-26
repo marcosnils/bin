@@ -53,15 +53,11 @@ func getVersion(url string) string {
 	return s[len(s)-2]
 }
 
-func newGitHub(u string) (Provider, error) {
-	purl, err := url.Parse(u)
-	if err != nil {
-		return nil, err
-	}
-	s := strings.Split(purl.Path, "/")
+func newGitHub(u *url.URL) (Provider, error) {
+	s := strings.Split(u.Path, "/")
 	if len(s) < 2 {
-		return nil, fmt.Errorf("Error parsing Github URL %s, can't find owner and repo", u)
+		return nil, fmt.Errorf("Error parsing Github URL %s, can't find owner and repo", u.String())
 	}
 	client := github.NewClient(nil)
-	return &gitHub{url: purl, client: client, owner: s[1], repo: s[2]}, nil
+	return &gitHub{url: u, client: client, owner: s[1], repo: s[2]}, nil
 }

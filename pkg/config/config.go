@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -18,6 +19,7 @@ type Binary struct {
 	Path    string `json:"path"`
 	Version string `json:"version"`
 	Hash    string `json:"hash"`
+	URL     string `json:"url"`
 }
 
 func CheckAndLoad() error {
@@ -31,7 +33,8 @@ func CheckAndLoad() error {
 
 	err = json.NewDecoder(f).Decode(&cfg)
 
-	if err != nil {
+	// ignore if file is empty
+	if err != nil && err != io.EOF {
 		return err
 	}
 

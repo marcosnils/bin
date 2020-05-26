@@ -3,6 +3,7 @@ package providers
 import (
 	"hash"
 	"io"
+	"net/url"
 )
 
 type File struct {
@@ -16,6 +17,6 @@ type Provider interface {
 	Fetch() (*File, error)
 }
 
-func New(url string) (Provider, error) {
+func New(url *url.URL) (Provider, error) {
 	return newGitHub(url)
 }
