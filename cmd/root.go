@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/apex/log"
@@ -18,8 +17,8 @@ func Execute(version string, exit func(int), args []string) {
 
 	log.SetHandler(cli.Default)
 
-	fmt.Println()
-	defer fmt.Println()
+	//fmt.Println()
+	//defer fmt.Println()
 	newRootCmd(version, exit).Execute(args)
 }
 
