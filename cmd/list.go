@@ -41,12 +41,12 @@ func newListCmd() *listCmd {
 
 				status := fmt.Sprintf(" (%s)", color.GreenString("ok"))
 				if err != nil {
-					status = fmt.Sprintf(" (%s)", color.RedString("no"))
+					status = fmt.Sprintf(" (%s)", color.RedString("missing"))
 				}
 
 				fmt.Fprintf(w, "\n %s\t%s\t%s\t", b.Path+status, b.Version, b.URL)
 			}
-			fmt.Fprintf(w, "\n")
+			fmt.Fprintf(w, "\n\n")
 			return nil
 		},
 	}
