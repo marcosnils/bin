@@ -1,3 +1,4 @@
+//TODO implement --force flag for install
 package cmd
 
 import (
@@ -33,7 +34,9 @@ func newInstallCmd() *installCmd {
 		Args:          cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			u := args[0]
+
 			//TODO make this path optional
+			//TODO validate path is valid
 			path := args[1]
 
 			//TODO check if binary already exists in config
@@ -56,12 +59,18 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
+			path, err = getFinalPath(path, pResult.Name)
+
+			if err != nil {
+				return err
+			}
+
 			if err = saveToDisk(pResult, path); err != nil {
 				return fmt.Errorf("Error installing binary %w", err)
 			}
 
 			err = config.AddBinary(&config.Binary{
-				Path:    filepath.Join(path, pResult.Name),
+				Path:    path,
 				Version: pResult.Version,
 				Hash:    fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
 				URL:     purl.String(),
@@ -81,24 +90,34 @@ func newInstallCmd() *installCmd {
 	return root
 }
 
-// checkPath checks that path exists and is a directory
-// it should additionally check if there's already a binary with the same
-// file and ask the user if he wants to override
-func checkPath(path string) error {
-	return nil
+// getFinalPath checks if path exists and returns
+// true if it's a directory. If false, it also
+// checks if the path already exists and prompts
+// the user to override
+func getFinalPath(path, fileName string) (string, error) {
+	fi, err := os.Stat(path)
+
+	//TODO implement file existence and override logic
+	if err != nil && !os.IsNotExist(err) {
+		return "", err
+	}
+
+	if fi != nil && fi.IsDir() {
+		return filepath.Join(path, fileName), nil
+	}
+
+	return path, nil
+
 }
 
 // saveToDisk saves the specified binary to the desired path
-// and makes it executable
+// and makes it executable. It also checks if any other binary
+// has the same hash and exists if so.
+
+//TODO check if other binary has the same hash and warn about it
 func saveToDisk(f *providers.File, path string) error {
 
-	//TODO implement checkpath
-	err := checkPath(path)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.OpenFile(filepath.Join(path, f.Name), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0766)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0766)
 
 	if err != nil {
 		return err
