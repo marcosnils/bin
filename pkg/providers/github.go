@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/apex/log"
@@ -18,12 +19,24 @@ type gitHub struct {
 	client *github.Client
 	owner  string
 	repo   string
+	tag    string
 }
 
 func (g *gitHub) Fetch() (*File, error) {
-	//TODO handle case when repo doesn't have releases?
-	log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
-	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
+
+	var release *github.RepositoryRelease
+
+	// If we have a tag, let's fetch from there
+	var err error
+	if len(g.tag) > 0 {
+		log.Infof("Getting %s release for %s/%s", g.tag, g.owner, g.repo)
+		release, _, err = g.client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repo, g.tag)
+	} else {
+		//TODO handle case when repo doesn't have releases?
+		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
+		release, _, err = g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +71,13 @@ func newGitHub(u *url.URL) (Provider, error) {
 	if len(s) < 2 {
 		return nil, fmt.Errorf("Error parsing Github URL %s, can't find owner and repo", u.String())
 	}
+
+	// it's a specific releases URL
+	var tag string
+	if strings.Contains(u.Path, "/releases/") {
+		tag = filepath.Base(u.Path)
+
+	}
 	client := github.NewClient(nil)
-	return &gitHub{url: u, client: client, owner: s[1], repo: s[2]}, nil
+	return &gitHub{url: u, client: client, owner: s[1], repo: s[2], tag: tag}, nil
 }
