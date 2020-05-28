@@ -1,6 +1,10 @@
 package cmd
 
 import (
+	"os"
+
+	"github.com/apex/log"
+	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -21,8 +25,17 @@ func newPruneCmd() *pruneCmd {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//TODO implement prune
-			return nil
+			cfg := config.Get()
+
+			pathsToDel := []string{}
+			for _, b := range cfg.Bins {
+				if _, err := os.Stat(b.Path); os.IsNotExist(err) {
+					log.Infof("%s not found removing", b.Path)
+					pathsToDel = append(pathsToDel, b.Path)
+				}
+			}
+
+			return config.RemoveBinaries(pathsToDel)
 		},
 	}
 

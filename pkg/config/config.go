@@ -59,6 +59,28 @@ func AddBinary(c *Binary) error {
 	return nil
 }
 
+// RemoveBinaries removes the specified paths
+// from bin configuration. It doesn't care about the order
+func RemoveBinaries(paths []string) error {
+	if len(paths) > 0 {
+		k := 0
+		for _, cb := range cfg.Bins {
+			for _, p := range paths {
+				if cb.Path != p {
+					cfg.Bins[k] = cb
+					k++
+				}
+			}
+		}
+
+		cfg.Bins = cfg.Bins[:k]
+
+		return write()
+	}
+
+	return nil
+}
+
 func write() error {
 	u, _ := user.Current()
 	f, err := os.OpenFile(filepath.Join(u.HomeDir, ".bin/config.json"), os.O_RDWR|os.O_CREATE, 0666)
