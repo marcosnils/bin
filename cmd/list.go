@@ -35,19 +35,17 @@ func newListCmd() *listCmd {
 
 			cfg := config.Get()
 
-			fmt.Fprintf(w, "\n %s\t%s\t%s", color.HiWhiteString("Path"), "Version", "URL")
+			fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", "Path", "Version", "URL", "Status")
 			for _, b := range cfg.Bins {
 
 				_, err := os.Stat(b.Path)
 
-				status := fmt.Sprintf(" (%s)", color.GreenString("ok"))
+				status := color.GreenString("OK")
 				if err != nil {
-					status = fmt.Sprintf(" (%s)", color.RedString("missing"))
+					status = color.RedString("missing file")
 				}
 
-				//status := ""
-
-				fmt.Fprintf(w, "\n %s\t%s\t%s", b.Path+status, b.Version, b.URL)
+				fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", b.Path, b.Version, b.URL, status)
 			}
 			fmt.Fprintf(w, "\n\n")
 			return nil
