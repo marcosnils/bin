@@ -26,7 +26,7 @@ func newInstallCmd() *installCmd {
 	var cmd = &cobra.Command{
 		Use:           "install",
 		Aliases:       []string{"i"},
-		Short:         "Installs the epecified project",
+		Short:         "Installs the specified project",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args:          cobra.ExactArgs(2),
