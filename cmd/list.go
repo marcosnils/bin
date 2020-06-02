@@ -35,8 +35,9 @@ func newListCmd() *listCmd {
 
 			cfg := config.Get()
 
-			fmt.Fprintf(w, "\n %s\t%s\t%s\t", color.HiWhiteString("Path"), "Version", "URL")
+			fmt.Fprintf(w, "\n %s\t%s\t%s", color.HiWhiteString("Path"), "Version", "URL")
 			for _, b := range cfg.Bins {
+
 				_, err := os.Stat(b.Path)
 
 				status := fmt.Sprintf(" (%s)", color.GreenString("ok"))
@@ -44,7 +45,9 @@ func newListCmd() *listCmd {
 					status = fmt.Sprintf(" (%s)", color.RedString("missing"))
 				}
 
-				fmt.Fprintf(w, "\n %s\t%s\t%s\t", b.Path+status, b.Version, b.URL)
+				//status := ""
+
+				fmt.Fprintf(w, "\n %s\t%s\t%s", b.Path+status, b.Version, b.URL)
 			}
 			fmt.Fprintf(w, "\n\n")
 			return nil

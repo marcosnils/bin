@@ -1,10 +1,8 @@
-//TODO implement --force flag for install
 package cmd
 
 import (
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
 
@@ -33,22 +31,24 @@ func newInstallCmd() *installCmd {
 		SilenceErrors: true,
 		Args:          cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			//TODO implement --force(-f) flag for install
+			// to override the binary if exists
 			u := args[0]
 
-			//TODO make this path optional
+			//TODO make this path optional. If the path
+			//is not specified bin could automatically
+			//select a PATH that could write and install the binaries there.
+			//Additionally, it could store that path in the config file so it doesn't
+			//have to calculate it each time. Afterwards, bin users can change this
+			//path by editing bin's config file or maybe introdice the `bin config` command
+
 			//TODO validate path is valid
 			path := args[1]
 
 			//TODO check if binary already exists in config
 			// and triger the update process if that's the case
 
-			purl, err := url.Parse(u)
-
-			if err != nil {
-				return err
-			}
-
-			p, err := providers.New(purl)
+			p, err := providers.New(u)
 			if err != nil {
 				return err
 			}
@@ -65,15 +65,16 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
-			if err = saveToDisk(pResult, path); err != nil {
+			if err = saveToDisk(pResult, path, false); err != nil {
 				return fmt.Errorf("Error installing binary %w", err)
 			}
 
-			err = config.AddBinary(&config.Binary{
-				Path:    path,
-				Version: pResult.Version,
-				Hash:    fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
-				URL:     purl.String(),
+			err = config.UpsertBinary(&config.Binary{
+				RemoteName: pResult.Name,
+				Path:       path,
+				Version:    pResult.Version,
+				Hash:       fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
+				URL:        u,
 			})
 
 			if err != nil {
@@ -114,10 +115,17 @@ func getFinalPath(path, fileName string) (string, error) {
 // and makes it executable. It also checks if any other binary
 // has the same hash and exists if so.
 
-//TODO check if other binary has the same hash and warn about it
-func saveToDisk(f *providers.File, path string) error {
+//TODO check if other binary has the same hash and warn about it.
+//TODO if the file is zipped, tared, whatever then extract it
+func saveToDisk(f *providers.File, path string, overwrite bool) error {
 
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0766)
+	var extraFlags int = os.O_EXCL
+
+	if overwrite {
+		extraFlags = 0
+	}
+
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|extraFlags, 0766)
 
 	if err != nil {
 		return err

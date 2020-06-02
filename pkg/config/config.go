@@ -12,14 +12,15 @@ import (
 var cfg config
 
 type config struct {
-	Bins []*Binary `json:"bins"`
+	Bins map[string]*Binary `json:"bins"`
 }
 
 type Binary struct {
-	Path    string `json:"path"`
-	Version string `json:"version"`
-	Hash    string `json:"hash"`
-	URL     string `json:"url"`
+	Path       string `json:"path"`
+	RemoteName string `json:"remote_name"`
+	Version    string `json:"version"`
+	Hash       string `json:"hash"`
+	URL        string `json:"url"`
 }
 
 func CheckAndLoad() error {
@@ -36,6 +37,8 @@ func CheckAndLoad() error {
 	// ignore if file is empty
 	if err != nil && err != io.EOF {
 		return err
+	} else if err == io.EOF {
+		cfg.Bins = map[string]*Binary{}
 	}
 
 	return nil
@@ -46,10 +49,12 @@ func Get() *config {
 	return &cfg
 }
 
-func AddBinary(c *Binary) error {
+//UpsertBinary adds or updats an existing
+//binary resource in the config
+func UpsertBinary(c *Binary) error {
 
 	if c != nil {
-		cfg.Bins = append(cfg.Bins, c)
+		cfg.Bins[c.Path] = c
 		err := write()
 		if err != nil {
 			return err
@@ -62,23 +67,11 @@ func AddBinary(c *Binary) error {
 // RemoveBinaries removes the specified paths
 // from bin configuration. It doesn't care about the order
 func RemoveBinaries(paths []string) error {
-	if len(paths) > 0 {
-		k := 0
-		for _, cb := range cfg.Bins {
-			for _, p := range paths {
-				if cb.Path != p {
-					cfg.Bins[k] = cb
-					k++
-				}
-			}
-		}
-
-		cfg.Bins = cfg.Bins[:k]
-
-		return write()
+	for _, p := range paths {
+		delete(cfg.Bins, p)
 	}
 
-	return nil
+	return write()
 }
 
 func write() error {

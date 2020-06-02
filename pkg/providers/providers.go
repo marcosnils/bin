@@ -1,9 +1,11 @@
 package providers
 
 import (
+	"fmt"
 	"hash"
 	"io"
 	"net/url"
+	"strings"
 )
 
 type File struct {
@@ -15,8 +17,19 @@ type File struct {
 
 type Provider interface {
 	Fetch() (*File, error)
+	GetLatestVersion(string) (string, string, error)
 }
 
-func New(url *url.URL) (Provider, error) {
-	return newGitHub(url)
+func New(u string) (Provider, error) {
+	purl, err := url.Parse(u)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.Contains(purl.Host, "github") {
+		return newGitHub(purl)
+	}
+
+	return nil, fmt.Errorf("Can't find provider for url %s", u)
 }

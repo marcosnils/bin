@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"strings"
 
 	"github.com/apex/log"
@@ -47,16 +46,44 @@ func (g *gitHub) Fetch() (*File, error) {
 		if strings.Contains(lowerName, config.GetOS()) && strings.Contains(lowerName, config.GetArch()) {
 			// We're not closing the body here since the caller is in charge of that
 			res, err := http.Get(*a.BrowserDownloadURL)
-			log.Debugf("Downloading binary form %s", *a.BrowserDownloadURL)
+			log.Debugf("Checking binary form %s", *a.BrowserDownloadURL)
 			if err != nil {
 				return nil, err
 			}
-			//TODO calculate file hash
+
+			if res.StatusCode > 299 || res.StatusCode < 200 {
+				return nil, fmt.Errorf("%d response when checking binary from %s", res.StatusCode, *a.BrowserDownloadURL)
+			}
+
+			//TODO calculate file hash. Not sure if we can / should do it here
+			//since we don't want to read the file unnecesarily. Additionally, sometimes
+			//releases have .sha256 files, so it'd be nice to check for those also
 			f = &File{Data: res.Body, Name: *a.Name, Hash: sha256.New(), Version: getVersion(*a.BrowserDownloadURL)}
 			break
 		}
 	}
 	return f, nil
+}
+
+//GetLatestVersion returns the version and the URL of the
+//specified asset name
+func (g *gitHub) GetLatestVersion(name string) (string, string, error) {
+	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
+	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
+	if err != nil {
+		return "", "", nil
+	}
+
+	var newDownloadUrl string
+	//TODO if asset can be found with the same name it had before,
+	//we should prompt the user if he wants to change the asset
+	for _, a := range release.Assets {
+		if a.GetName() == name {
+			newDownloadUrl = a.GetBrowserDownloadURL()
+		}
+
+	}
+	return release.GetTagName(), newDownloadUrl, nil
 }
 
 // getVersion returns the asset version given the
@@ -75,7 +102,15 @@ func newGitHub(u *url.URL) (Provider, error) {
 	// it's a specific releases URL
 	var tag string
 	if strings.Contains(u.Path, "/releases/") {
-		tag = filepath.Base(u.Path)
+		//For release and download URL's, the
+		//path is usually /releases/tag/v0.1
+		// or /releases/download/v0.1.
+		ps := strings.Split(u.Path, "/")
+		for i, p := range ps {
+			if p == "releases" {
+				tag = ps[i+2]
+			}
+		}
 
 	}
 	client := github.NewClient(nil)
