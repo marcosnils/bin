@@ -92,12 +92,18 @@ func write() error {
 
 // GetArch is the running program's operating system target:
 // one of darwin, freebsd, linux, and so on.
-func GetArch() string {
-	return runtime.GOARCH
+func GetArch() []string {
+	res := []string{runtime.GOARCH}
+	if runtime.GOARCH == "amd64" {
+		//Adding x86_64 manually since the uname syscall (man 2 uname)
+		//is not implemented in all systems
+		res = append(res, "x86_64")
+	}
+	return res
 }
 
 // GetOS is the running program's architecture target:
 // one of 386, amd64, arm, s390x, and so on.
-func GetOS() string {
-	return runtime.GOOS
+func GetOS() []string {
+	return []string{runtime.GOOS}
 }

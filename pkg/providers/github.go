@@ -11,6 +11,7 @@ import (
 	"github.com/apex/log"
 	"github.com/google/go-github/v31/github"
 	"github.com/marcosnils/bin/pkg/config"
+	bstrings "github.com/marcosnils/bin/pkg/strings"
 )
 
 type gitHub struct {
@@ -43,7 +44,7 @@ func (g *gitHub) Fetch() (*File, error) {
 	var f *File
 	for _, a := range release.Assets {
 		lowerName := strings.ToLower(*a.Name)
-		if strings.Contains(lowerName, config.GetOS()) && strings.Contains(lowerName, config.GetArch()) {
+		if bstrings.ContainsAny(lowerName, config.GetOS()) && bstrings.ContainsAny(lowerName, config.GetArch()) {
 			// We're not closing the body here since the caller is in charge of that
 			res, err := http.Get(*a.BrowserDownloadURL)
 			log.Debugf("Checking binary form %s", *a.BrowserDownloadURL)
