@@ -9,4 +9,5 @@ require (
 	github.com/google/go-github/v31 v31.0.0
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/spf13/cobra v1.0.0
+	golang.org/x/sys v0.0.0-20191026070338-33540a1f6037
 )

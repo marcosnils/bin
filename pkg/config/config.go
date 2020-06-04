@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/user"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/apex/log"
+	"golang.org/x/sys/unix"
 )
 
 var cfg config
@@ -56,23 +58,58 @@ func CheckAndLoad() error {
 //getDefaultPath reads the user's PATH variable
 //and returns the first directory that's writable by the current
 //user in the system
+//TODO add feature to prompt the user which to select
+//if many paths are found
 func getDefaultPath() string {
 	penv := os.Getenv("PATH")
 	log.Debugf("User PATH is [%s]", penv)
+	options := []string{}
 	for _, p := range strings.Split(penv, ":") {
 		log.Debugf("Checking path %s", p)
 
-		fi, _ := os.Stat(p)
-		// If it's a dir and has the write bit set
-		if fi.IsDir() && !(fi.Mode().Perm()&(1<<(uint(7))) == 0) {
-			log.Debugf("%s seems to be a dir and writable, using it.", p)
-			return p
+		//TODO make this work in non unix platforms
+		err := unix.Access(p, unix.W_OK)
+
+		if err != nil {
+			log.Debugf("Error [%s] checking path", err)
+			continue
 		}
+
+		log.Debugf("%s seems to be a dir and writable, adding option.", p)
+		options = append(options, p)
 
 	}
 
-	return ""
+	return selectOption("Pick a default download dir: ", options)
 
+}
+
+//selectOptions prompts the user which
+//of the available options is the desired
+//through STDIN
+func selectOption(msg string, opts []string) string {
+	if len(opts) == 1 {
+		return opts[0]
+	}
+	fmt.Print(msg)
+	for i, o := range opts {
+		fmt.Printf("\n [%d] %s", i+1, o)
+	}
+
+	var opt uint
+	var err error
+	for {
+		fmt.Printf("\n Select an option: ")
+		_, err = fmt.Scanln(&opt)
+		if err != nil || opt < 1 || int(opt) > len(opts) {
+			fmt.Printf("Invalid option")
+			continue
+		}
+		break
+
+	}
+
+	return opts[opt-1]
 }
 
 func Get() *config {
