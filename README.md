@@ -4,7 +4,7 @@ Manages bin files downloaded from different sources
 ## Rationale
 
 `bin` started as an idea given the popularity of single binary releases due to the surge of  languages like 
-Go, Rust, Deno, etc whih can easily produce dynamically and statically compiled binarines. 
+Go, Rust, Deno, etc which can easily produce dynamically and statically compiled binarines. 
 
 I found myself downloading binaries (or tarballs) directly from VCS (Github mostly) and then it was hard
 to keep control and update such dependencies whenever a new version was released. So, with the objective 
@@ -15,7 +15,7 @@ these binaries as downloading, making them executable and storing it somewhere i
 After I finished the first MVP, a friend pointed out that [brew](https://brew.sh) was now supported in linux which almost 
 made me abandon the project. After checking out brew (never been an osx user), I found it a bit bloated and seems
 to be doing way more than what I'm actually needing. So, I've decided to continue `bin` and hopefully add more features
-that could result useful to somewhere else. 
+that could result useful to someone else. 
 
 If you find `bin` helpful and you have any ideas or suggestions, please create an issue here or send a PR and I'll 
 be more than happy to brainstrom about possibilities. 
