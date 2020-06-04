@@ -23,6 +23,16 @@ be more than happy to brainstrom about possibilities.
 
 ## Usage
 
+Install a realse from github with the following command:
+
+```
+bin install https://github.com/kubernetes-sigs/kind # installs latest Kind release
+
+bin install https://github.com/kubernetes-sigs/kind/releases/tag/v0.8.0 # installs a specific release
+
+bin install https://github.com/kubernetes-sigs/kind ~/bin/kind # installs latest on a specific path 
+```
+
 ```
 bin install <repo> [path] # Downloads the latest binary and makes it executable 
 bin update [bin]... # Scans binaries and prompts for update
