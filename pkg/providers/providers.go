@@ -5,6 +5,7 @@ import (
 	"hash"
 	"io"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -20,7 +21,13 @@ type Provider interface {
 	GetLatestVersion(string) (string, string, error)
 }
 
+var httpUrlPrefix = regexp.MustCompile("^https?://")
+
 func New(u string) (Provider, error) {
+	if !httpUrlPrefix.MatchString(u) {
+		u = fmt.Sprintf("https://%s", u)
+	}
+
 	purl, err := url.Parse(u)
 
 	if err != nil {
