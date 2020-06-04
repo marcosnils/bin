@@ -29,7 +29,7 @@ func newInstallCmd() *installCmd {
 		Short:         "Installs the specified project",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Args:          cobra.ExactArgs(2),
+		Args:          cobra.MaximumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			//TODO implement --force(-f) flag for install
 			// to override the binary if exists
@@ -42,8 +42,18 @@ func newInstallCmd() *installCmd {
 			//have to calculate it each time. Afterwards, bin users can change this
 			//path by editing bin's config file or maybe introdice the `bin config` command
 
-			//TODO validate path is valid
-			path := args[1]
+			var path string
+			if len(args) > 1 {
+				path = args[1]
+			} else if len(config.Get().DefaultPath) > 0 {
+				path = config.Get().DefaultPath
+			} else {
+				var err error
+				path, err = os.Getwd()
+				if err != nil {
+					return err
+				}
+			}
 
 			//TODO check if binary already exists in config
 			// and triger the update process if that's the case

@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/marcosnils/bin/cmd"
-	"github.com/marcosnils/bin/pkg/config"
 )
 
 // nolint: gochecknoglobals
@@ -38,11 +37,4 @@ func buildVersion(version, commit, date, builtBy string) string {
 		result = fmt.Sprintf("%s\nbuilt by: %s", result, builtBy)
 	}
 	return result
-}
-
-func init() {
-	err := config.CheckAndLoad()
-	if err != nil {
-		fmt.Printf("Error loading config file %v", err)
-	}
 }

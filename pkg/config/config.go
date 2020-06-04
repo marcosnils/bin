@@ -7,12 +7,16 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strings"
+
+	"github.com/apex/log"
 )
 
 var cfg config
 
 type config struct {
-	Bins map[string]*Binary `json:"bins"`
+	DefaultPath string             `json:"default_path"`
+	Bins        map[string]*Binary `json:"bins"`
 }
 
 type Binary struct {
@@ -34,6 +38,10 @@ func CheckAndLoad() error {
 
 	err = json.NewDecoder(f).Decode(&cfg)
 
+	if len(cfg.DefaultPath) == 0 {
+		cfg.DefaultPath = getDefaultPath()
+	}
+	log.Debugf("Download path set to %s", cfg.DefaultPath)
 	// ignore if file is empty
 	if err != nil && err != io.EOF {
 		return err
@@ -42,6 +50,28 @@ func CheckAndLoad() error {
 	}
 
 	return nil
+
+}
+
+//getDefaultPath reads the user's PATH variable
+//and returns the first directory that's writable by the current
+//user in the system
+func getDefaultPath() string {
+	penv := os.Getenv("PATH")
+	log.Debugf("User PATH is [%s]", penv)
+	for _, p := range strings.Split(penv, ":") {
+		log.Debugf("Checking path %s", p)
+
+		fi, _ := os.Stat(p)
+		// If it's a dir and has the write bit set
+		if fi.IsDir() && !(fi.Mode().Perm()&(1<<(uint(7))) == 0) {
+			log.Debugf("%s seems to be a dir and writable, using it.", p)
+			return p
+		}
+
+	}
+
+	return ""
 
 }
 

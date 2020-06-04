@@ -6,6 +6,7 @@ import (
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
 	"github.com/fatih/color"
+	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -63,6 +64,12 @@ func newRootCmd(version string, exit func(int)) *rootCmd {
 			if root.debug {
 				log.SetLevel(log.DebugLevel)
 				log.Debug("debug logs enabled")
+			}
+
+			//check and load config after handlers are configured
+			err := config.CheckAndLoad()
+			if err != nil {
+				log.Fatalf("Error loading config file %v", err)
 			}
 		},
 	}
