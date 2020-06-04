@@ -12,7 +12,7 @@ to solve that problem and also looking for something that will allow me to get t
 In addition to that, I was also looking for something that doesn't require `sudo` or `root` privileges to install 
 these binaries as downloading, making them executable and storing it somewhere in your PATH would be sufficient.
 
-After I finished the first MVP, a friend pointed out that [brew](brew.sh) was now supported in linux which almost 
+After I finished the first MVP, a friend pointed out that [brew](https://brew.sh) was now supported in linux which almost 
 made me abandon the project. After checking out brew (never been an osx user), I found it a bit bloated and seems
 to be doing way more than what I'm actually needing. So, I've decided to continue `bin` and hopefully add more features
 that could result useful to somewhere else. 
