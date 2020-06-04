@@ -26,11 +26,11 @@ be more than happy to brainstrom about possibilities.
 Install a realse from github with the following command:
 
 ```
-bin install https://github.com/kubernetes-sigs/kind # installs latest Kind release
+bin install github.com/kubernetes-sigs/kind # installs latest Kind release
 
-bin install https://github.com/kubernetes-sigs/kind/releases/tag/v0.8.0 # installs a specific release
+bin install github.com/kubernetes-sigs/kind/releases/tag/v0.8.0 # installs a specific release
 
-bin install https://github.com/kubernetes-sigs/kind ~/bin/kind # installs latest on a specific path 
+bin install github.com/kubernetes-sigs/kind ~/bin/kind # installs latest on a specific path 
 ```
 
 ```
