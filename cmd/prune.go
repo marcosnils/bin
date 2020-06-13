@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/apex/log"
@@ -33,6 +34,21 @@ func newPruneCmd() *pruneCmd {
 					log.Infof("%s not found removing", b.Path)
 					pathsToDel = append(pathsToDel, b.Path)
 				}
+			}
+
+			//TODO will have to refactor this prompt to a separate function
+			//so it can be reused in some other places
+			fmt.Printf("\nThe following paths will be removed. Continue? [Y/n] ")
+			var response string
+
+			_, err := fmt.Scanln(&response)
+
+			if err != nil {
+				return fmt.Errorf("Invalid input")
+			}
+
+			if response != "Y" {
+				return fmt.Errorf("Update aborted")
 			}
 
 			return config.RemoveBinaries(pathsToDel)
