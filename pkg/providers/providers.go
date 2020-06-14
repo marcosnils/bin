@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -8,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 )
+
+var ErrInvalidProvider = errors.New("invalid provider")
 
 type File struct {
 	Data    io.ReadCloser
@@ -36,6 +39,10 @@ func New(u string) (Provider, error) {
 
 	if strings.Contains(purl.Host, "github") {
 		return newGitHub(purl)
+	}
+
+	if strings.Contains(purl.Host, "hub.docker.com") || strings.Contains(purl.Host, "docker.io") {
+		return newDocker(purl)
 	}
 
 	return nil, fmt.Errorf("Can't find provider for url %s", u)
