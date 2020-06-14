@@ -38,6 +38,7 @@ func newPruneCmd() *pruneCmd {
 
 			//TODO will have to refactor this prompt to a separate function
 			//so it can be reused in some other places
+			// TODO add force flag to bypass prompt
 			fmt.Printf("\nThe following paths will be removed. Continue? [Y/n] ")
 			var response string
 

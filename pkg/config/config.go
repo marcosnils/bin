@@ -2,13 +2,14 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/marcosnils/bin/pkg/options"
 
 	"github.com/apex/log"
 	"golang.org/x/sys/unix"
@@ -63,7 +64,7 @@ func CheckAndLoad() error {
 func getDefaultPath() string {
 	penv := os.Getenv("PATH")
 	log.Debugf("User PATH is [%s]", penv)
-	options := []string{}
+	opts := []interface{}{}
 	for _, p := range strings.Split(penv, ":") {
 		log.Debugf("Checking path %s", p)
 
@@ -76,40 +77,12 @@ func getDefaultPath() string {
 		}
 
 		log.Debugf("%s seems to be a dir and writable, adding option.", p)
-		options = append(options, p)
+		opts = append(opts, p)
 
 	}
 
-	return selectOption("Pick a default download dir: ", options)
+	return options.Select("Pick a default download dir: ", opts).(string)
 
-}
-
-//selectOptions prompts the user which
-//of the available options is the desired
-//through STDIN
-func selectOption(msg string, opts []string) string {
-	if len(opts) == 1 {
-		return opts[0]
-	}
-	fmt.Print(msg)
-	for i, o := range opts {
-		fmt.Printf("\n [%d] %s", i+1, o)
-	}
-
-	var opt uint
-	var err error
-	for {
-		fmt.Printf("\n Select an option: ")
-		_, err = fmt.Scanln(&opt)
-		if err != nil || opt < 1 || int(opt) > len(opts) {
-			fmt.Printf("Invalid option")
-			continue
-		}
-		break
-
-	}
-
-	return opts[opt-1]
 }
 
 func Get() *config {

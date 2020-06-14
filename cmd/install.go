@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/apex/log"
+	"github.com/h2non/filetype"
+	"github.com/h2non/filetype/matchers"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
@@ -128,6 +130,16 @@ func getFinalPath(path, fileName string) (string, error) {
 //TODO check if other binary has the same hash and warn about it.
 //TODO if the file is zipped, tared, whatever then extract it
 func saveToDisk(f *providers.File, path string, overwrite bool) error {
+
+	t, err := filetype.MatchReader(f.Data)
+
+	if err != nil {
+		return err
+	}
+
+	if t != matchers.TypeElf {
+		return fmt.Errorf("File type [%v] not supported", t)
+	}
 
 	var extraFlags int = os.O_EXCL
 
