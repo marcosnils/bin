@@ -6,25 +6,25 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
 	"strings"
 
+	distreference "github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/reference"
 	"github.com/moby/moby/client"
 )
 
 const (
-	sh = `docker run --rm -i -t -v ${PWD}:/tmp/cmd -w /tmp/cmd %s/%s:%s "$@"`
+	sh = `docker run --rm -i -t -v ${PWD}:/tmp/cmd -w /tmp/cmd %s:%s "$@"`
 )
 
 type docker struct {
-	client *client.Client
-	url    *url.URL
+	client    *client.Client
+	repo, tag string
 }
 
 func (d *docker) Fetch() (*File, error) {
-	owner, name, version := getImageDesc(d.url.Path)
-	out, err := d.client.ImagePull(context.Background(), fmt.Sprintf("docker.io/%s/%s:%s", owner, name, version), types.ImagePullOptions{})
+	out, err := d.client.ImagePull(context.Background(), fmt.Sprintf("%s:%s", d.repo, d.tag), types.ImagePullOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -35,11 +35,17 @@ func (d *docker) Fetch() (*File, error) {
 	}
 
 	return &File{
-		Data:    ioutil.NopCloser(strings.NewReader(fmt.Sprintf(sh, owner, name, version))),
-		Name:    name,
-		Version: version,
+		Data:    ioutil.NopCloser(strings.NewReader(fmt.Sprintf(sh, d.repo, d.tag))),
+		Name:    getImageName(d.repo),
+		Version: d.tag,
 		Hash:    sha256.New(),
 	}, nil
+}
+
+// getImageName gets the name of the image from the image repo.
+func getImageName(repo string) string {
+	image := strings.Split(repo, "/")
+	return image[len(image)-1]
 }
 
 // TODO: implement
@@ -47,37 +53,45 @@ func (d *docker) GetLatestVersion(name string) (string, string, error) {
 	return "", "", nil
 }
 
-// getImageDesc gest the image owner, name and version from the path.
-func getImageDesc(path string) (string, string, string) {
-	path = strings.TrimPrefix(path, "/")
-	path = strings.TrimPrefix(path, "r/")
-	var (
-		owner, image, version string
-		imageDesc             = strings.Split(path, "/")
-	)
-	if len(imageDesc) == 1 {
-		owner, image = "library", imageDesc[0]
-	} else {
-		owner, image = imageDesc[0], imageDesc[1]
+func newDocker(imageURL string) (Provider, error) {
+	imageURL = strings.TrimPrefix(imageURL, "docker://")
+
+	repo, tag, err := parseImage(imageURL)
+	if err != nil {
+		return nil, err
 	}
 
-	version = "latest"
-	imageVersion := strings.Split(image, ":")
-	if len(imageVersion) > 1 {
-		image, version = imageVersion[0], imageVersion[1]
-	}
-
-	return owner, image, version
-}
-
-func newDocker(u *url.URL) (Provider, error) {
-	if u.Path == "" || len(strings.Split(strings.TrimPrefix("/r", u.Path), "/")) > 3 {
-		return nil, fmt.Errorf("Error parsing registry URL. %s is not a valid image name and version", u.Path)
-	}
 	client, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
 	}
 
-	return &docker{url: u, client: client}, nil
+	return &docker{repo: repo, tag: tag, client: client}, nil
+}
+
+// parseImage parses the image returning the repository, tag
+// and an error if it fails. ParseImage handles non-canonical
+// URLs like `hashicorp/terraform`.
+func parseImage(imageURL string) (string, string, error) {
+	repo, tag, err := reference.Parse(imageURL)
+	if err == nil {
+		return repo, tag, nil
+	}
+
+	if err != distreference.ErrNameNotCanonical {
+		return "", "", fmt.Errorf("image %s is invalid: %w", imageURL, err)
+	}
+
+	image := imageURL
+	tag = "latest"
+	if i := strings.LastIndex(imageURL, ":"); i > -1 {
+		image = imageURL[:i]
+		tag = imageURL[i+1:]
+	}
+
+	if strings.Count(imageURL, "/") == 0 {
+		image = "library/" + image
+	}
+
+	return fmt.Sprintf("docker.io/%s", image), tag, nil
 }

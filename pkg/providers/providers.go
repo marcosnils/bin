@@ -24,9 +24,15 @@ type Provider interface {
 	GetLatestVersion(string) (string, string, error)
 }
 
-var httpUrlPrefix = regexp.MustCompile("^https?://")
+var (
+	httpUrlPrefix   = regexp.MustCompile("^https?://")
+	dockerUrlPrefix = regexp.MustCompile("^docker://")
+)
 
 func New(u string) (Provider, error) {
+	if dockerUrlPrefix.MatchString(u) {
+		return newDocker(u)
+	}
 	if !httpUrlPrefix.MatchString(u) {
 		u = fmt.Sprintf("https://%s", u)
 	}
@@ -39,10 +45,6 @@ func New(u string) (Provider, error) {
 
 	if strings.Contains(purl.Host, "github") {
 		return newGitHub(purl)
-	}
-
-	if strings.Contains(purl.Host, "hub.docker.com") || strings.Contains(purl.Host, "docker.io") {
-		return newDocker(purl)
 	}
 
 	return nil, fmt.Errorf("Can't find provider for url %s", u)
