@@ -149,19 +149,6 @@ func saveToDisk(f *providers.File, path string, overwrite bool) error {
 
 	var outputFile = io.MultiReader(&buf, f.Data)
 
-	if t != matchers.TypeElf && t != matchers.TypeGz {
-		// if its not elf or gz then its an executable text file
-		// that needs to be written as is
-		file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0766)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		_, err = io.Copy(file, outputFile)
-		return err
-	}
-
 	if t == matchers.TypeGz {
 		fileName, file, err := processTarGz(outputFile)
 		if err != nil {
