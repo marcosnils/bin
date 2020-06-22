@@ -205,11 +205,6 @@ func processTarGz(r io.Reader) (string, io.Reader, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	// We'll only support .tar.gz for the moment since very few projecs
-	// actually release gzipped binaries since it doesn't make a lot of sense
-	if t, err := filetype.MatchReader(gr); err != nil || t != matchers.TypeTar {
-		return "", nil, fmt.Errorf("Error reading %v file inside tar: %v. Unsupported", err, t)
-	}
 
 	tr := tar.NewReader(gr)
 	tarFiles := []interface{}{}
