@@ -1,31 +1,33 @@
 package providers
 
-import "testing"
+import (
+	"testing"
+)
 
-func TestGetImageDesc(t *testing.T) {
+func TestParseImage(t *testing.T) {
 	cases := []struct {
-		name            string
-		path            string
-		expectedOwner   string
-		expectedName    string
-		expectedVersion string
+		name                      string
+		imageURL                  string
+		expectedRepo, expectedTag string
+		withErr                   bool
 	}{
-		{"no owner no version", "/alpine", "library", "alpine", "latest"},
-		{"no owner with version", "/alpine:3.0.9", "library", "alpine", "3.0.9"},
-		{"with owner and no version", "/hashicorp/terraform", "hashicorp", "terraform", "latest"},
-		{"with owner with version", "/hashicorp/terraform:light", "hashicorp", "terraform", "light"},
+		{name: "no host, no version", imageURL: "postgres", expectedRepo: "docker.io/library/postgres", expectedTag: "latest"},
+		{name: "no host, with version", imageURL: "postgres:1.2.3", expectedRepo: "docker.io/library/postgres", expectedTag: "1.2.3"},
+		{name: "with host, no version", imageURL: "quay.io/calico/node", expectedRepo: "quay.io/calico/node", expectedTag: "latest"},
+		{name: "with host, with version", imageURL: "quay.io/calico/node:1.2.3", expectedRepo: "quay.io/calico/node", expectedTag: "1.2.3"},
+		{name: "no host, with version and owner", imageURL: "hashicorp/terraform:1.2.3", expectedRepo: "docker.io/hashicorp/terraform", expectedTag: "1.2.3"},
 	}
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			owner, name, version := getImageDesc(test.path)
+			repo, tag, err := parseImage(test.imageURL)
 			switch {
-			case test.expectedOwner != owner:
-				t.Errorf("expected owner was %s got %s", test.expectedOwner, owner)
-			case test.expectedName != name:
-				t.Errorf("expected name was %s got %s", test.expectedName, name)
-			case test.expectedVersion != version:
-				t.Errorf("expected version was %s got %s", test.expectedVersion, version)
+			case test.expectedRepo != repo:
+				t.Errorf("expected repo was %s, got %s", test.expectedRepo, repo)
+			case test.expectedTag != tag:
+				t.Errorf("expected tag was %s, got %s", test.expectedTag, tag)
+			case test.withErr != (err != nil):
+				t.Errorf("expected err != nil to be %v", test.withErr)
 			}
 		})
 	}

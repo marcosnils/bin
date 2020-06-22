@@ -137,23 +137,23 @@ func getFinalPath(path, fileName string) (string, error) {
 //TODO check if other binary has the same hash and warn about it.
 //TODO if the file is zipped, tared, whatever then extract it
 func saveToDisk(f *providers.File, path string, overwrite bool) error {
-
 	defer f.Data.Close()
 
 	var buf bytes.Buffer
 	tee := io.TeeReader(f.Data, &buf)
 
 	t, err := filetype.MatchReader(tee)
-
 	if err != nil {
 		return err
 	}
 
-	if t != matchers.TypeElf && t != matchers.TypeGz {
-		return fmt.Errorf("File type [%v] not supported", t)
-	}
-
 	var outputFile = io.MultiReader(&buf, f.Data)
+
+	// TODO: validating the type of the file will eventually be
+	// handled by each provider
+	// if t != matchers.TypeElf && t != matchers.TypeGz {
+	// 	return fmt.Errorf("File type [%v] not supported", t)
+	// }
 
 	if t == matchers.TypeGz {
 		fileName, file, err := processTarGz(outputFile)
