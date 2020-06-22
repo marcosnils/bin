@@ -149,6 +149,12 @@ func saveToDisk(f *providers.File, path string, overwrite bool) error {
 
 	var outputFile = io.MultiReader(&buf, f.Data)
 
+	// TODO: validating the type of the file will eventually be
+	// handled by each provider
+	// if t != matchers.TypeElf && t != matchers.TypeGz {
+	// 	return fmt.Errorf("File type [%v] not supported", t)
+	// }
+
 	if t == matchers.TypeGz {
 		fileName, file, err := processTarGz(outputFile)
 		if err != nil {
