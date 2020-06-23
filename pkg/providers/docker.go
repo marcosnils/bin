@@ -4,14 +4,16 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 
+	"github.com/apex/log"
 	distreference "github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/reference"
 	"github.com/moby/moby/client"
+	"github.com/moby/moby/pkg/jsonmessage"
 )
 
 const (
@@ -28,13 +30,21 @@ type docker struct {
 }
 
 func (d *docker) Fetch() (*File, error) {
-	out, err := d.client.ImagePull(context.Background(), fmt.Sprintf("%s:%s", d.repo, d.tag), types.ImagePullOptions{})
+	log.Infof("Pulling docker image %s:%s", d.repo, d.tag)
+	out, err := d.client.ImageCreate(context.Background(), fmt.Sprintf("%s:%s", d.repo, d.tag), types.ImageCreateOptions{})
 	if err != nil {
 		return nil, err
 	}
 	defer out.Close()
 
-	if _, err := io.Copy(ioutil.Discard, out); err != nil {
+	err = jsonmessage.DisplayJSONMessagesStream(
+		out,
+		os.Stderr,
+		os.Stdout.Fd(),
+		false,
+		nil)
+
+	if err != nil {
 		return nil, err
 	}
 
