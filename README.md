@@ -23,7 +23,7 @@ be more than happy to brainstrom about possibilities.
 
 ## Usage
 
-Install a realse from github with the following command:
+Install a release from github with the following command:
 
 ```
 bin install github.com/kubernetes-sigs/kind # installs latest Kind release
@@ -31,6 +31,14 @@ bin install github.com/kubernetes-sigs/kind # installs latest Kind release
 bin install github.com/kubernetes-sigs/kind/releases/tag/v0.8.0 # installs a specific release
 
 bin install github.com/kubernetes-sigs/kind ~/bin/kind # installs latest on a specific path 
+```
+
+You can install Docker images and use them as regular CLIs:
+
+```
+bin install docker://hashicorp/terraform:light # install the `light` tag for terraform
+
+bin install docker://quay.io/calico/node # install the latest version of calico/node
 ```
 
 ```
