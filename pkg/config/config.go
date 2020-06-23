@@ -33,7 +33,7 @@ type Binary struct {
 func CheckAndLoad() error {
 	u, _ := user.Current()
 	f, err := os.OpenFile(filepath.Join(u.HomeDir, ".bin/config.json"), os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
