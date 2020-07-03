@@ -89,7 +89,7 @@ func (g *gitHub) GetLatestVersion(name string) (string, string, error) {
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
 	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
 	if err != nil {
-		return "", "", nil
+		return "", "", err
 	}
 
 	var newDownloadUrl string
