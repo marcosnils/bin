@@ -17,5 +17,6 @@ require (
 	github.com/moby/moby v1.13.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/spf13/cobra v1.0.0
+	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
 	golang.org/x/sys v0.0.0-20191026070338-33540a1f6037
 )

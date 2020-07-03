@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/apex/log"
@@ -13,6 +14,7 @@ import (
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/options"
 	bstrings "github.com/marcosnils/bin/pkg/strings"
+	"golang.org/x/oauth2"
 )
 
 type gitHub struct {
@@ -131,6 +133,13 @@ func newGitHub(u *url.URL) (Provider, error) {
 		}
 
 	}
-	client := github.NewClient(nil)
+	token := os.Getenv("GITHUB_AUTH_TOKEN")
+	var tc *http.Client
+	if token != "" {
+		tc = oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: token},
+		))
+	}
+	client := github.NewClient(tc)
 	return &gitHub{url: u, client: client, owner: s[1], repo: s[2], tag: tag}, nil
 }
