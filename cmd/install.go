@@ -1,22 +1,13 @@
 package cmd
 
 import (
-	"archive/tar"
-	"bytes"
-	"compress/gzip"
-	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/apex/log"
-	"github.com/h2non/filetype"
-	"github.com/h2non/filetype/matchers"
 	"github.com/marcosnils/bin/pkg/config"
-	"github.com/marcosnils/bin/pkg/options"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
 )
@@ -137,33 +128,6 @@ func getFinalPath(path, fileName string) (string, error) {
 //TODO check if other binary has the same hash and warn about it.
 //TODO if the file is zipped, tared, whatever then extract it
 func saveToDisk(f *providers.File, path string, overwrite bool) error {
-	defer f.Data.Close()
-
-	var buf bytes.Buffer
-	tee := io.TeeReader(f.Data, &buf)
-
-	t, err := filetype.MatchReader(tee)
-	if err != nil {
-		return err
-	}
-
-	var outputFile = io.MultiReader(&buf, f.Data)
-
-	// TODO: validating the type of the file will eventually be
-	// handled by each provider
-	// if t != matchers.TypeElf && t != matchers.TypeGz {
-	// 	return fmt.Errorf("File type [%v] not supported", t)
-	// }
-
-	if t == matchers.TypeGz {
-		fileName, file, err := processTarGz(outputFile)
-		if err != nil {
-			return err
-		}
-		outputFile = file
-		path = strings.Replace(path, filepath.Base(path), fileName, -1)
-
-	}
 
 	var extraFlags int = os.O_EXCL
 
@@ -181,76 +145,10 @@ func saveToDisk(f *providers.File, path string, overwrite bool) error {
 
 	//TODO add a spinner here indicating that the binary is being downloaded
 	log.Infof("Starting download for %s@%s into %s", f.Name, f.Version, path)
-	_, err = io.Copy(file, outputFile)
+	_, err = io.Copy(file, f.Data)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-// processTar receives a tar.gz file and returns the
-// correct file for bin to download
-func processTarGz(r io.Reader) (string, io.Reader, error) {
-	// We're caching the whole file into memory so we can prompt
-	// the user which file they want to download
-
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return "", nil, err
-	}
-	br := bytes.NewReader(b)
-
-	gr, err := gzip.NewReader(br)
-	if err != nil {
-		return "", nil, err
-	}
-
-	tr := tar.NewReader(gr)
-	tarFiles := []interface{}{}
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return "", nil, err
-		}
-
-		if header.Typeflag == tar.TypeReg {
-			tarFiles = append(tarFiles, header.Name)
-		}
-	}
-	if len(tarFiles) == 0 {
-		return "", nil, errors.New("No files found in tar archive")
-	}
-
-	selectedFile := options.Select("Select file to download:", tarFiles).(string)
-
-	// Reset readers so we can scan the tar file
-	// again to get the correct file reader
-	br.Seek(0, io.SeekStart)
-	gr, err = gzip.NewReader(br)
-	if err != nil {
-		return "", nil, err
-	}
-	tr = tar.NewReader(gr)
-
-	var fr io.Reader
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return "", nil, err
-		}
-
-		if header.Name == selectedFile {
-			fr = tr
-			break
-		}
-	}
-	// return base of selected file since tar
-	// files usually have folders inside
-	return filepath.Base(selectedFile), fr, nil
-
 }

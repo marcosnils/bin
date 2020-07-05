@@ -1,16 +1,25 @@
 package providers
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/apex/log"
 	"github.com/google/go-github/v31/github"
+	"github.com/h2non/filetype"
+	"github.com/h2non/filetype/matchers"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/options"
 	bstrings "github.com/marcosnils/bin/pkg/strings"
@@ -28,6 +37,32 @@ type gitHub struct {
 type githubFileInfo struct{ url, name string }
 
 func (g *githubFileInfo) String() string { return g.name }
+
+// filterAssets receives a slice of GH assets and tries to
+// select the proper one and ask the user to manually select one
+// in case it can't determine it
+func filterAssets(as []*github.ReleaseAsset) (*githubFileInfo, error) {
+	matches := []interface{}{}
+	for _, a := range as {
+		lowerName := strings.ToLower(*a.Name)
+		if bstrings.ContainsAny(lowerName, config.GetOS()) && bstrings.ContainsAny(lowerName, config.GetArch()) {
+			matches = append(matches, &githubFileInfo{a.GetBrowserDownloadURL(), a.GetName()})
+		}
+	}
+
+	var gf *githubFileInfo
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("Could not find any compatbile files")
+	} else if len(matches) > 1 {
+		gf = options.Select("Multiple matches found, please select one:", matches).(*githubFileInfo)
+		//TODO make user select the proper file
+	} else {
+		gf = matches[0].(*githubFileInfo)
+	}
+
+	return gf, nil
+
+}
 
 func (g *gitHub) Fetch() (*File, error) {
 
@@ -48,28 +83,15 @@ func (g *gitHub) Fetch() (*File, error) {
 		return nil, err
 	}
 
-	var f *File
-	matches := []interface{}{}
-	for _, a := range release.Assets {
-		lowerName := strings.ToLower(*a.Name)
-		if bstrings.ContainsAny(lowerName, config.GetOS()) && bstrings.ContainsAny(lowerName, config.GetArch()) {
-			matches = append(matches, &githubFileInfo{a.GetBrowserDownloadURL(), a.GetName()})
-		}
-	}
+	gf, err := filterAssets(release.Assets)
 
-	var gf *githubFileInfo
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("Could not find any compatbile files")
-	} else if len(matches) > 1 {
-		gf = options.Select("Multiple matches found, please select one:", matches).(*githubFileInfo)
-		//TODO make user select the proper file
-	} else {
-		gf = matches[0].(*githubFileInfo)
+	if err != nil {
+		return nil, err
 	}
 
 	// We're not closing the body here since the caller is in charge of that
 	res, err := http.Get(gf.url)
-	log.Debugf("Checking binary form %s", gf.url)
+	log.Debugf("Checking binary from %s", gf.url)
 	if err != nil {
 		return nil, err
 	}
@@ -78,39 +100,118 @@ func (g *gitHub) Fetch() (*File, error) {
 		return nil, fmt.Errorf("%d response when checking binary from %s", res.StatusCode, gf.url)
 	}
 
+	var buf bytes.Buffer
+	tee := io.TeeReader(res.Body, &buf)
+
+	t, err := filetype.MatchReader(tee)
+	if err != nil {
+		return nil, err
+	}
+
+	var outputFile = io.MultiReader(&buf, res.Body)
+
+	// TODO: validating the type of the file will eventually be
+	// handled by each provider since it's impossible to make it generic enough
+	// if t != matchers.TypeElf && t != matchers.TypeGz {
+	// 	return fmt.Errorf("File type [%v] not supported", t)
+	// }
+
+	var name = gf.name
+
+	if t == matchers.TypeGz {
+		fileName, file, err := processTarGz(outputFile)
+		if err != nil {
+			return nil, err
+		}
+		outputFile = file
+		name = fileName
+
+	}
+
 	//TODO calculate file hash. Not sure if we can / should do it here
 	//since we don't want to read the file unnecesarily. Additionally, sometimes
 	//releases have .sha256 files, so it'd be nice to check for those also
-	f = &File{Data: res.Body, Name: gf.name, Hash: sha256.New(), Version: getVersion(gf.url)}
+	f := &File{Data: outputFile, Name: name, Hash: sha256.New(), Version: release.GetTagName()}
+
 	return f, nil
 }
 
-//GetLatestVersion returns the version and the URL of the
-//specified asset name
-func (g *gitHub) GetLatestVersion(name string) (string, string, error) {
+// processTar receives a tar.gz file and returns the
+// correct file for bin to download
+func processTarGz(r io.Reader) (string, io.Reader, error) {
+	// We're caching the whole file into memory so we can prompt
+	// the user which file they want to download
+
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return "", nil, err
+	}
+	br := bytes.NewReader(b)
+
+	gr, err := gzip.NewReader(br)
+	if err != nil {
+		return "", nil, err
+	}
+
+	tr := tar.NewReader(gr)
+	tarFiles := []interface{}{}
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return "", nil, err
+		}
+
+		if header.Typeflag == tar.TypeReg {
+			tarFiles = append(tarFiles, header.Name)
+		}
+	}
+	if len(tarFiles) == 0 {
+		return "", nil, errors.New("No files found in tar archive")
+	}
+
+	selectedFile := options.Select("Select file to download:", tarFiles).(string)
+
+	// Reset readers so we can scan the tar file
+	// again to get the correct file reader
+	br.Seek(0, io.SeekStart)
+	gr, err = gzip.NewReader(br)
+	if err != nil {
+		return "", nil, err
+	}
+	tr = tar.NewReader(gr)
+
+	var fr io.Reader
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return "", nil, err
+		}
+
+		if header.Name == selectedFile {
+			fr = tr
+			break
+		}
+	}
+	// return base of selected file since tar
+	// files usually have folders inside
+	return filepath.Base(selectedFile), fr, nil
+
+}
+
+//GetLatestVersion checks the latest repo release and
+//returns the corresponding metadata
+func (g *gitHub) GetLatestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
 	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
 	if err != nil {
 		return "", "", err
 	}
 
-	var newDownloadUrl string
-	//TODO if asset can be found with the same name it had before,
-	//we should prompt the user if he wants to change the asset
-	for _, a := range release.Assets {
-		if a.GetName() == name {
-			newDownloadUrl = a.GetBrowserDownloadURL()
-		}
-
-	}
-	return release.GetTagName(), newDownloadUrl, nil
-}
-
-// getVersion returns the asset version given the
-// browser download URL
-func getVersion(url string) string {
-	s := strings.Split(url, "/")
-	return s[len(s)-2]
+	return release.GetTagName(), release.GetHTMLURL(), nil
 }
 
 func newGitHub(u *url.URL) (Provider, error) {
@@ -128,11 +229,12 @@ func newGitHub(u *url.URL) (Provider, error) {
 		ps := strings.Split(u.Path, "/")
 		for i, p := range ps {
 			if p == "releases" {
-				tag = ps[i+2]
+				tag = strings.Join(ps[i+2:], "/")
 			}
 		}
 
 	}
+
 	token := os.Getenv("GITHUB_AUTH_TOKEN")
 	var tc *http.Client
 	if token != "" {

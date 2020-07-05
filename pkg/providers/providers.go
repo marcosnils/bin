@@ -13,15 +13,19 @@ import (
 var ErrInvalidProvider = errors.New("invalid provider")
 
 type File struct {
-	Data    io.ReadCloser
+	Data    io.Reader
 	Name    string
 	Hash    hash.Hash
 	Version string
 }
 
 type Provider interface {
+	// Fetch returns the file metadata to retrieve a specific binary given
+	// for a provider
 	Fetch() (*File, error)
-	GetLatestVersion(string) (string, string, error)
+	// GetLatestVersion returns the version and the URL of the
+	// latest version for this binary
+	GetLatestVersion() (string, string, error)
 }
 
 var (

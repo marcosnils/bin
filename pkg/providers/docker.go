@@ -63,7 +63,7 @@ func getImageName(repo string) string {
 }
 
 // TODO: implement
-func (d *docker) GetLatestVersion(name string) (string, string, error) {
+func (d *docker) GetLatestVersion() (string, string, error) {
 	return "", "", nil
 }
 

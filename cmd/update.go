@@ -18,19 +18,24 @@ type updateCmd struct {
 type updateOpts struct {
 }
 
+type updateInfo struct{ version, url string }
+
 func newUpdateCmd() *updateCmd {
 	var root = &updateCmd{}
 	// nolint: dupl
 	var cmd = &cobra.Command{
-		Use:           "update",
+		Use:           "update [binary_path]",
 		Aliases:       []string{"u"},
-		Short:         "Updates binaries managed by bin",
+		Short:         "Updates one or multiple binaries managed by bin",
 		SilenceUsage:  true,
+		Args:          cobra.MaximumNArgs(1),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			//TODO add support o update a single binary with
-			//`bin update <binary>`
+			var bin string
+			if len(args) > 0 {
+				bin = args[0]
+			}
 
 			//TODO update should check all binaries with a
 			//certain configured parallelism (default 10, can be changed with -p) and report
@@ -38,29 +43,29 @@ func newUpdateCmd() *updateCmd {
 			//It's very likely that we have to extend the provider
 			//interface to support this use-case
 
-			type updateInfo struct{ version, url string }
-
-			toUpdate := map[updateInfo]*config.Binary{}
+			toUpdate := map[*updateInfo]*config.Binary{}
 			cfg := config.Get()
-			for _, b := range cfg.Bins {
 
-				p, err := providers.New(b.URL)
+			// Update single binary
+			if bin != "" {
+				if b, found := cfg.Bins[bin]; !found {
+					return fmt.Errorf("Binary path %s not found", bin)
 
-				if err != nil {
-					return err
+				} else {
+					if ui, err := getLatestVersion(b); err != nil {
+						return err
+					} else if ui != nil {
+						toUpdate[ui] = b
+					}
 				}
 
-				log.Debugf("Checking updates for %s", b.Path)
-				v, u, err := p.GetLatestVersion(b.RemoteName)
-
-				if err != nil {
-					return fmt.Errorf("Error checking updates for %s, %w", b.Path, err)
-				}
-
-				if b.Version != v {
-					log.Debugf("Found new version %s for %s", v, b.Path)
-					log.Infof("%s %s -> %s ", b.Path, color.YellowString(b.Version), color.GreenString(v))
-					toUpdate[updateInfo{v, u}] = b
+			} else {
+				for _, b := range cfg.Bins {
+					if ui, err := getLatestVersion(b); err != nil {
+						return err
+					} else if ui != nil {
+						toUpdate[ui] = b
+					}
 				}
 			}
 
@@ -121,4 +126,26 @@ func newUpdateCmd() *updateCmd {
 
 	root.cmd = cmd
 	return root
+}
+
+func getLatestVersion(b *config.Binary) (*updateInfo, error) {
+	p, err := providers.New(b.URL)
+
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debugf("Checking updates for %s", b.Path)
+	v, u, err := p.GetLatestVersion()
+
+	if err != nil {
+		return nil, fmt.Errorf("Error checking updates for %s, %w", b.Path, err)
+	}
+
+	if b.Version == v {
+		return nil, nil
+	}
+	log.Debugf("Found new version %s for %s at %s", v, b.Path, u)
+	log.Infof("%s %s -> %s ", b.Path, color.YellowString(b.Version), color.GreenString(v))
+	return &updateInfo{v, u}, nil
 }
