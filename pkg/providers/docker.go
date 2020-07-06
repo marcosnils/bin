@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -49,7 +48,7 @@ func (d *docker) Fetch() (*File, error) {
 	}
 
 	return &File{
-		Data:    ioutil.NopCloser(strings.NewReader(fmt.Sprintf(sh, d.repo, d.tag))),
+		Data:    strings.NewReader(fmt.Sprintf(sh, d.repo, d.tag)),
 		Name:    getImageName(d.repo),
 		Version: d.tag,
 		Hash:    sha256.New(),
@@ -62,9 +61,9 @@ func getImageName(repo string) string {
 	return image[len(image)-1]
 }
 
-// TODO: implement
+// TODO: missing implementation here
 func (d *docker) GetLatestVersion() (string, string, error) {
-	return "", "", nil
+	return d.tag, "", nil
 }
 
 func newDocker(imageURL string) (Provider, error) {

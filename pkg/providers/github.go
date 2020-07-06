@@ -203,7 +203,7 @@ func processTarGz(r io.Reader) (string, io.Reader, error) {
 }
 
 //GetLatestVersion checks the latest repo release and
-//returns the corresponding metadata
+//returns the corresponding name and url to fetch the version
 func (g *gitHub) GetLatestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
 	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
