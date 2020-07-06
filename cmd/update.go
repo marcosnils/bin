@@ -32,6 +32,10 @@ func newUpdateCmd() *updateCmd {
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			//TODO add support to update from a specific URL.
+			//This allows to update binares from a repo that contains
+			//multiple tags for different binaries
+
 			var bin string
 			if len(args) > 0 {
 				bin = args[0]
