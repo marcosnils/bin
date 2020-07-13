@@ -8,11 +8,9 @@ import (
 	"strings"
 
 	"github.com/apex/log"
-	distreference "github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/reference"
-	"github.com/moby/moby/client"
-	"github.com/moby/moby/pkg/jsonmessage"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/jsonmessage"
 )
 
 const (
@@ -86,17 +84,8 @@ func newDocker(imageURL string) (Provider, error) {
 // and an error if it fails. ParseImage handles non-canonical
 // URLs like `hashicorp/terraform`.
 func parseImage(imageURL string) (string, string, error) {
-	repo, tag, err := reference.Parse(imageURL)
-	if err == nil {
-		return repo, tag, nil
-	}
-
-	if err != distreference.ErrNameNotCanonical {
-		return "", "", fmt.Errorf("image %s is invalid: %w", imageURL, err)
-	}
-
 	image := imageURL
-	tag = "latest"
+	tag := "latest"
 	if i := strings.LastIndex(imageURL, ":"); i > -1 {
 		image = imageURL[:i]
 		tag = imageURL[i+1:]
