@@ -23,6 +23,13 @@ that could result useful to someone else.
 If you find `bin` helpful and you have any ideas or suggestions, please create an issue here or send a PR and I'll 
 be more than happy to brainstrom about possibilities. 
 
+## Installing
+
+1. Download `bin` from the [releases](https://github.com/marcosnils/bin/releases)
+2. Run `./bin install github.com/marcosnils/bin` so `bin` is managed by `bin` itself
+3. Run `bin ls` to make sure bin has been installed correctly. You can now remove the first file you downloaded.
+4. Enjoy!
+
 
 ## Usage
 
