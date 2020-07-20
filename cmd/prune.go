@@ -49,7 +49,7 @@ func newPruneCmd() *pruneCmd {
 			}
 
 			if response != "Y" {
-				return fmt.Errorf("Update aborted")
+				return fmt.Errorf("Command aborted")
 			}
 
 			return config.RemoveBinaries(pathsToDel)

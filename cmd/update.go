@@ -90,7 +90,7 @@ func newUpdateCmd() *updateCmd {
 			}
 
 			if response != "Y" {
-				return fmt.Errorf("Update aborted")
+				return fmt.Errorf("Command aborted")
 			}
 
 			//TODO 	:S code smell here, this pretty much does
