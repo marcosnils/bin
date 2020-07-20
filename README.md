@@ -1,6 +1,9 @@
 # bin
 Manages bin files downloaded from different sources
 
+![bin](https://user-images.githubusercontent.com/1578458/87901619-ee629a80-ca2d-11ea-8609-8a8eb39801d2.gif)
+
+
 ## Rationale
 
 `bin` started as an idea given the popularity of single binary releases due to the surge of  languages like 
@@ -48,3 +51,11 @@ bin ls # List current binaries and it's versions
 bin remove <bin>... # Deletes one or more binaries
 bin purge # Removes from the DB missing binaries
 ```
+
+## FAQ
+
+### There are some bugs and the code is not tested. 
+
+I know.. and that's not planning to change any time soon unless I start getting some contributions. I did this as a personal tool and I'll probably be fixing stuff and adding features as I personally need them. Contribution are welcome though and I'll be happy to discuss and review them. 
+
+
