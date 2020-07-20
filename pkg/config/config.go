@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/user"
@@ -32,7 +33,14 @@ type Binary struct {
 
 func CheckAndLoad() error {
 	u, _ := user.Current()
-	f, err := os.OpenFile(filepath.Join(u.HomeDir, ".bin/config.json"), os.O_RDWR|os.O_CREATE, 0666)
+
+	configDir := filepath.Join(u.HomeDir, ".bin")
+
+	if err := os.Mkdir(configDir, 0755); err != nil && !os.IsExist(err) {
+		return fmt.Errorf("Error creating config directory [%v]", err)
+	}
+
+	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -49,7 +57,13 @@ func CheckAndLoad() error {
 	if err != nil && err != io.EOF {
 		return err
 	} else if err == io.EOF {
+		// Config file doesn't exist. Initialize it
 		cfg.Bins = map[string]*Binary{}
+		f.Close()
+		if werr := write(); werr != nil {
+			return werr
+		}
+
 	}
 
 	return nil
@@ -116,7 +130,7 @@ func RemoveBinaries(paths []string) error {
 
 func write() error {
 	u, _ := user.Current()
-	f, err := os.OpenFile(filepath.Join(u.HomeDir, ".bin/config.json"), os.O_RDWR|os.O_CREATE, 0666)
+	f, err := os.OpenFile(filepath.Join(u.HomeDir, ".bin", "config.json"), os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}
