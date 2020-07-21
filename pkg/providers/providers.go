@@ -17,6 +17,7 @@ type File struct {
 	Name    string
 	Hash    hash.Hash
 	Version string
+	Length  int64
 }
 
 type Provider interface {
