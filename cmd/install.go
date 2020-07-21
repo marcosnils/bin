@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/apex/log"
+	"github.com/cheggaaa/pb"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
@@ -143,9 +144,11 @@ func saveToDisk(f *providers.File, path string, overwrite bool) error {
 
 	defer file.Close()
 
-	//TODO add a spinner here indicating that the binary is being downloaded
 	log.Infof("Starting download for %s@%s into %s", f.Name, f.Version, path)
-	_, err = io.Copy(file, f.Data)
+	bar := pb.Full.Start64(f.Length)
+	barReader := bar.NewProxyReader(f.Data)
+	_, err = io.Copy(file, barReader)
+	bar.Finish()
 	if err != nil {
 		return err
 	}
