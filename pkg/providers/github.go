@@ -128,12 +128,36 @@ func (g *gitHub) Fetch() (*File, error) {
 
 	}
 
+	version := release.GetTagName()
+
 	//TODO calculate file hash. Not sure if we can / should do it here
 	//since we don't want to read the file unnecesarily. Additionally, sometimes
 	//releases have .sha256 files, so it'd be nice to check for those also
-	f := &File{Data: outputFile, Name: name, Hash: sha256.New(), Version: release.GetTagName()}
+	f := &File{Data: outputFile, Name: sanitizeName(name, version), Hash: sha256.New(), Version: version}
 
 	return f, nil
+}
+
+// sanitizeName removes irrelevant information from the
+// file name in case it exists
+func sanitizeName(name, version string) string {
+	name = strings.ToLower(name)
+	replacements := []string{}
+	for _, v := range config.GetOS() {
+		replacements = append(replacements, "_"+v, "")
+		replacements = append(replacements, "-"+v, "")
+	}
+
+	for _, v := range config.GetArch() {
+		replacements = append(replacements, "_"+v, "")
+		replacements = append(replacements, "-"+v, "")
+	}
+	replacements = append(replacements, "_"+version, "")
+	replacements = append(replacements, "_"+strings.TrimPrefix(version, "v"), "")
+	replacements = append(replacements, "-"+version, "")
+	replacements = append(replacements, "-"+strings.TrimPrefix(version, "v"), "")
+	r := strings.NewReplacer(replacements...)
+	return r.Replace(name)
 }
 
 // processTar receives a tar.gz file and returns the
