@@ -49,6 +49,14 @@ func filterAssets(as []*github.ReleaseAsset) (*githubFileInfo, error) {
 			matches = append(matches, &githubFileInfo{a.GetBrowserDownloadURL(), a.GetName()})
 		}
 	}
+	if len(matches) == 0 {
+		for _, a := range as {
+			lowerName := strings.ToLower(*a.Name)
+			if bstrings.ContainsAny(lowerName, config.GetOS()) || bstrings.ContainsAny(lowerName, config.GetArch()) {
+				matches = append(matches, &githubFileInfo{a.GetBrowserDownloadURL(), a.GetName()})
+			}
+		}
+	}
 
 	var gf *githubFileInfo
 	if len(matches) == 0 {
@@ -143,6 +151,14 @@ func (g *gitHub) Fetch() (*File, error) {
 func sanitizeName(name, version string) string {
 	name = strings.ToLower(name)
 	replacements := []string{}
+
+	for _, osName := range config.GetOS() {
+		for _, archName := range config.GetArch() {
+			replacements = append(replacements, "_"+osName+archName, "")
+			replacements = append(replacements, "-"+osName+archName, "")
+		}
+	}
+
 	for _, v := range config.GetOS() {
 		replacements = append(replacements, "_"+v, "")
 		replacements = append(replacements, "-"+v, "")
