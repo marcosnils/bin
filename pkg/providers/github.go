@@ -49,6 +49,10 @@ func filterAssets(as []*github.ReleaseAsset) (*githubFileInfo, error) {
 			matches = append(matches, &githubFileInfo{a.GetBrowserDownloadURL(), a.GetName()})
 		}
 	}
+	// If we don't match any resources using the "standard" strategy,
+	// try to be a bit more flexible to find better alternatives.
+	// I guess that ideally we'd have to build a prioritization
+	// list instead of doing this that seems a hack :D.
 	if len(matches) == 0 {
 		for _, a := range as {
 			lowerName := strings.ToLower(*a.Name)
@@ -152,22 +156,25 @@ func sanitizeName(name, version string) string {
 	name = strings.ToLower(name)
 	replacements := []string{}
 
+	// TODO maybe instead of doing this put everything in a map (set) and then
+	// generate the replacements? IDK.
+	firstPass := true
 	for _, osName := range config.GetOS() {
+		replacements = append(replacements, "_"+osName, "")
+		replacements = append(replacements, "-"+osName, "")
 		for _, archName := range config.GetArch() {
 			replacements = append(replacements, "_"+osName+archName, "")
 			replacements = append(replacements, "-"+osName+archName, "")
+
+			if firstPass {
+				replacements = append(replacements, "_"+archName, "")
+				replacements = append(replacements, "-"+archName, "")
+			}
 		}
+		firstPass = false
+
 	}
 
-	for _, v := range config.GetOS() {
-		replacements = append(replacements, "_"+v, "")
-		replacements = append(replacements, "-"+v, "")
-	}
-
-	for _, v := range config.GetArch() {
-		replacements = append(replacements, "_"+v, "")
-		replacements = append(replacements, "-"+v, "")
-	}
 	replacements = append(replacements, "_"+version, "")
 	replacements = append(replacements, "_"+strings.TrimPrefix(version, "v"), "")
 	replacements = append(replacements, "-"+version, "")
