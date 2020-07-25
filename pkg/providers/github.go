@@ -45,7 +45,10 @@ func filterAssets(as []*github.ReleaseAsset) (*githubFileInfo, error) {
 	matches := []interface{}{}
 	for _, a := range as {
 		lowerName := strings.ToLower(*a.Name)
-		if bstrings.ContainsAny(lowerName, config.GetOS()) && bstrings.ContainsAny(lowerName, config.GetArch()) {
+		filetype.GetType(lowerName)
+		if bstrings.ContainsAny(lowerName, config.GetOS()) &&
+			bstrings.ContainsAny(lowerName, config.GetArch()) &&
+			isSupportedExt(lowerName) {
 			matches = append(matches, &githubFileInfo{a.GetBrowserDownloadURL(), a.GetName()})
 		}
 	}
@@ -56,7 +59,7 @@ func filterAssets(as []*github.ReleaseAsset) (*githubFileInfo, error) {
 	if len(matches) == 0 {
 		for _, a := range as {
 			lowerName := strings.ToLower(*a.Name)
-			if bstrings.ContainsAny(lowerName, config.GetOS()) || bstrings.ContainsAny(lowerName, config.GetArch()) {
+			if isSupportedExt(lowerName) && (bstrings.ContainsAny(lowerName, config.GetOS()) || bstrings.ContainsAny(lowerName, config.GetArch())) {
 				matches = append(matches, &githubFileInfo{a.GetBrowserDownloadURL(), a.GetName()})
 			}
 		}
@@ -74,6 +77,21 @@ func filterAssets(as []*github.ReleaseAsset) (*githubFileInfo, error) {
 
 	return gf, nil
 
+}
+
+// isSupportedExt checks if this provider supports
+// dealing with this specific file extension
+func isSupportedExt(filename string) bool {
+	if ext := strings.TrimPrefix(filepath.Ext(filename), "."); len(ext) > 0 {
+		switch filetype.GetType(ext) {
+		case matchers.TypeGz:
+			break
+		default:
+			return false
+		}
+	}
+
+	return true
 }
 
 func (g *gitHub) Fetch() (*File, error) {
