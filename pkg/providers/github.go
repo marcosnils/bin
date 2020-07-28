@@ -20,6 +20,7 @@ import (
 	"github.com/google/go-github/v31/github"
 	"github.com/h2non/filetype"
 	"github.com/h2non/filetype/matchers"
+	"github.com/h2non/filetype/types"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/options"
 	bstrings "github.com/marcosnils/bin/pkg/strings"
@@ -84,7 +85,7 @@ func filterAssets(as []*github.ReleaseAsset) (*githubFileInfo, error) {
 func isSupportedExt(filename string) bool {
 	if ext := strings.TrimPrefix(filepath.Ext(filename), "."); len(ext) > 0 {
 		switch filetype.GetType(ext) {
-		case matchers.TypeGz:
+		case matchers.TypeGz, types.Unknown:
 			break
 		default:
 			return false
@@ -175,6 +176,7 @@ func sanitizeName(name, version string) string {
 	replacements := []string{}
 
 	// TODO maybe instead of doing this put everything in a map (set) and then
+
 	// generate the replacements? IDK.
 	firstPass := true
 	for _, osName := range config.GetOS() {
