@@ -150,6 +150,6 @@ func getLatestVersion(b *config.Binary) (*updateInfo, error) {
 		return nil, nil
 	}
 	log.Debugf("Found new version %s for %s at %s", v, b.Path, u)
-	log.Infof("%s %s -> %s ", b.Path, color.YellowString(b.Version), color.GreenString(v))
+	log.Infof("%s %s -> %s (%s)", b.Path, color.YellowString(b.Version), color.GreenString(v), u)
 	return &updateInfo{v, u}, nil
 }
