@@ -23,6 +23,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/xanzy/go-gitlab v0.33.0
+	github.com/yuin/goldmark v1.2.0
 	golang.org/x/oauth2 v0.0.0-20181106182150-f42d05182288
 	golang.org/x/sys v0.0.0-20191026070338-33540a1f6037
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
