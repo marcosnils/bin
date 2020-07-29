@@ -2,10 +2,16 @@ package options
 
 import "fmt"
 
+type LiteralStringer string
+
+func (l LiteralStringer) String() string {
+	return string(l)
+}
+
 //Select prompts the user which
 //of the available options is the desired
 //through STDIN and returns the selected one
-func Select(msg string, opts []interface{}) interface{} {
+func Select(msg string, opts []fmt.Stringer) interface{} {
 	if len(opts) == 1 {
 		return opts[0]
 	}
