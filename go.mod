@@ -22,7 +22,8 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/spf13/cobra v1.0.0
-	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
+	github.com/xanzy/go-gitlab v0.33.0
+	golang.org/x/oauth2 v0.0.0-20181106182150-f42d05182288
 	golang.org/x/sys v0.0.0-20191026070338-33540a1f6037
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
 	gopkg.in/cheggaaa/pb.v2 v2.0.7 // indirect

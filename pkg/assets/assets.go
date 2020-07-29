@@ -86,7 +86,7 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 			log.Debugf("Removing %v with score %v lower than %v", matches[i].Name, matches[i].score, highestAssetScore)
 			matches = append(matches[:i], matches[i+1:]...)
 		} else {
-			log.Debugf("Keeping %v with highest score %v", matches[i].Name, matches[i].score)
+			log.Debugf("Keeping %v (URL %v) with highest score %v", matches[i].Name, matches[i].URL, matches[i].score)
 		}
 	}
 
