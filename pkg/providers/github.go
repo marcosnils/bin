@@ -180,8 +180,6 @@ func sanitizeName(name, version string) string {
 	// generate the replacements? IDK.
 	firstPass := true
 	for _, osName := range config.GetOS() {
-		replacements = append(replacements, "_"+osName, "")
-		replacements = append(replacements, "-"+osName, "")
 		for _, archName := range config.GetArch() {
 			replacements = append(replacements, "_"+osName+archName, "")
 			replacements = append(replacements, "-"+osName+archName, "")
@@ -191,6 +189,10 @@ func sanitizeName(name, version string) string {
 				replacements = append(replacements, "-"+archName, "")
 			}
 		}
+
+		replacements = append(replacements, "_"+osName, "")
+		replacements = append(replacements, "-"+osName, "")
+
 		firstPass = false
 
 	}
