@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -16,7 +17,7 @@ import (
 func getDefaultPath() string {
 	penv := os.Getenv("PATH")
 	log.Debugf("User PATH is [%s]", penv)
-	opts := []interface{}{}
+	opts := []fmt.Stringer{}
 	for _, p := range strings.Split(penv, ";") {
 		log.Debugf("Checking path %s", p)
 
@@ -29,7 +30,7 @@ func getDefaultPath() string {
 		// Check if the user bit is enabled in file permission
 		if info.Mode().Perm()&(1<<(uint(7))) != 0 {
 			log.Debugf("%s seems to be a dir and writable, adding option.", p)
-			opts = append(opts, p)
+			opts = append(opts, options.LiteralStringer(p))
 		}
 
 	}
