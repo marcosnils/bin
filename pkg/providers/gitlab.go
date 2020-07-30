@@ -16,6 +16,9 @@ import (
 	"github.com/h2non/filetype/matchers"
 	"github.com/marcosnils/bin/pkg/assets"
 	"github.com/xanzy/go-gitlab"
+	"github.com/yuin/goldmark"
+	goldast "github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/text"
 )
 
 type gitLab struct {
@@ -68,6 +71,24 @@ func (g *gitLab) Fetch() (*File, error) {
 	for _, link := range release.Assets.Links {
 		candidates = append(candidates, &assets.Asset{Name: link.Name, URL: link.URL})
 	}
+
+	node := goldmark.DefaultParser().Parse(text.NewReader([]byte(release.Description)))
+	walker := func(n goldast.Node, entering bool) (goldast.WalkStatus, error) {
+		if !entering {
+			return goldast.WalkContinue, nil
+		}
+		if n.Type() == goldast.TypeInline && n.Kind() == goldast.KindLink {
+			link := n.(*goldast.Link)
+			name := string(link.Title)
+			url := string(link.Destination)
+			candidates = append(candidates, &assets.Asset{Name: name, URL: url})
+		}
+		return goldast.WalkContinue, nil
+	}
+	if err := goldast.Walk(node, walker); err != nil {
+		return nil, err
+	}
+
 	gf, err := assets.FilterAssets(g.repo, candidates)
 
 	if err != nil {
