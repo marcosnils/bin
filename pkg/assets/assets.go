@@ -16,6 +16,7 @@ import (
 	"github.com/h2non/filetype"
 	"github.com/h2non/filetype/matchers"
 	"github.com/h2non/filetype/types"
+	"github.com/krolaw/zipstream"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/options"
 	bstrings "github.com/marcosnils/bin/pkg/strings"
@@ -213,12 +214,49 @@ func ProcessTarGz(r io.Reader) (string, io.Reader, error) {
 
 }
 
+func ProcessZip(r io.Reader) (string, io.Reader, error) {
+
+	zr := zipstream.NewReader(r)
+
+	zipFiles := map[string][]byte{}
+	for {
+		header, err := zr.Next()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return "", nil, err
+		}
+
+		bs, err := ioutil.ReadAll(zr)
+		if err != nil {
+			return "", nil, err
+		}
+
+		zipFiles[header.Name] = bs
+	}
+	if len(zipFiles) == 0 {
+		return "", nil, errors.New("No files found in zip archive")
+	}
+
+	generic := make([]fmt.Stringer, 0)
+	for f := range zipFiles {
+		generic = append(generic, options.LiteralStringer(f))
+	}
+	selectedFile := options.Select("Select file to download:", generic).(fmt.Stringer).String()
+
+	fr := bytes.NewReader(zipFiles[selectedFile])
+
+	// return base of selected file since tar
+	// files usually have folders inside
+	return filepath.Base(selectedFile), fr, nil
+}
+
 // isSupportedExt checks if this provider supports
 // dealing with this specific file extension
 func isSupportedExt(filename string) bool {
 	if ext := strings.TrimPrefix(filepath.Ext(filename), "."); len(ext) > 0 {
 		switch filetype.GetType(ext) {
-		case matchers.TypeGz, types.Unknown:
+		case matchers.TypeGz, types.Unknown, matchers.TypeZip:
 			break
 		default:
 			return false

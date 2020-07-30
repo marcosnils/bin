@@ -9,6 +9,7 @@ require (
 	github.com/apex/log v1.1.4
 	github.com/cheggaaa/pb v2.0.7+incompatible
 	github.com/containerd/containerd v1.3.6 // indirect
+	github.com/coreos/go-semver v0.2.0
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200618181300-9dc6525e6118+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -17,6 +18,7 @@ require (
 	github.com/google/go-github/v31 v31.0.0
 	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/h2non/filetype v1.1.0
+	github.com/krolaw/zipstream v0.0.0-20180621105154-0a2661891f94
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
@@ -24,6 +26,7 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/xanzy/go-gitlab v0.33.0
 	github.com/yuin/goldmark v1.2.0
+	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
 	golang.org/x/oauth2 v0.0.0-20181106182150-f42d05182288
 	golang.org/x/sys v0.0.0-20191026070338-33540a1f6037
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
