@@ -81,5 +81,5 @@ func parseImage(imageURL string) (string, string, error) {
 		image = "library/" + image
 	}
 
-	return fmt.Sprintf("docker.io/%s", image), tag, nil
+	return fmt.Sprintf("%s", image), tag, nil
 }
