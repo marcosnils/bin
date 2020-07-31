@@ -17,6 +17,7 @@ import (
 	"github.com/h2non/filetype"
 	"github.com/h2non/filetype/matchers"
 	"github.com/marcosnils/bin/pkg/assets"
+	"github.com/marcosnils/bin/pkg/options"
 )
 
 const (
@@ -24,63 +25,26 @@ const (
 )
 
 type hashiCorp struct {
-	url    *url.URL
-	client *http.Client
-	owner  string
-	repo   string
-	tag    string
+	url     *url.URL
+	client  *http.Client
+	owner   string
+	repo    string
+	tag     string
+	baseURL *url.URL
 }
 
-type hashiCorpFileInfo struct {
-	url, name string
-	score     int
-}
-
-type hashiCorpRelease struct {
-	Name             string           `json:"name"`
-	Version          string           `json:"version"`
-	Shasums          string           `json:"shasums"`
-	ShasumsSignature string           `json:"shasums_signature"`
-	Builds           []hashiCorpBuild `json:"builds"`
-}
-
-type hashiCorpRepo struct {
-	Name     string                      `json:"name"`
-	Versions map[string]hashiCorpVersion `json:"versions"`
-}
-
-type hashiCorpVersion struct {
-	Name             string           `json:"name"`
-	Version          string           `json:"version"`
-	Shasums          string           `json:"shasums"`
-	ShasumsSignature string           `json:"shasums_signature"`
-	Builds           []hashiCorpBuild `json:"builds"`
-}
-
-type hashiCorpBuild struct {
-	Name     string `json:"name"`
-	Version  string `json:"version"`
-	OS       string `json:"os"`
-	Arch     string `json:"arch"`
-	Filename string `json:"filename"`
-	URL      string `json:"url"`
-}
-
-func (g *hashiCorpFileInfo) String() string {
-	return g.name
-}
-
-func buildHashiCorpAPIURL(args ...string) string {
-	baseURL, _ := url.Parse(releasesURLBase)
+func (g *hashiCorp) buildHashiCorpAPIURL(args ...string) string {
+	apiURL := &url.URL{}
+	*apiURL = *g.baseURL
 
 	args = append(args, "index.json")
-	baseURL.Path = path.Join(args...)
+	apiURL.Path = path.Join(args...)
 
-	return baseURL.String()
+	return apiURL.String()
 }
 
 func (g *hashiCorp) getRelease(repoName, version string) (*hashiCorpRelease, error) {
-	releaseURL := buildHashiCorpAPIURL(repoName, version)
+	releaseURL := g.buildHashiCorpAPIURL(repoName, version)
 	resp, err := g.client.Get(releaseURL)
 	if err != nil {
 		return nil, err
@@ -94,7 +58,7 @@ func (g *hashiCorp) getRelease(repoName, version string) (*hashiCorpRelease, err
 }
 
 func (g *hashiCorp) listReleases(repoName string) (*hashiCorpRepo, error) {
-	repoURL := buildHashiCorpAPIURL(repoName)
+	repoURL := g.buildHashiCorpAPIURL(repoName)
 	resp, err := g.client.Get(repoURL)
 	if err != nil {
 		return nil, err
@@ -107,37 +71,30 @@ func (g *hashiCorp) listReleases(repoName string) (*hashiCorpRepo, error) {
 	return &repo, nil
 }
 
+type hashiCorpFileInfo struct {
+	url, name string
+	score     int
+}
+
+func (g *hashiCorpFileInfo) String() string {
+	return g.name
+}
+
 func (g *hashiCorp) Fetch() (*File, error) {
 
 	var release *hashiCorpRelease
 
 	// If we have a tag, let's fetch from there
 	var err error
-	projectPath := fmt.Sprintf("%s/%s", g.owner, g.repo)
 	if len(g.tag) > 0 {
-		log.Infof("Getting %s release for %s/%s", g.tag, g.owner, g.repo)
-		release, err = g.getRelease(projectPath, g.tag)
+		log.Infof("Getting %s release for %s", g.tag, g.repo)
+		release, err = g.getRelease(g.repo, g.tag)
 	} else {
-		//TODO handle case when repo doesn't have releases?
-		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
-		releases, err := g.listReleases(projectPath)
+		version, _, err := g.GetLatestVersion()
 		if err != nil {
 			return nil, err
 		}
-		if len(releases.Versions) == 0 {
-			return nil, fmt.Errorf("no releases found for %s/%s", g.owner, g.repo)
-		}
-		var svs semver.Versions
-		for _, version := range releases.Versions {
-			sv, err := semver.NewVersion(version.Version)
-			if err != nil {
-				return nil, err
-			}
-			svs = append(svs, sv)
-		}
-		sort.Sort(svs)
-		highestVersion := svs[len(svs)-1]
-		release, err = g.getRelease(projectPath, highestVersion.String())
+		release, err = g.getRelease(g.repo, version)
 	}
 
 	if err != nil {
@@ -224,14 +181,36 @@ func (g *hashiCorp) GetLatestVersion() (string, string, error) {
 		}
 		svs = append(svs, sv)
 	}
+	if len(svs) == 0 {
+		return "", "", fmt.Errorf("no semver versions found for %s", g.repo)
+	}
 	sort.Sort(svs)
 	highestVersion := svs[len(svs)-1]
+	tied := map[string]*semver.Version{}
+	for i := len(svs) - 1; i >= 0; i-- {
+		sv := svs[i]
+		if sv.Compare(*highestVersion) == 0 {
+			tied[sv.String()] = sv
+		}
+	}
+	if len(tied) > 1 {
+		tiedKeys := []string{}
+		for key := range tied {
+			tiedKeys = append(tiedKeys, key)
+		}
+		sort.Strings(tiedKeys)
+		generic := make([]fmt.Stringer, 0)
+		for _, key := range tiedKeys {
+			generic = append(generic, tied[key])
+		}
+		highestVersion = options.Select("Select file to download:", generic).(*semver.Version)
+	}
 	release, err := g.getRelease(g.repo, highestVersion.String())
 	if err != nil {
 		return "", "", err
 	}
 
-	return release.Version, buildHashiCorpAPIURL(g.repo, release.Version), nil
+	return release.Version, g.buildHashiCorpAPIURL(g.repo, release.Version), nil
 }
 
 func newHashiCorp(u *url.URL) (Provider, error) {
@@ -242,9 +221,11 @@ func newHashiCorp(u *url.URL) (Provider, error) {
 
 	// it's a specific releases URL
 	var tag string
-	if len(s) == 3 {
+	if len(s) >= 3 {
 		tag = s[2]
 	}
 
-	return &hashiCorp{url: u, client: http.DefaultClient, owner: "", repo: s[1], tag: tag}, nil
+	baseURL, _ := url.Parse(releasesURLBase)
+
+	return &hashiCorp{url: u, client: http.DefaultClient, owner: "", repo: s[1], tag: tag, baseURL: baseURL}, nil
 }
