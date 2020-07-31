@@ -45,12 +45,12 @@ type hashiCorpRelease struct {
 }
 
 type hashiCorpRepo struct {
-	Name     osName                      `json:"name"`
+	Name     string                      `json:"name"`
 	Versions map[string]hashiCorpVersion `json:"versions"`
 }
 
 type hashiCorpVersion struct {
-	Name             osName           `json:"name"`
+	Name             string           `json:"name"`
 	Version          string           `json:"version"`
 	Shasums          string           `json:"shasums"`
 	ShasumsSignature string           `json:"shasums_signature"`
@@ -60,22 +60,11 @@ type hashiCorpVersion struct {
 type hashiCorpBuild struct {
 	Name     string `json:"name"`
 	Version  string `json:"version"`
-	OS       osName `json:"os"`
+	OS       string `json:"os"`
 	Arch     string `json:"arch"`
 	Filename string `json:"filename"`
 	URL      string `json:"url"`
 }
-
-type osName string
-
-const (
-	Darwin  osName = "darwin"
-	Freebsd osName = "freebsd"
-	Linux   osName = "linux"
-	Openbsd osName = "openbsd"
-	Solaris osName = "solaris"
-	Windows osName = "windows"
-)
 
 func (g *hashiCorpFileInfo) String() string {
 	return g.name
