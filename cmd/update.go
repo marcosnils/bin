@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/apex/log"
 	"github.com/fatih/color"
@@ -81,15 +84,18 @@ func newUpdateCmd() *updateCmd {
 			//TODO will have to refactor this prompt to a separate function
 			//so it can be reused in some other places
 			fmt.Printf("\nDo you want to continue? [Y/n] ")
+			reader := bufio.NewReader(os.Stdin)
 			var response string
 
-			_, err := fmt.Scanln(&response)
+			response, err := reader.ReadString('\n')
 
 			if err != nil {
 				return fmt.Errorf("Invalid input")
 			}
 
-			if response != "Y" {
+			switch strings.ToLower(strings.TrimSpace(response)) {
+			case "y", "yes":
+			default:
 				return fmt.Errorf("Command aborted")
 			}
 
