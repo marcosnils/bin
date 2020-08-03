@@ -33,6 +33,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.6.1 // indirect
 	github.com/xanzy/go-gitlab v0.33.0
+	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	github.com/yuin/goldmark v1.2.0
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45

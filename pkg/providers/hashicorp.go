@@ -1,11 +1,9 @@
 package providers
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -14,8 +12,6 @@ import (
 
 	"github.com/apex/log"
 	"github.com/coreos/go-semver/semver"
-	"github.com/h2non/filetype"
-	"github.com/h2non/filetype/matchers"
 	"github.com/marcosnils/bin/pkg/assets"
 	"github.com/marcosnils/bin/pkg/options"
 )
@@ -112,51 +108,14 @@ func (g *hashiCorp) Fetch() (*File, error) {
 		return nil, err
 	}
 
-	// We're not closing the body here since the caller is in charge of that
-	res, err := http.Get(gf.URL)
-	log.Debugf("Checking binary from %s", gf.URL)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode > 299 || res.StatusCode < 200 {
-		return nil, fmt.Errorf("%d response when checking binary from %s", res.StatusCode, gf.URL)
-	}
-
-	var buf bytes.Buffer
-	tee := io.TeeReader(res.Body, &buf)
-
-	t, err := filetype.MatchReader(tee)
-	if err != nil {
-		return nil, err
-	}
-
-	var outputFile = io.MultiReader(&buf, res.Body)
-
-	var name = gf.Name
-
-	type processorFunc func(r io.Reader) (string, io.Reader, error)
-	var processor processorFunc
-	switch t {
-	case matchers.TypeZip:
-		processor = assets.ProcessZip
-	case matchers.TypeGz:
-		processor = assets.ProcessTarGz
-
-	}
-	if processor != nil {
-		name, outputFile, err = processor(outputFile)
-		if err != nil {
-			return nil, err
-		}
-	}
+	name, outputFile, length, err := assets.ProcessURL(gf)
 
 	version := release.Version
 
 	//TODO calculate file hash. Not sure if we can / should do it here
 	//since we don't want to read the file unnecesarily. Additionally, sometimes
 	//releases have .sha256 files, so it'd be nice to check for those also
-	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version, Length: res.ContentLength}
+	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version, Length: length}
 
 	return f, nil
 }
