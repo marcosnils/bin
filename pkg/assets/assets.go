@@ -146,9 +146,9 @@ func SanitizeName(name, version string) string {
 	return r.Replace(name)
 }
 
-// ProcessTarGz receives a tar.gz file and returns the
+// processGz receives a tar.gz file and returns the
 // correct file for bin to download
-func ProcessTarGz(r io.Reader) (string, io.Reader, error) {
+func processGz(r io.Reader) (string, io.Reader, error) {
 	// We're caching the whole file into memory so we can prompt
 	// the user which file they want to download
 
@@ -163,8 +163,12 @@ func ProcessTarGz(r io.Reader) (string, io.Reader, error) {
 		return "", nil, err
 	}
 
-	tr := tar.NewReader(gr)
-	tarFiles := []string{}
+	return "", gr, nil
+}
+
+func processTar(r io.Reader) (string, io.Reader, error) {
+	tr := tar.NewReader(r)
+	tarFiles := map[string][]byte{}
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -174,7 +178,11 @@ func ProcessTarGz(r io.Reader) (string, io.Reader, error) {
 		}
 
 		if header.Typeflag == tar.TypeReg {
-			tarFiles = append(tarFiles, header.Name)
+			bs, err := ioutil.ReadAll(tr)
+			if err != nil {
+				return "", nil, err
+			}
+			tarFiles[header.Name] = bs
 		}
 	}
 	if len(tarFiles) == 0 {
@@ -182,41 +190,16 @@ func ProcessTarGz(r io.Reader) (string, io.Reader, error) {
 	}
 
 	generic := make([]fmt.Stringer, 0)
-	for _, f := range tarFiles {
+	for f := range tarFiles {
 		generic = append(generic, options.LiteralStringer(f))
 	}
 	selectedFile := options.Select("Select file to download:", generic).(fmt.Stringer).String()
 
-	// Reset readers so we can scan the tar file
-	// again to get the correct file reader
-	br.Seek(0, io.SeekStart)
-	gr, err = gzip.NewReader(br)
-	if err != nil {
-		return "", nil, err
-	}
-	tr = tar.NewReader(gr)
-
-	var fr io.Reader
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return "", nil, err
-		}
-
-		if header.Name == selectedFile {
-			fr = tr
-			break
-		}
-	}
-	// return base of selected file since tar
-	// files usually have folders inside
-	return filepath.Base(selectedFile), fr, nil
-
+	tf := tarFiles[selectedFile]
+	return filepath.Base(selectedFile), bytes.NewReader(tf), nil
 }
 
-func ProcessZip(r io.Reader) (string, io.Reader, error) {
+func processZip(r io.Reader) (string, io.Reader, error) {
 
 	zr := zipstream.NewReader(r)
 
@@ -244,7 +227,7 @@ func ProcessZip(r io.Reader) (string, io.Reader, error) {
 	for f := range zipFiles {
 		generic = append(generic, options.LiteralStringer(f))
 	}
-	selectedFile := options.Select("Select file to download:", generic).(fmt.Stringer).String()
+	selectedFile := options.Select("Select file to extract:", generic).(fmt.Stringer).String()
 
 	fr := bytes.NewReader(zipFiles[selectedFile])
 
@@ -253,7 +236,7 @@ func ProcessZip(r io.Reader) (string, io.Reader, error) {
 	return filepath.Base(selectedFile), fr, nil
 }
 
-func ProcessTarXz(r io.Reader) (string, io.Reader, error) {
+func processXz(r io.Reader) (string, io.Reader, error) {
 
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
@@ -266,58 +249,10 @@ func ProcessTarXz(r io.Reader) (string, io.Reader, error) {
 		return "", nil, err
 	}
 
-	tr := tar.NewReader(xr)
-	tarFiles := []string{}
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return "", nil, err
-		}
-
-		if header.Typeflag == tar.TypeReg {
-			tarFiles = append(tarFiles, header.Name)
-		}
-	}
-	if len(tarFiles) == 0 {
-		return "", nil, errors.New("No files found in tar archive")
-	}
-
-	generic := make([]fmt.Stringer, 0)
-	for _, f := range tarFiles {
-		generic = append(generic, options.LiteralStringer(f))
-	}
-	selectedFile := options.Select("Select file to download:", generic).(fmt.Stringer).String()
-
-	// Reset readers so we can scan the tar file
-	// again to get the correct file reader
-	br.Seek(0, io.SeekStart)
-	xr, err = xz.NewReader(br, 0)
-	if err != nil {
-		return "", nil, err
-	}
-	tr = tar.NewReader(xr)
-
-	var fr io.Reader
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return "", nil, err
-		}
-
-		if header.Name == selectedFile {
-			fr = tr
-			break
-		}
-	}
-	// return base of selected file since tar
-	// files usually have folders inside
-	return filepath.Base(selectedFile), fr, nil
+	return "", xr, nil
 }
 
+// ProcessURL processes a FilteredAsset by uncompressing/unarchiving the URL of the asset.
 func ProcessURL(gf *FilteredAsset) (string, io.Reader, int64, error) {
 	// We're not closing the body here since the caller is in charge of that
 	res, err := http.Get(gf.URL)
@@ -330,14 +265,14 @@ func ProcessURL(gf *FilteredAsset) (string, io.Reader, int64, error) {
 		return "", nil, 0, fmt.Errorf("%d response when checking binary from %s", res.StatusCode, gf.URL)
 	}
 
-	name, outputFile, err := ProcessReader(gf.Name, res.Body)
+	name, outputFile, err := processReader(gf.Name, res.Body)
 	if err != nil {
 		return "", nil, 0, err
 	}
 	return name, outputFile, res.ContentLength, err
 }
 
-func ProcessReader(name string, r io.Reader) (string, io.Reader, error) {
+func processReader(name string, r io.Reader) (string, io.Reader, error) {
 	var buf bytes.Buffer
 	tee := io.TeeReader(r, &buf)
 
@@ -352,18 +287,21 @@ func ProcessReader(name string, r io.Reader) (string, io.Reader, error) {
 	var processor processorFunc
 	switch t {
 	case matchers.TypeZip:
-		processor = ProcessZip
+		processor = processZip
 	case matchers.TypeGz:
-		processor = ProcessTarGz
+		processor = processGz
 	case matchers.TypeXz:
-		processor = ProcessTarXz
+		processor = processXz
+	case matchers.TypeTar:
+		processor = processTar
 	}
 	if processor != nil {
 		name, outputFile, err = processor(outputFile)
 		if err != nil {
 			return "", nil, err
 		}
-		return ProcessReader(name, outputFile)
+		// In case of e.g. a .tar.gz, process the uncompressed archive by calling recursively
+		return processReader(name, outputFile)
 	}
 
 	return name, outputFile, err
@@ -374,7 +312,7 @@ func ProcessReader(name string, r io.Reader) (string, io.Reader, error) {
 func isSupportedExt(filename string) bool {
 	if ext := strings.TrimPrefix(filepath.Ext(filename), "."); len(ext) > 0 {
 		switch filetype.GetType(ext) {
-		case matchers.TypeGz, types.Unknown, matchers.TypeZip, matchers.TypeXz:
+		case matchers.TypeGz, types.Unknown, matchers.TypeZip, matchers.TypeXz, matchers.TypeTar:
 			break
 		default:
 			return false
