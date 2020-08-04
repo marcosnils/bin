@@ -44,9 +44,15 @@ func CheckAndLoad() error {
 	defer f.Close()
 
 	err = json.NewDecoder(f).Decode(&cfg)
+	if err != nil {
+		return err
+	}
 
 	if len(cfg.DefaultPath) == 0 {
-		cfg.DefaultPath = getDefaultPath()
+		cfg.DefaultPath, err = getDefaultPath()
+		if err != nil {
+			return err
+		}
 	}
 	log.Debugf("Download path set to %s", cfg.DefaultPath)
 	// ignore if file is empty

@@ -101,7 +101,11 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 		for _, f := range matches {
 			generic = append(generic, f)
 		}
-		gf = options.Select("Multiple matches found, please select one:", generic).(*FilteredAsset)
+		choice, err := options.Select("Multiple matches found, please select one:", generic)
+		if err != nil {
+			return nil, err
+		}
+		gf = choice.(*FilteredAsset)
 		//TODO make user select the proper file
 	} else {
 		gf = matches[0]
@@ -124,15 +128,18 @@ func SanitizeName(name, version string) string {
 		for _, archName := range config.GetArch() {
 			replacements = append(replacements, "_"+osName+archName, "")
 			replacements = append(replacements, "-"+osName+archName, "")
+			replacements = append(replacements, "."+osName+archName, "")
 
 			if firstPass {
 				replacements = append(replacements, "_"+archName, "")
 				replacements = append(replacements, "-"+archName, "")
+				replacements = append(replacements, "."+archName, "")
 			}
 		}
 
 		replacements = append(replacements, "_"+osName, "")
 		replacements = append(replacements, "-"+osName, "")
+		replacements = append(replacements, "."+osName, "")
 
 		firstPass = false
 
@@ -193,7 +200,11 @@ func processTar(r io.Reader) (string, io.Reader, error) {
 	for f := range tarFiles {
 		generic = append(generic, options.LiteralStringer(f))
 	}
-	selectedFile := options.Select("Select file to download:", generic).(fmt.Stringer).String()
+	choice, err := options.Select("Select file to download:", generic)
+	if err != nil {
+		return "", nil, err
+	}
+	selectedFile := choice.(fmt.Stringer).String()
 
 	tf := tarFiles[selectedFile]
 	return filepath.Base(selectedFile), bytes.NewReader(tf), nil
@@ -227,7 +238,11 @@ func processZip(r io.Reader) (string, io.Reader, error) {
 	for f := range zipFiles {
 		generic = append(generic, options.LiteralStringer(f))
 	}
-	selectedFile := options.Select("Select file to extract:", generic).(fmt.Stringer).String()
+	choice, err := options.Select("Select file to extract:", generic)
+	if err != nil {
+		return "", nil, err
+	}
+	selectedFile := choice.(fmt.Stringer).String()
 
 	fr := bytes.NewReader(zipFiles[selectedFile])
 

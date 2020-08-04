@@ -162,7 +162,11 @@ func (g *hashiCorp) GetLatestVersion() (string, string, error) {
 		for _, key := range tiedKeys {
 			generic = append(generic, tied[key])
 		}
-		highestVersion = options.Select("Select file to download:", generic).(*semver.Version)
+		choice, err := options.Select("Select file to download:", generic)
+		if err != nil {
+			return "", "", err
+		}
+		highestVersion = choice.(*semver.Version)
 	}
 	release, err := g.getRelease(g.repo, highestVersion.String())
 	if err != nil {
