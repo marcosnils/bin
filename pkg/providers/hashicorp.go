@@ -138,7 +138,9 @@ func (g *hashiCorp) GetLatestVersion() (string, string, error) {
 		if err != nil {
 			return "", "", err
 		}
-		svs = append(svs, sv)
+		if sv.PreRelease == "" && sv.Metadata == "" {
+			svs = append(svs, sv)
+		}
 	}
 	if len(svs) == 0 {
 		return "", "", fmt.Errorf("no semver versions found for %s", g.repo)
