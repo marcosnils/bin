@@ -19,6 +19,7 @@ type installCmd struct {
 }
 
 type installOpts struct {
+	force bool
 }
 
 func newInstallCmd() *installCmd {
@@ -76,8 +77,9 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
-			if err = saveToDisk(pResult, path, false); err != nil {
-				return fmt.Errorf("Error installing binary %w", err)
+			force, _ := cmd.LocalFlags().GetBool("force")
+			if err = saveToDisk(pResult, path, force); err != nil {
+				return fmt.Errorf("Error installing binary: %w", err)
 			}
 
 			err = config.UpsertBinary(&config.Binary{
@@ -99,6 +101,7 @@ func newInstallCmd() *installCmd {
 	}
 
 	root.cmd = cmd
+	root.cmd.Flags().BoolVarP(&root.opts.force, "force", "f", false, "Force the installation even if the file already exists")
 	return root
 }
 
