@@ -43,9 +43,13 @@ func CheckAndLoad() error {
 
 	defer f.Close()
 
-	err = json.NewDecoder(f).Decode(&cfg)
-	if err != nil {
-		return err
+	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
+		if err == io.EOF {
+			// Empty file and/or was just created, initialize cfg.Bins
+			cfg.Bins = map[string]*Binary{}
+		} else {
+			return err
+		}
 	}
 
 	if len(cfg.DefaultPath) == 0 {
@@ -53,20 +57,12 @@ func CheckAndLoad() error {
 		if err != nil {
 			return err
 		}
+		f.Close()
+		if err := write(); err != nil {
+			return err
+		}
 	}
 	log.Debugf("Download path set to %s", cfg.DefaultPath)
-	// ignore if file is empty
-	if err != nil && err != io.EOF {
-		return err
-	} else if err == io.EOF {
-		// Config file doesn't exist. Initialize it
-		cfg.Bins = map[string]*Binary{}
-		f.Close()
-		if werr := write(); werr != nil {
-			return werr
-		}
-
-	}
 
 	return nil
 
@@ -108,7 +104,9 @@ func write() error {
 		return err
 	}
 
-	err = json.NewEncoder(f).Encode(cfg)
+	decoder := json.NewEncoder(f)
+	decoder.SetIndent("", "    ")
+	err = decoder.Encode(cfg)
 
 	if err != nil {
 		return err
