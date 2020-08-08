@@ -35,6 +35,6 @@ func getDefaultPath() string {
 
 	}
 
-	return options.Select("Pick a default download dir: ", opts).(string)
+	return options.Select("Pick a default download dir: ", opts).(options.LiteralStringer).String()
 
 }
