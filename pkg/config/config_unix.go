@@ -17,7 +17,7 @@ import (
 //user in the system
 //TODO add feature to prompt the user which to select
 //if many paths are found
-func getDefaultPath() string {
+func getDefaultPath() options.LiteralStringer {
 	penv := os.Getenv("PATH")
 	log.Debugf("User PATH is [%s]", penv)
 	opts := []fmt.Stringer{}
@@ -37,6 +37,6 @@ func getDefaultPath() string {
 
 	}
 
-	return options.Select("Pick a default download dir: ", opts).(string)
+	return options.Select("Pick a default download dir: ", opts).(options.LiteralStringer)
 
 }
