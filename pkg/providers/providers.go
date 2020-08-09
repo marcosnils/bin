@@ -56,5 +56,9 @@ func New(u string) (Provider, error) {
 		return newGitLab(purl)
 	}
 
+	if strings.Contains(purl.Host, "releases.hashicorp.com") {
+		return newHashiCorp(purl)
+	}
+
 	return nil, fmt.Errorf("Can't find provider for url %s", u)
 }

@@ -1,11 +1,9 @@
 package providers
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,8 +11,6 @@ import (
 
 	"github.com/apex/log"
 	"github.com/google/go-github/v31/github"
-	"github.com/h2non/filetype"
-	"github.com/h2non/filetype/matchers"
 	"github.com/marcosnils/bin/pkg/assets"
 	"golang.org/x/oauth2"
 )
@@ -58,51 +54,14 @@ func (g *gitHub) Fetch() (*File, error) {
 		return nil, err
 	}
 
-	// We're not closing the body here since the caller is in charge of that
-	res, err := http.Get(gf.URL)
-	log.Debugf("Checking binary from %s", gf.URL)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode > 299 || res.StatusCode < 200 {
-		return nil, fmt.Errorf("%d response when checking binary from %s", res.StatusCode, gf.URL)
-	}
-
-	var buf bytes.Buffer
-	tee := io.TeeReader(res.Body, &buf)
-
-	t, err := filetype.MatchReader(tee)
-	if err != nil {
-		return nil, err
-	}
-
-	var outputFile = io.MultiReader(&buf, res.Body)
-
-	// TODO: validating the type of the file will eventually be
-	// handled by each provider since it's impossible to make it generic enough
-	// if t != matchers.TypeElf && t != matchers.TypeGz {
-	// 	return fmt.Errorf("File type [%v] not supported", t)
-	// }
-
-	var name = gf.Name
-
-	if t == matchers.TypeGz {
-		fileName, file, err := assets.ProcessTarGz(outputFile)
-		if err != nil {
-			return nil, err
-		}
-		outputFile = file
-		name = fileName
-
-	}
+	name, outputFile, length, err := assets.ProcessURL(gf)
 
 	version := release.GetTagName()
 
 	//TODO calculate file hash. Not sure if we can / should do it here
 	//since we don't want to read the file unnecesarily. Additionally, sometimes
 	//releases have .sha256 files, so it'd be nice to check for those also
-	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version, Length: res.ContentLength}
+	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version, Length: length}
 
 	return f, nil
 }
