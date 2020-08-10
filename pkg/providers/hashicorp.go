@@ -108,14 +108,17 @@ func (g *hashiCorp) Fetch() (*File, error) {
 		return nil, err
 	}
 
-	name, outputFile, length, err := assets.ProcessURL(gf)
+	name, outputFile, err := assets.ProcessURL(gf)
+	if err != nil {
+		return nil, err
+	}
 
 	version := release.Version
 
 	//TODO calculate file hash. Not sure if we can / should do it here
 	//since we don't want to read the file unnecesarily. Additionally, sometimes
 	//releases have .sha256 files, so it'd be nice to check for those also
-	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version, Length: length}
+	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version}
 
 	return f, nil
 }
