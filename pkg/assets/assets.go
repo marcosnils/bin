@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/apex/log"
+	"github.com/cheggaaa/pb"
 	"github.com/h2non/filetype"
 	"github.com/h2non/filetype/matchers"
 	"github.com/h2non/filetype/types"
@@ -29,13 +30,16 @@ type Asset struct {
 	URL  string
 }
 
+func (g Asset) String() string { return g.Name }
+
 type FilteredAsset struct {
-	Name  string
-	URL   string
-	score int
+	RepoName string
+	Name     string
+	URL      string
+	score    int
 }
 
-func (g *FilteredAsset) String() string { return g.Name }
+func (g FilteredAsset) String() string { return g.Name }
 
 // FilterAssets receives a slice of GL assets and tries to
 // select the proper one and ask the user to manually select one
@@ -59,7 +63,7 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 		lowerURLPathBasename := path.Base(strings.ToLower(a.URL))
 		filetype.GetType(lowerName)
 		highestScoreForAsset := 0
-		gf := &FilteredAsset{Name: a.Name, URL: a.URL, score: 0}
+		gf := &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0}
 		for _, candidate := range []string{lowerName, lowerURLPathBasename} {
 			if bstrings.ContainsAny(candidate, scoreKeys) &&
 				isSupportedExt(candidate) {
@@ -153,27 +157,83 @@ func SanitizeName(name, version string) string {
 	return r.Replace(name)
 }
 
-// processGz receives a tar.gz file and returns the
-// correct file for bin to download
-func processGz(r io.Reader) (string, io.Reader, error) {
+// ProcessURL processes a FilteredAsset by uncompressing/unarchiving the URL of the asset.
+func ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
+	// We're not closing the body here since the caller is in charge of that
+	res, err := http.Get(gf.URL)
+	log.Debugf("Checking binary from %s", gf.URL)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if res.StatusCode > 299 || res.StatusCode < 200 {
+		return "", nil, fmt.Errorf("%d response when checking binary from %s", res.StatusCode, gf.URL)
+	}
+
 	// We're caching the whole file into memory so we can prompt
 	// the user which file they want to download
 
-	b, err := ioutil.ReadAll(r)
+	log.Infof("Starting download of %s", gf.URL)
+	bar := pb.Full.Start64(res.ContentLength)
+	barReader := bar.NewProxyReader(res.Body)
+	defer bar.Finish()
+	buf := new(bytes.Buffer)
+	io.Copy(buf, barReader)
 	if err != nil {
 		return "", nil, err
 	}
-	br := bytes.NewReader(b)
-
-	gr, err := gzip.NewReader(br)
-	if err != nil {
-		return "", nil, err
-	}
-
-	return "", gr, nil
+	bar.Finish()
+	return processReader(gf.RepoName, gf.Name, buf)
 }
 
-func processTar(r io.Reader) (string, io.Reader, error) {
+func processReader(repoName string, name string, r io.Reader) (string, io.Reader, error) {
+	var buf bytes.Buffer
+	tee := io.TeeReader(r, &buf)
+
+	t, err := filetype.MatchReader(tee)
+	if err != nil {
+		return "", nil, err
+	}
+
+	var outputFile = io.MultiReader(&buf, r)
+
+	type processorFunc func(repoName string, r io.Reader) (string, io.Reader, error)
+	var processor processorFunc
+	switch t {
+	case matchers.TypeGz:
+		processor = processGz
+	case matchers.TypeTar:
+		processor = processTar
+	case matchers.TypeXz:
+		processor = processXz
+	case matchers.TypeZip:
+		processor = processZip
+	}
+	if processor != nil {
+		// log.Debugf("Processing %s file %s with %s", repoName, name, runtime.FuncForPC(reflect.ValueOf(processor).Pointer()).Name())
+		name, outputFile, err = processor(repoName, outputFile)
+		if err != nil {
+			return "", nil, err
+		}
+		// In case of e.g. a .tar.gz, process the uncompressed archive by calling recursively
+		return processReader(repoName, name, outputFile)
+	}
+
+	return name, outputFile, err
+}
+
+// processGz receives a tar.gz file and returns the
+// correct file for bin to download
+func processGz(name string, r io.Reader) (string, io.Reader, error) {
+	gr, err := gzip.NewReader(r)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return gr.Name, gr, nil
+}
+
+func processTar(name string, r io.Reader) (string, io.Reader, error) {
 	tr := tar.NewReader(r)
 	tarFiles := map[string][]byte{}
 	for {
@@ -196,22 +256,30 @@ func processTar(r io.Reader) (string, io.Reader, error) {
 		return "", nil, errors.New("No files found in tar archive")
 	}
 
-	generic := make([]fmt.Stringer, 0)
+	as := make([]*Asset, 0)
 	for f := range tarFiles {
-		generic = append(generic, options.LiteralStringer(f))
+		as = append(as, &Asset{Name: f, URL: ""})
 	}
-	choice, err := options.Select("Select file to download:", generic)
+	choice, err := FilterAssets(name, as)
 	if err != nil {
 		return "", nil, err
 	}
-	selectedFile := choice.(fmt.Stringer).String()
+	selectedFile := choice.String()
 
 	tf := tarFiles[selectedFile]
 	return filepath.Base(selectedFile), bytes.NewReader(tf), nil
 }
 
-func processZip(r io.Reader) (string, io.Reader, error) {
+func processXz(name string, r io.Reader) (string, io.Reader, error) {
+	xr, err := xz.NewReader(r, 0)
+	if err != nil {
+		return "", nil, err
+	}
 
+	return "", xr, nil
+}
+
+func processZip(name string, r io.Reader) (string, io.Reader, error) {
 	zr := zipstream.NewReader(r)
 
 	zipFiles := map[string][]byte{}
@@ -249,77 +317,6 @@ func processZip(r io.Reader) (string, io.Reader, error) {
 	// return base of selected file since tar
 	// files usually have folders inside
 	return filepath.Base(selectedFile), fr, nil
-}
-
-func processXz(r io.Reader) (string, io.Reader, error) {
-
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return "", nil, err
-	}
-	br := bytes.NewReader(b)
-
-	xr, err := xz.NewReader(br, 0)
-	if err != nil {
-		return "", nil, err
-	}
-
-	return "", xr, nil
-}
-
-// ProcessURL processes a FilteredAsset by uncompressing/unarchiving the URL of the asset.
-func ProcessURL(gf *FilteredAsset) (string, io.Reader, int64, error) {
-	// We're not closing the body here since the caller is in charge of that
-	res, err := http.Get(gf.URL)
-	log.Debugf("Checking binary from %s", gf.URL)
-	if err != nil {
-		return "", nil, 0, err
-	}
-
-	if res.StatusCode > 299 || res.StatusCode < 200 {
-		return "", nil, 0, fmt.Errorf("%d response when checking binary from %s", res.StatusCode, gf.URL)
-	}
-
-	name, outputFile, err := processReader(gf.Name, res.Body)
-	if err != nil {
-		return "", nil, 0, err
-	}
-	return name, outputFile, res.ContentLength, err
-}
-
-func processReader(name string, r io.Reader) (string, io.Reader, error) {
-	var buf bytes.Buffer
-	tee := io.TeeReader(r, &buf)
-
-	t, err := filetype.MatchReader(tee)
-	if err != nil {
-		return "", nil, err
-	}
-
-	var outputFile = io.MultiReader(&buf, r)
-
-	type processorFunc func(r io.Reader) (string, io.Reader, error)
-	var processor processorFunc
-	switch t {
-	case matchers.TypeZip:
-		processor = processZip
-	case matchers.TypeGz:
-		processor = processGz
-	case matchers.TypeXz:
-		processor = processXz
-	case matchers.TypeTar:
-		processor = processTar
-	}
-	if processor != nil {
-		name, outputFile, err = processor(outputFile)
-		if err != nil {
-			return "", nil, err
-		}
-		// In case of e.g. a .tar.gz, process the uncompressed archive by calling recursively
-		return processReader(name, outputFile)
-	}
-
-	return name, outputFile, err
 }
 
 // isSupportedExt checks if this provider supports
