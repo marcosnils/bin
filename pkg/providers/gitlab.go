@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/apex/log"
+	"github.com/coreos/go-semver/semver"
 	"github.com/marcosnils/bin/pkg/assets"
 	"github.com/xanzy/go-gitlab"
 	"github.com/yuin/goldmark"
@@ -46,16 +48,11 @@ func (g *gitLab) Fetch() (*File, error) {
 	} else {
 		//TODO handle case when repo doesn't have releases?
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
-		releases, _, err := g.client.Releases.ListReleases(projectPath, &gitlab.ListReleasesOptions{
-			PerPage: 1,
-		})
+		name, _, err := g.GetLatestVersion()
 		if err != nil {
 			return nil, err
 		}
-		if len(releases) == 0 {
-			return nil, fmt.Errorf("no releases found for %s/%s", g.owner, g.repo)
-		}
-		release, _, err = g.client.Releases.GetRelease(projectPath, releases[0].TagName, gitlab.WithContext(context.TODO()))
+		release, _, err = g.client.Releases.GetRelease(projectPath, name, gitlab.WithContext(context.TODO()))
 	}
 
 	if err != nil {
@@ -75,8 +72,8 @@ func (g *gitLab) Fetch() (*File, error) {
 		if n.Type() == goldast.TypeInline && n.Kind() == goldast.KindLink {
 			link := n.(*goldast.Link)
 			name := string(link.Title)
-			url := string(link.Destination)
-			candidates = append(candidates, &assets.Asset{Name: name, URL: url})
+			assetURL := string(link.Destination)
+			candidates = append(candidates, &assets.Asset{Name: name, URL: assetURL})
 		}
 		return goldast.WalkContinue, nil
 	}
@@ -110,18 +107,41 @@ func (g *gitLab) Fetch() (*File, error) {
 func (g *gitLab) GetLatestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
 	projectPath := fmt.Sprintf("%s/%s", g.owner, g.repo)
+
 	releases, _, err := g.client.Releases.ListReleases(projectPath, &gitlab.ListReleasesOptions{
-		PerPage: 1,
+		PerPage: 100,
 	})
 	if err != nil {
 		return "", "", err
 	}
-	release, _, err := g.client.Releases.GetRelease(projectPath, releases[0].TagName)
-	if err != nil {
-		return "", "", err
+	if len(releases) == 0 {
+		return "", "", fmt.Errorf("no releases found for %s/%s", g.owner, g.repo)
+	}
+	highestTagName := releases[0].TagName
+	var svs semver.Versions
+	svToTagName := map[string]string{}
+	tagNameToRelease := map[string]*gitlab.Release{}
+	for _, release := range releases {
+		tagName := release.TagName
+		if strings.HasPrefix(tagName, "v") {
+			tagName = strings.TrimPrefix(tagName, "v")
+		}
+		sv, err := semver.NewVersion(tagName)
+		if err != nil {
+			continue
+		}
+		if sv.PreRelease == "" && sv.Metadata == "" {
+			svs = append(svs, sv)
+			svToTagName[sv.String()] = release.TagName
+			tagNameToRelease[release.TagName] = release
+		}
+	}
+	if len(svs) > 0 {
+		sort.Sort(svs)
+		highestTagName = svToTagName[svs[len(svs)-1].String()]
 	}
 
-	return release.TagName, release.Commit.WebURL, nil
+	return highestTagName, tagNameToRelease[highestTagName].Commit.WebURL, nil
 }
 
 func newGitLab(u *url.URL) (Provider, error) {
