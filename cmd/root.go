@@ -27,7 +27,7 @@ func (cmd *rootCmd) Execute(args []string) {
 	cmd.cmd.SetArgs(args)
 
 	if defaultCommand(cmd.cmd, args) {
-		cmd.cmd.SetArgs(append([]string{"list"}, args...))
+		cmd.cmd.SetArgs(append([]string{"--help"}, args...))
 	}
 
 	if err := cmd.cmd.Execute(); err != nil {
