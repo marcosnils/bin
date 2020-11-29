@@ -66,3 +66,4 @@ bin purge # Removes from the DB missing binaries
 I know.. and that's not planning to change any time soon unless I start getting some contributions. I did this as a personal tool and I'll probably be fixing stuff and adding features as I personally need them. Contributions are welcome though and I'll be happy to discuss and review them. 
 
 
+
