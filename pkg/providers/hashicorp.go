@@ -139,7 +139,8 @@ func (g *hashiCorp) GetLatestVersion() (string, string, error) {
 	for _, version := range releases.Versions {
 		sv, err := semver.NewVersion(version.Version)
 		if err != nil {
-			return "", "", err
+			log.Debugf("unable to parse %q as a semantic version: %+v", version.Version, err)
+			continue
 		}
 		if sv.PreRelease == "" && sv.Metadata == "" {
 			svs = append(svs, sv)
