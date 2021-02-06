@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/apex/log"
@@ -55,8 +56,14 @@ func newUpdateCmd() *updateCmd {
 
 			// Update single binary
 			if bin != "" {
+				path, errBin := exec.LookPath(bin)
+				if errBin != nil {
+					return printBinaryNotFound(bin)
+				}
+				bin = path
+
 				if b, found := cfg.Bins[bin]; !found {
-					return fmt.Errorf("Binary path %s not found", bin)
+					return printBinaryNotFound(bin)
 
 				} else {
 					if ui, err := getLatestVersion(b); err != nil {
@@ -136,6 +143,10 @@ func newUpdateCmd() *updateCmd {
 
 	root.cmd = cmd
 	return root
+}
+
+func printBinaryNotFound(bin string) error {
+	return fmt.Errorf("Binary path %s not found", bin)
 }
 
 func getLatestVersion(b *config.Binary) (*updateInfo, error) {
