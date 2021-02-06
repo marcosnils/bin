@@ -56,14 +56,16 @@ func newUpdateCmd() *updateCmd {
 
 			// Update single binary
 			if bin != "" {
-				path, errBin := exec.LookPath(bin)
-				if errBin != nil {
-					return printBinaryNotFound(bin)
+				if !strings.Contains(bin, "/") {
+					path, errBin := exec.LookPath(bin)
+					if errBin != nil {
+						return pathBinaryNotFoundError(bin)
+					}
+					bin = path
 				}
-				bin = path
 
 				if b, found := cfg.Bins[bin]; !found {
-					return printBinaryNotFound(bin)
+					return pathBinaryNotFoundError(bin)
 
 				} else {
 					if ui, err := getLatestVersion(b); err != nil {
@@ -145,7 +147,7 @@ func newUpdateCmd() *updateCmd {
 	return root
 }
 
-func printBinaryNotFound(bin string) error {
+func pathBinaryNotFoundError(bin string) error {
 	return fmt.Errorf("Binary path %s not found", bin)
 }
 
