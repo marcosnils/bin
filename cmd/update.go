@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/apex/log"
@@ -56,16 +55,19 @@ func newUpdateCmd() *updateCmd {
 
 			// Update single binary
 			if bin != "" {
+				// If user enter a command update like this:  $ bin update yq
+				// Find path on the config file
 				if !strings.Contains(bin, "/") {
-					path, errBin := exec.LookPath(bin)
-					if errBin != nil {
-						return pathBinaryNotFoundError(bin)
+					for _, b := range cfg.Bins {
+						if b.RemoteName == bin {
+							bin = b.Path
+							break
+						}
 					}
-					bin = path
 				}
 
 				if b, found := cfg.Bins[bin]; !found {
-					return pathBinaryNotFoundError(bin)
+					return fmt.Errorf("Binary path %s not found", bin)
 
 				} else {
 					if ui, err := getLatestVersion(b); err != nil {
@@ -145,10 +147,6 @@ func newUpdateCmd() *updateCmd {
 
 	root.cmd = cmd
 	return root
-}
-
-func pathBinaryNotFoundError(bin string) error {
-	return fmt.Errorf("Binary path %s not found", bin)
 }
 
 func getLatestVersion(b *config.Binary) (*updateInfo, error) {
