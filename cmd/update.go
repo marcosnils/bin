@@ -55,6 +55,17 @@ func newUpdateCmd() *updateCmd {
 
 			// Update single binary
 			if bin != "" {
+				// If user enter a command update like this:  $ bin update yq
+				// Find path on the config file
+				if !strings.Contains(bin, "/") {
+					for _, b := range cfg.Bins {
+						if b.RemoteName == bin {
+							bin = b.Path
+							break
+						}
+					}
+				}
+
 				if b, found := cfg.Bins[bin]; !found {
 					return fmt.Errorf("Binary path %s not found", bin)
 
