@@ -104,8 +104,8 @@ func newInstallCmd() *installCmd {
 	return root
 }
 
-// getFinalPath checks if path exists and returns
-// true if it's a directory. If false, it also
+// getFinalPath checks if path exists and if it's a dir or not
+// and returns the correct final file path. It also
 // checks if the path already exists and prompts
 // the user to override
 func getFinalPath(path, fileName string) (string, error) {
