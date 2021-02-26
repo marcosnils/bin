@@ -33,10 +33,11 @@ type Asset struct {
 func (g Asset) String() string { return g.Name }
 
 type FilteredAsset struct {
-	RepoName string
-	Name     string
-	URL      string
-	score    int
+	RepoName     string
+	Name         string
+	URL          string
+	score        int
+	ExtraHeaders map[string]string
 }
 
 type platformResolver interface {
@@ -177,8 +178,15 @@ func SanitizeName(name, version string) string {
 // ProcessURL processes a FilteredAsset by uncompressing/unarchiving the URL of the asset.
 func ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
 	// We're not closing the body here since the caller is in charge of that
-	res, err := http.Get(gf.URL)
+	req, err := http.NewRequest(http.MethodGet, gf.URL, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	for name, value := range gf.ExtraHeaders {
+		req.Header.Add(name, value)
+	}
 	log.Debugf("Checking binary from %s", gf.URL)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", nil, err
 	}

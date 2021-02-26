@@ -60,31 +60,69 @@ func (g *gitLab) Fetch() (*File, error) {
 	}
 
 	candidates := []*assets.Asset{}
-	for _, link := range release.Assets.Links {
-		candidates = append(candidates, &assets.Asset{Name: link.Name, URL: link.URL})
+
+	packages, _, err := g.client.Packages.ListProjectPackages(projectPath, &gitlab.ListProjectPackagesOptions{})
+	if err != nil {
+		return nil, err
+	}
+	packageFound := false
+	for _, v := range packages {
+		if fmt.Sprintf("v%s", v.Version) == release.TagName {
+			packageFiles, _, err := g.client.Packages.ListPackageFiles(projectPath, v.ID, &gitlab.ListPackageFilesOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for _, f := range packageFiles {
+				candidates = append(candidates, &assets.Asset{
+					Name: v.Name,
+					URL: fmt.Sprintf("%sprojects/%s/packages/%s/%s/%s/%s",
+						g.client.BaseURL().String(),
+						url.PathEscape(projectPath),
+						v.PackageType,
+						v.Name,
+						v.Version,
+						f.FileName,
+					),
+				})
+			}
+			packageFound = true
+		}
 	}
 
-	node := goldmark.DefaultParser().Parse(text.NewReader([]byte(release.Description)))
-	walker := func(n goldast.Node, entering bool) (goldast.WalkStatus, error) {
-		if !entering {
+	if !packageFound {
+		for _, link := range release.Assets.Links {
+			candidates = append(candidates, &assets.Asset{Name: link.Name, URL: link.URL})
+		}
+
+		node := goldmark.DefaultParser().Parse(text.NewReader([]byte(release.Description)))
+		walker := func(n goldast.Node, entering bool) (goldast.WalkStatus, error) {
+			if !entering {
+				return goldast.WalkContinue, nil
+			}
+			if n.Type() == goldast.TypeInline && n.Kind() == goldast.KindLink {
+				link := n.(*goldast.Link)
+				name := string(link.Title)
+				assetURL := string(link.Destination)
+				candidates = append(candidates, &assets.Asset{Name: name, URL: assetURL})
+			}
 			return goldast.WalkContinue, nil
 		}
-		if n.Type() == goldast.TypeInline && n.Kind() == goldast.KindLink {
-			link := n.(*goldast.Link)
-			name := string(link.Title)
-			assetURL := string(link.Destination)
-			candidates = append(candidates, &assets.Asset{Name: name, URL: assetURL})
+		if err := goldast.Walk(node, walker); err != nil {
+			return nil, err
 		}
-		return goldast.WalkContinue, nil
-	}
-	if err := goldast.Walk(node, walker); err != nil {
-		return nil, err
 	}
 
 	gf, err := assets.FilterAssets(g.repo, candidates)
 
 	if err != nil {
 		return nil, err
+	}
+
+	if token, exists := os.LookupEnv("GITLAB_TOKEN"); exists {
+		if gf.ExtraHeaders == nil {
+			gf.ExtraHeaders = map[string]string{}
+		}
+		gf.ExtraHeaders["PRIVATE-TOKEN"] = token
 	}
 
 	name, outputFile, err := assets.ProcessURL(gf)
