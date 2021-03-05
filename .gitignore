@@ -19,6 +19,5 @@ bin
 
 /.vscode/
 /__debug_bin
-# Ignore vscode remote-container configuration
-/.devcontainer/
+
 dist

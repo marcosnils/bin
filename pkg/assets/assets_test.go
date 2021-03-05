@@ -12,9 +12,6 @@ func TestSanitizeName(t *testing.T) {
 		out string
 	}
 	var cases []sample
-	//TODO: For sure there will be a better option to divide/adapt tests based on OS
-	//with this first iteration we can declare scenarios for windows and other OS
-	//without modifiying the core code of the test.
 	if runtime.GOOS == "windows" {
 		cases = []sample{
 			{"bin_0.0.1_Windows_x86_64.exe","0.0.1","bin.exe"},
@@ -48,9 +45,6 @@ func TestFilterAssets(t *testing.T) {
 		out string
 	}
 	var cases []sample
-	//TODO: For sure there will be a better option to divide/adapt tests based on OS
-	//with this first iteration we can declare scenarios for windows and other OS
-	//without modifiying the core code of the test.
 	if runtime.GOOS == "windows"{
 		cases = []sample {
 			{args{"bin", []*Asset{
