@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/apex/log"
 	"github.com/marcosnils/bin/pkg/config"
@@ -21,7 +22,7 @@ func newRemoveCmd() *removeCmd {
 	var root = &removeCmd{}
 	// nolint: dupl
 	var cmd = &cobra.Command{
-		Use:           "remove <paths...>",
+		Use:           "remove [<name> | <paths...>]",
 		Aliases:       []string{"rm"},
 		Short:         "Removes binaries managed by bin",
 		SilenceUsage:  true,
@@ -34,6 +35,16 @@ func newRemoveCmd() *removeCmd {
 			existingToRemove := []string{}
 
 			for _, p := range args {
+				// If arg is a binary name, find path.
+				if !strings.Contains(p, "/") {
+					for _, b := range cfg.Bins {
+						if b.RemoteName == p {
+							p = b.Path
+							break
+						}
+					}
+				}
+
 				if _, ok := cfg.Bins[p]; ok {
 					existingToRemove = append(existingToRemove, p)
 					//TODO some providers (like docker) might download
