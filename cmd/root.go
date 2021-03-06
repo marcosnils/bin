@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/apex/log"
@@ -111,4 +112,16 @@ func defaultCommand(cmd *cobra.Command, args []string) bool {
 
 	// otherwise, we should probably prepend ls
 	return true
+}
+
+func getBinPath(name string) (string, error) {
+	cfg := config.Get()
+
+	for _, bin := range cfg.Bins {
+		if bin.RemoteName == name {
+			return bin.Path, nil
+		}
+	}
+
+	return "", fmt.Errorf("Binary path %s not found", name)
 }

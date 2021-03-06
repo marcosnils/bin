@@ -35,16 +35,13 @@ func newRemoveCmd() *removeCmd {
 			existingToRemove := []string{}
 
 			for _, p := range args {
-				// If arg is a binary name, find path.
 				if !strings.Contains(p, "/") {
-					for _, b := range cfg.Bins {
-						if b.RemoteName == p {
-							p = b.Path
-							break
-						}
+					var err error
+					p, err = getBinPath(p)
+					if err != nil {
+						return err
 					}
 				}
-
 				if _, ok := cfg.Bins[p]; ok {
 					existingToRemove = append(existingToRemove, p)
 					//TODO some providers (like docker) might download
