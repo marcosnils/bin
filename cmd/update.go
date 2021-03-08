@@ -55,13 +55,11 @@ func newUpdateCmd() *updateCmd {
 
 			// Update single binary
 			if bin != "" {
-				if !strings.Contains(bin, "/") {
-					var err error
-					bin, err = getBinPath(bin)
-					if err != nil {
-						return err
-					}
+				bin, err := getBinPath(bin)
+				if err != nil {
+					return err
 				}
+
 				b := cfg.Bins[bin]
 
 				if ui, err := getLatestVersion(b); err != nil {

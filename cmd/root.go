@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
@@ -115,6 +116,10 @@ func defaultCommand(cmd *cobra.Command, args []string) bool {
 }
 
 func getBinPath(name string) (string, error) {
+	if strings.Contains(name, "/") {
+		return name, nil
+	}
+
 	cfg := config.Get()
 
 	for _, bin := range cfg.Bins {

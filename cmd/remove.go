@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/apex/log"
 	"github.com/marcosnils/bin/pkg/config"
@@ -35,13 +34,11 @@ func newRemoveCmd() *removeCmd {
 			existingToRemove := []string{}
 
 			for _, p := range args {
-				if !strings.Contains(p, "/") {
-					var err error
-					p, err = getBinPath(p)
-					if err != nil {
-						return err
-					}
+				p, err := getBinPath(p)
+				if err != nil {
+					return err
 				}
+
 				if _, ok := cfg.Bins[p]; ok {
 					existingToRemove = append(existingToRemove, p)
 					//TODO some providers (like docker) might download
