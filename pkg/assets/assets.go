@@ -26,15 +26,22 @@ import (
 )
 
 type Asset struct {
-	Name string
-	URL  string
+	Name        string
+	DisplayName string
+	URL         string
 }
 
-func (g Asset) String() string { return g.Name }
+func (g Asset) String() string {
+	if g.DisplayName != "" {
+		return g.DisplayName
+	}
+	return g.Name
+}
 
 type FilteredAsset struct {
 	RepoName     string
 	Name         string
+	DisplayName  string
 	URL          string
 	score        int
 	ExtraHeaders map[string]string
@@ -57,7 +64,12 @@ func (runtimeResolver) GetArch() []string {
 
 var resolver platformResolver = runtimeResolver{}
 
-func (g FilteredAsset) String() string { return g.Name }
+func (g FilteredAsset) String() string {
+	if g.DisplayName != "" {
+		return g.DisplayName
+	}
+	return g.Name
+}
 
 // FilterAssets receives a slice of GL assets and tries to
 // select the proper one and ask the user to manually select one
@@ -83,16 +95,19 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 		highestScoreForAsset := 0
 		gf := &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0}
 		for _, candidate := range []string{lowerName, lowerURLPathBasename} {
+			candidateScore := 0
 			if bstrings.ContainsAny(candidate, scoreKeys) &&
 				isSupportedExt(candidate) {
 				for toMatch, score := range scores {
 					if strings.Contains(candidate, toMatch) {
-						gf.score += score
+						candidateScore += score
 					}
 				}
-				if gf.score > highestScoreForAsset {
-					highestScoreForAsset = gf.score
+				if candidateScore > highestScoreForAsset {
+					highestScoreForAsset = candidateScore
 					gf.Name = candidate
+					gf.DisplayName = a.DisplayName
+					gf.score = candidateScore
 				}
 			}
 		}

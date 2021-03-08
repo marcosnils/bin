@@ -27,11 +27,14 @@ type gitLab struct {
 }
 
 type gitlabFileInfo struct {
-	url, name string
-	score     int
+	url, name, displayName string
+	score                  int
 }
 
 func (g *gitlabFileInfo) String() string {
+	if g.displayName != "" {
+		return g.displayName
+	}
 	return g.name
 }
 
@@ -46,7 +49,7 @@ func (g *gitLab) Fetch() (*File, error) {
 		log.Infof("Getting %s release for %s/%s", g.tag, g.owner, g.repo)
 		release, _, err = g.client.Releases.GetRelease(projectPath, g.tag)
 	} else {
-		//TODO handle case when repo doesn't have releases?
+		// TODO: handle case when repo doesn't have releases?
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
 		name, _, err := g.GetLatestVersion()
 		if err != nil {
@@ -60,6 +63,7 @@ func (g *gitLab) Fetch() (*File, error) {
 	}
 
 	candidates := []*assets.Asset{}
+	candidateURLs := map[string]struct{}{}
 
 	packages, _, err := g.client.Packages.ListProjectPackages(projectPath, &gitlab.ListProjectPackagesOptions{})
 	if err != nil {
@@ -72,17 +76,24 @@ func (g *gitLab) Fetch() (*File, error) {
 				return nil, err
 			}
 			for _, f := range packageFiles {
-				candidates = append(candidates, &assets.Asset{
-					Name: v.Name,
-					URL: fmt.Sprintf("%sprojects/%s/packages/%s/%s/%s/%s",
-						g.client.BaseURL().String(),
-						url.PathEscape(projectPath),
-						v.PackageType,
-						v.Name,
-						v.Version,
-						f.FileName,
-					),
-				})
+				assetURL := fmt.Sprintf("%sprojects/%s/packages/%s/%s/%s/%s",
+					g.client.BaseURL().String(),
+					url.PathEscape(projectPath),
+					v.PackageType,
+					v.Name,
+					v.Version,
+					f.FileName,
+				)
+				if _, exists := candidateURLs[assetURL]; !exists {
+					asset := &assets.Asset{
+						Name:        v.Name,
+						DisplayName: fmt.Sprintf("%s (%s package)", f.FileName, v.PackageType),
+						URL:         assetURL,
+					}
+					candidates = append(candidates, asset)
+					log.Debugf("Adding %s with URL %s", asset.Name, asset.URL)
+				}
+				candidateURLs[assetURL] = struct{}{}
 			}
 		}
 	}
@@ -93,9 +104,19 @@ func (g *gitLab) Fetch() (*File, error) {
 	}
 	projectUploadsURL := fmt.Sprintf("%s/uploads/", project.WebURL)
 	projectIsPublic := project.Visibility == gitlab.PublicVisibility
+	log.Debugf("Project is public: %v", projectIsPublic)
 	for _, link := range release.Assets.Links {
 		if projectIsPublic || !strings.HasPrefix(link.URL, projectUploadsURL) {
-			candidates = append(candidates, &assets.Asset{Name: link.Name, URL: link.URL})
+			if _, exists := candidateURLs[link.URL]; !exists {
+				asset := &assets.Asset{
+					Name:        link.Name,
+					DisplayName: fmt.Sprintf("%s (asset link)", link.Name),
+					URL:         link.URL,
+				}
+				candidates = append(candidates, asset)
+				log.Debugf("Adding %s with URL %s", asset.Name, asset.URL)
+			}
+			candidateURLs[link.URL] = struct{}{}
 		}
 	}
 
@@ -106,10 +127,19 @@ func (g *gitLab) Fetch() (*File, error) {
 		}
 		if n.Type() == goldast.TypeInline && n.Kind() == goldast.KindLink {
 			link := n.(*goldast.Link)
-			if projectIsPublic || !strings.HasPrefix(string(link.Destination), projectUploadsURL) {
-				name := string(link.Title)
-				assetURL := string(link.Destination)
-				candidates = append(candidates, &assets.Asset{Name: name, URL: assetURL})
+			name := string(link.Title)
+			assetURL := string(link.Destination)
+			if projectIsPublic || !strings.HasPrefix(assetURL, projectUploadsURL) {
+				if _, exists := candidateURLs[assetURL]; !exists {
+					asset := &assets.Asset{
+						Name:        name,
+						DisplayName: fmt.Sprintf("%s (from release description)", name),
+						URL:         assetURL,
+					}
+					candidates = append(candidates, asset)
+					log.Debugf("Adding %s with URL %s", asset.Name, asset.URL)
+				}
+				candidateURLs[assetURL] = struct{}{}
 			}
 		}
 		return goldast.WalkContinue, nil
