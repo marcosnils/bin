@@ -65,7 +65,6 @@ func (g *gitLab) Fetch() (*File, error) {
 	if err != nil {
 		return nil, err
 	}
-	packageFound := false
 	for _, v := range packages {
 		if fmt.Sprintf("v%s", v.Version) == release.TagName {
 			packageFiles, _, err := g.client.Packages.ListPackageFiles(projectPath, v.ID, &gitlab.ListPackageFilesOptions{})
@@ -85,31 +84,38 @@ func (g *gitLab) Fetch() (*File, error) {
 					),
 				})
 			}
-			packageFound = true
 		}
 	}
 
-	if !packageFound {
-		for _, link := range release.Assets.Links {
+	project, _, err := g.client.Projects.GetProject(projectPath, &gitlab.GetProjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+	projectUploadsURL := fmt.Sprintf("%s/uploads/", project.WebURL)
+	projectIsPublic := project.Visibility == gitlab.PublicVisibility
+	for _, link := range release.Assets.Links {
+		if projectIsPublic || !strings.HasPrefix(link.URL, projectUploadsURL) {
 			candidates = append(candidates, &assets.Asset{Name: link.Name, URL: link.URL})
 		}
+	}
 
-		node := goldmark.DefaultParser().Parse(text.NewReader([]byte(release.Description)))
-		walker := func(n goldast.Node, entering bool) (goldast.WalkStatus, error) {
-			if !entering {
-				return goldast.WalkContinue, nil
-			}
-			if n.Type() == goldast.TypeInline && n.Kind() == goldast.KindLink {
-				link := n.(*goldast.Link)
+	node := goldmark.DefaultParser().Parse(text.NewReader([]byte(release.Description)))
+	walker := func(n goldast.Node, entering bool) (goldast.WalkStatus, error) {
+		if !entering {
+			return goldast.WalkContinue, nil
+		}
+		if n.Type() == goldast.TypeInline && n.Kind() == goldast.KindLink {
+			link := n.(*goldast.Link)
+			if projectIsPublic || !strings.HasPrefix(string(link.Destination), projectUploadsURL) {
 				name := string(link.Title)
 				assetURL := string(link.Destination)
 				candidates = append(candidates, &assets.Asset{Name: name, URL: assetURL})
 			}
-			return goldast.WalkContinue, nil
 		}
-		if err := goldast.Walk(node, walker); err != nil {
-			return nil, err
-		}
+		return goldast.WalkContinue, nil
+	}
+	if err := goldast.Walk(node, walker); err != nil {
+		return nil, err
 	}
 
 	gf, err := assets.FilterAssets(g.repo, candidates)
