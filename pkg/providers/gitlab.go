@@ -21,6 +21,7 @@ import (
 type gitLab struct {
 	url    *url.URL
 	client *gitlab.Client
+	token  string
 	owner  string
 	repo   string
 	tag    string
@@ -154,11 +155,11 @@ func (g *gitLab) Fetch() (*File, error) {
 		return nil, err
 	}
 
-	if token, exists := os.LookupEnv("GITLAB_TOKEN"); exists {
+	if g.token != "" {
 		if gf.ExtraHeaders == nil {
 			gf.ExtraHeaders = map[string]string{}
 		}
-		gf.ExtraHeaders["PRIVATE-TOKEN"] = token
+		gf.ExtraHeaders["PRIVATE-TOKEN"] = g.token
 	}
 
 	name, outputFile, err := assets.ProcessURL(gf)
@@ -239,9 +240,14 @@ func newGitLab(u *url.URL) (Provider, error) {
 	}
 
 	token := os.Getenv("GITLAB_TOKEN")
+	hostnameSpecificEnvVarName := fmt.Sprintf("GITLAB_TOKEN_%s", strings.ReplaceAll(u.Hostname(), `.`, "_"))
+	hostnameSpecificToken := os.Getenv(hostnameSpecificEnvVarName)
+	if hostnameSpecificToken != "" {
+		token = hostnameSpecificToken
+	}
 	client, err := gitlab.NewClient(token, gitlab.WithBaseURL(fmt.Sprintf("https://%s/api/v4", u.Hostname())))
 	if err != nil {
 		return nil, err
 	}
-	return &gitLab{url: u, client: client, owner: s[1], repo: s[2], tag: tag}, nil
+	return &gitLab{url: u, client: client, token: token, owner: s[1], repo: s[2], tag: tag}, nil
 }
