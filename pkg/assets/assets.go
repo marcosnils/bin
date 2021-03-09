@@ -39,6 +39,23 @@ type FilteredAsset struct {
 	score    int
 }
 
+type platformResolver interface {
+	GetOS() []string
+	GetArch() []string
+}
+
+type runtimeResolver struct{}
+
+func (runtimeResolver) GetOS() []string {
+	return config.GetOS()
+}
+
+func (runtimeResolver) GetArch() []string {
+	return config.GetArch()
+}
+
+var resolver platformResolver = runtimeResolver{}
+
 func (g FilteredAsset) String() string { return g.Name }
 
 // FilterAssets receives a slice of GL assets and tries to
@@ -48,7 +65,7 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	matches := []*FilteredAsset{}
 	scores := map[string]int{}
 	scores[repoName] = 1
-	for _, os := range config.GetOS() {
+	for _, os := range resolver.GetOS() {
 		scores[os] = 10
 	}
 	for _, arch := range config.GetArch() {
@@ -128,7 +145,7 @@ func SanitizeName(name, version string) string {
 	// TODO maybe instead of doing this put everything in a map (set) and then
 	// generate the replacements? IDK.
 	firstPass := true
-	for _, osName := range config.GetOS() {
+	for _, osName := range resolver.GetOS() {
 		for _, archName := range config.GetArch() {
 			replacements = append(replacements, "_"+osName+archName, "")
 			replacements = append(replacements, "-"+osName+archName, "")
