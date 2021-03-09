@@ -21,17 +21,17 @@ func TestSanitizeName(t *testing.T) {
 	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64"}}
 	windowsAMDResolver := &mockOSResolver{OS: []string{"windows"}, Arch: []string{"amd64"}}
 	cases := []struct {
-		in  string
-		v   string
-		out string
+		in       string
+		v        string
+		out      string
 		resolver platformResolver
 	}{
-		{"bin_amd64_linux", "v0.0.1", "bin",linuxAMDResolver},
-		{"bin_0.0.1_amd64_linux", "0.0.1", "bin",linuxAMDResolver},
-		{"bin_0.0.1_amd64_linux", "v0.0.1", "bin",linuxAMDResolver},
-		{"gitlab-runner-linux-amd64", "v13.2.1", "gitlab-runner",linuxAMDResolver},
-		{"jq-linux64", "jq-1.5", "jq",linuxAMDResolver},
-		{"bin_0.0.1_Windows_x86_64.exe","0.0.1","bin.exe",windowsAMDResolver},
+		{"bin_amd64_linux", "v0.0.1", "bin", linuxAMDResolver},
+		{"bin_0.0.1_amd64_linux", "0.0.1", "bin", linuxAMDResolver},
+		{"bin_0.0.1_amd64_linux", "v0.0.1", "bin", linuxAMDResolver},
+		{"gitlab-runner-linux-amd64", "v13.2.1", "gitlab-runner", linuxAMDResolver},
+		{"jq-linux64", "jq-1.5", "jq", linuxAMDResolver},
+		{"bin_0.0.1_Windows_x86_64.exe", "0.0.1", "bin.exe", windowsAMDResolver},
 	}
 
 	for _, c := range cases {
@@ -44,8 +44,8 @@ func TestSanitizeName(t *testing.T) {
 }
 
 func TestFilterAssets(t *testing.T) {
-	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64"}}
-	windowsAMDResolver := &mockOSResolver{OS: []string{"windows"}, Arch: []string{"amd64"}}
+	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64", "x86_64", "64"}}
+	windowsAMDResolver := &mockOSResolver{OS: []string{"windows"}, Arch: []string{"amd64", "x86_64", "64"}}
 	type args struct {
 		repoName string
 		as       []*Asset
