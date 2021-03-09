@@ -104,7 +104,7 @@ func (g *gitLab) Fetch() (*File, error) {
 		return nil, err
 	}
 	projectUploadsURL := fmt.Sprintf("%s/uploads/", project.WebURL)
-	projectIsPublic := project.Visibility == gitlab.PublicVisibility
+	projectIsPublic := g.token == "" || project.Visibility == gitlab.PublicVisibility
 	log.Debugf("Project is public: %v", projectIsPublic)
 	for _, link := range release.Assets.Links {
 		if projectIsPublic || !strings.HasPrefix(link.URL, projectUploadsURL) {
