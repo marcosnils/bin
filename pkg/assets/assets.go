@@ -81,7 +81,7 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	for _, os := range resolver.GetOS() {
 		scores[os] = 10
 	}
-	for _, arch := range config.GetArch() {
+	for _, arch := range resolver.GetArch() {
 		scores[arch] = 5
 	}
 	scoreKeys := []string{}
@@ -162,7 +162,7 @@ func SanitizeName(name, version string) string {
 	// generate the replacements? IDK.
 	firstPass := true
 	for _, osName := range resolver.GetOS() {
-		for _, archName := range config.GetArch() {
+		for _, archName := range resolver.GetArch() {
 			replacements = append(replacements, "_"+osName+archName, "")
 			replacements = append(replacements, "-"+osName+archName, "")
 			replacements = append(replacements, "."+osName+archName, "")
