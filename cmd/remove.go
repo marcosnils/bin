@@ -21,7 +21,7 @@ func newRemoveCmd() *removeCmd {
 	var root = &removeCmd{}
 	// nolint: dupl
 	var cmd = &cobra.Command{
-		Use:           "remove <paths...>",
+		Use:           "remove [<name> | <paths...>]",
 		Aliases:       []string{"rm"},
 		Short:         "Removes binaries managed by bin",
 		SilenceUsage:  true,
@@ -34,6 +34,11 @@ func newRemoveCmd() *removeCmd {
 			existingToRemove := []string{}
 
 			for _, p := range args {
+				p, err := getBinPath(p)
+				if err != nil {
+					return err
+				}
+
 				if _, ok := cfg.Bins[p]; ok {
 					existingToRemove = append(existingToRemove, p)
 					//TODO some providers (like docker) might download
