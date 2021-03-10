@@ -91,22 +91,19 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	for _, a := range as {
 		lowerName := strings.ToLower(a.Name)
 		lowerURLPathBasename := path.Base(strings.ToLower(a.URL))
-		filetype.GetType(lowerName)
 		highestScoreForAsset := 0
-		gf := &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0}
+		gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
 		for _, candidate := range []string{lowerName, lowerURLPathBasename} {
 			candidateScore := 0
 			if bstrings.ContainsAny(candidate, scoreKeys) &&
 				isSupportedExt(candidate) {
 				for toMatch, score := range scores {
-					if strings.Contains(candidate, toMatch) {
+					if strings.Contains(candidate, strings.ToLower(toMatch)) {
 						candidateScore += score
 					}
 				}
 				if candidateScore > highestScoreForAsset {
 					highestScoreForAsset = candidateScore
-					gf.Name = candidate
-					gf.DisplayName = a.DisplayName
 					gf.score = candidateScore
 				}
 			}
