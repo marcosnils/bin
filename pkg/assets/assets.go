@@ -104,6 +104,7 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 				}
 				if candidateScore > highestScoreForAsset {
 					highestScoreForAsset = candidateScore
+					gf.Name = candidate
 					gf.score = candidateScore
 				}
 			}

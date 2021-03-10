@@ -66,53 +66,55 @@ func (g *gitLab) Fetch() (*File, error) {
 	candidates := []*assets.Asset{}
 	candidateURLs := map[string]struct{}{}
 
-	packages, _, err := g.client.Packages.ListProjectPackages(projectPath, &gitlab.ListProjectPackagesOptions{
-		OrderBy: gitlab.String("version"),
-		Sort:    gitlab.String("desc"),
-	})
+	project, _, err := g.client.Projects.GetProject(projectPath, &gitlab.GetProjectOptions{})
 	if err != nil {
 		return nil, err
 	}
-	tagVersion := strings.TrimPrefix(release.TagName, "v")
-	for _, v := range packages {
-		if strings.TrimPrefix(v.Version, "v") == tagVersion {
-			totalPages := -1
-			for page := 1; page != totalPages; page++ {
-				packageFiles, resp, err := g.client.Packages.ListPackageFiles(projectPath, v.ID, &gitlab.ListPackageFilesOptions{
-					Page: page,
-				})
-				if err != nil {
-					return nil, err
-				}
-				totalPages = resp.TotalPages
-				for _, f := range packageFiles {
-					assetURL := fmt.Sprintf("%sprojects/%s/packages/%s/%s/%s/%s",
-						g.client.BaseURL().String(),
-						url.PathEscape(projectPath),
-						v.PackageType,
-						v.Name,
-						v.Version,
-						f.FileName,
-					)
-					if _, exists := candidateURLs[assetURL]; !exists {
-						asset := &assets.Asset{
-							Name:        f.FileName,
-							DisplayName: fmt.Sprintf("%s (%s package)", f.FileName, v.PackageType),
-							URL:         assetURL,
-						}
-						candidates = append(candidates, asset)
-						log.Debugf("Adding %s with URL %s", asset, asset.URL)
+	if project.PackagesEnabled {
+		packages, _, err := g.client.Packages.ListProjectPackages(projectPath, &gitlab.ListProjectPackagesOptions{
+			OrderBy: gitlab.String("version"),
+			Sort:    gitlab.String("desc"),
+		})
+		if err != nil {
+			return nil, err
+		}
+		tagVersion := strings.TrimPrefix(release.TagName, "v")
+		for _, v := range packages {
+			if strings.TrimPrefix(v.Version, "v") == tagVersion {
+				totalPages := -1
+				for page := 1; page != totalPages; page++ {
+					packageFiles, resp, err := g.client.Packages.ListPackageFiles(projectPath, v.ID, &gitlab.ListPackageFilesOptions{
+						Page: page,
+					})
+					if err != nil {
+						return nil, err
 					}
-					candidateURLs[assetURL] = struct{}{}
+					totalPages = resp.TotalPages
+					for _, f := range packageFiles {
+						assetURL := fmt.Sprintf("%sprojects/%s/packages/%s/%s/%s/%s",
+							g.client.BaseURL().String(),
+							url.PathEscape(projectPath),
+							v.PackageType,
+							v.Name,
+							v.Version,
+							f.FileName,
+						)
+						if _, exists := candidateURLs[assetURL]; !exists {
+							asset := &assets.Asset{
+								Name:        f.FileName,
+								DisplayName: fmt.Sprintf("%s (%s package)", f.FileName, v.PackageType),
+								URL:         assetURL,
+							}
+							candidates = append(candidates, asset)
+							log.Debugf("Adding %s with URL %s", asset, asset.URL)
+						}
+						candidateURLs[assetURL] = struct{}{}
+					}
 				}
 			}
 		}
 	}
 
-	project, _, err := g.client.Projects.GetProject(projectPath, &gitlab.GetProjectOptions{})
-	if err != nil {
-		return nil, err
-	}
 	projectUploadsURL := fmt.Sprintf("%s/uploads/", project.WebURL)
 	projectIsPublic := g.token == "" || project.Visibility == "" || project.Visibility == gitlab.PublicVisibility
 	log.Debugf("Project is public: %v", projectIsPublic)
