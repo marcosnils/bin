@@ -121,7 +121,7 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	}
 	for i := len(matches) - 1; i >= 0; i-- {
 		if matches[i].score < highestAssetScore {
-			log.Debugf("Removing %v with score %v lower than %v", matches[i].Name, matches[i].score, highestAssetScore)
+			log.Debugf("Removing %v (URL %v) with score %v lower than %v", matches[i].Name, matches[i].URL, matches[i].score, highestAssetScore)
 			matches = append(matches[:i], matches[i+1:]...)
 		} else {
 			log.Debugf("Keeping %v (URL %v) with highest score %v", matches[i].Name, matches[i].URL, matches[i].score)
