@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"sort"
@@ -70,12 +71,15 @@ func (g *gitLab) Fetch() (*File, error) {
 	if err != nil {
 		return nil, err
 	}
-	if project.PackagesEnabled {
-		packages, _, err := g.client.Packages.ListProjectPackages(projectPath, &gitlab.ListProjectPackagesOptions{
+	projectIsPublic := g.token == "" || project.Visibility == "" || project.Visibility == gitlab.PublicVisibility
+	log.Debugf("Project is public: %v", projectIsPublic)
+	tryPackages := projectIsPublic || project.PackagesEnabled
+	if tryPackages {
+		packages, resp, err := g.client.Packages.ListProjectPackages(projectPath, &gitlab.ListProjectPackagesOptions{
 			OrderBy: gitlab.String("version"),
 			Sort:    gitlab.String("desc"),
 		})
-		if err != nil {
+		if err != nil && (resp == nil || resp.StatusCode != http.StatusForbidden) {
 			return nil, err
 		}
 		tagVersion := strings.TrimPrefix(release.TagName, "v")
@@ -116,8 +120,6 @@ func (g *gitLab) Fetch() (*File, error) {
 	}
 
 	projectUploadsURL := fmt.Sprintf("%s/uploads/", project.WebURL)
-	projectIsPublic := g.token == "" || project.Visibility == "" || project.Visibility == gitlab.PublicVisibility
-	log.Debugf("Project is public: %v", projectIsPublic)
 	for _, link := range release.Assets.Links {
 		if projectIsPublic || !strings.HasPrefix(link.URL, projectUploadsURL) {
 			if _, exists := candidateURLs[link.URL]; !exists {
