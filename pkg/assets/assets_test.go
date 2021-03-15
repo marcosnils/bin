@@ -18,8 +18,8 @@ func (m *mockOSResolver) GetArch() []string {
 }
 
 func TestSanitizeName(t *testing.T) {
-	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64"}}
-	windowsAMDResolver := &mockOSResolver{OS: []string{"windows"}, Arch: []string{"amd64"}}
+	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64", "x86_64", "64"}}
+	windowsAMDResolver := &mockOSResolver{OS: []string{"windows"}, Arch: []string{"amd64", "x86_64", "64"}}
 	cases := []struct {
 		in       string
 		v        string
@@ -90,6 +90,9 @@ func TestFilterAssets(t *testing.T) {
 			{Name: "bin_0.1.0_Linux_x86_64", URL: "https://github.com/marcosnils/bin/releases/download/v0.0.1/bin_0.1.0_Linux_x86_64"},
 			{Name: "bin_0.1.0_Darwin_x86_64", URL: "https://github.com/marcosnils/bin/releases/download/v0.0.1/bin_0.1.0_Darwin_x86_64"},
 		}}, "bin_0.0.1_windows_x86_64.exe", windowsAMDResolver},
+		{args{"tezos", []*Asset{
+			{Name: "x86_64-linux-tezos-binaries.tar.gz", URL: "https://gitlab.com/api/v4/projects/3836952/packages/generic/tezos/8.2.0/x86_64-linux-tezos-binaries.tar.gz"},
+		}}, "x86_64-linux-tezos-binaries.tar.gz", linuxAMDResolver},
 	}
 
 	for _, c := range cases {
