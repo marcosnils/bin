@@ -7,7 +7,9 @@ const (
 	// TODO: there might be a way were users can configure a template for the
 	// actual execution since some CLIs require some other folders to be mounted
 	// or networks to be shared
-	sh = `@docker run --rm -i -t -v %%cd%%:/tmp/cmd -w /tmp/cmd %s:%s "$@"`
+	sh = `@echo off
+docker run --rm -i -t -v %%cd%%:/tmp/cmd -w /tmp/cmd %s:%s %%*
+`
 )
 
 // getImageName gets the name of the image from the image repo.

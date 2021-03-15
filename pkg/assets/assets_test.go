@@ -18,19 +18,24 @@ func (m *mockOSResolver) GetArch() []string {
 }
 
 func TestSanitizeName(t *testing.T) {
+	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64"}}
+	windowsAMDResolver := &mockOSResolver{OS: []string{"windows"}, Arch: []string{"amd64"}}
 	cases := []struct {
 		in  string
 		v   string
 		out string
+		resolver platformResolver
 	}{
-		{"bin_amd64_linux", "v0.0.1", "bin"},
-		{"bin_0.0.1_amd64_linux", "0.0.1", "bin"},
-		{"bin_0.0.1_amd64_linux", "v0.0.1", "bin"},
-		{"gitlab-runner-linux-amd64", "v13.2.1", "gitlab-runner"},
-		{"jq-linux64", "jq-1.5", "jq"},
+		{"bin_amd64_linux", "v0.0.1", "bin",linuxAMDResolver},
+		{"bin_0.0.1_amd64_linux", "0.0.1", "bin",linuxAMDResolver},
+		{"bin_0.0.1_amd64_linux", "v0.0.1", "bin",linuxAMDResolver},
+		{"gitlab-runner-linux-amd64", "v13.2.1", "gitlab-runner",linuxAMDResolver},
+		{"jq-linux64", "jq-1.5", "jq",linuxAMDResolver},
+		{"bin_0.0.1_Windows_x86_64.exe","0.0.1","bin.exe",windowsAMDResolver},
 	}
 
 	for _, c := range cases {
+		resolver = c.resolver
 		if n := SanitizeName(c.in, c.v); n != c.out {
 			t.Fatalf("Error replacing %s: %s does not match %s", c.in, n, c.out)
 		}
@@ -40,7 +45,7 @@ func TestSanitizeName(t *testing.T) {
 
 func TestFilterAssets(t *testing.T) {
 	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64"}}
-
+	windowsAMDResolver := &mockOSResolver{OS: []string{"windows"}, Arch: []string{"amd64"}}
 	type args struct {
 		repoName string
 		as       []*Asset
@@ -80,6 +85,11 @@ func TestFilterAssets(t *testing.T) {
 			{Name: "jq-linux64", URL: "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64"},
 			{Name: "jq-osx-amd64", URL: "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64"},
 		}}, "jq-linux64", linuxAMDResolver},
+		{args{"bin", []*Asset{
+			{Name: "bin_0.0.1_Windows_x86_64.exe", URL: "https://github.com/marcosnils/bin/releases/download/v0.0.1/bin_0.0.1_Windows_x86_64.exe"},
+			{Name: "bin_0.1.0_Linux_x86_64", URL: "https://github.com/marcosnils/bin/releases/download/v0.0.1/bin_0.1.0_Linux_x86_64"},
+			{Name: "bin_0.1.0_Darwin_x86_64", URL: "https://github.com/marcosnils/bin/releases/download/v0.0.1/bin_0.1.0_Darwin_x86_64"},
+		}}, "bin_0.0.1_windows_x86_64.exe", windowsAMDResolver},
 	}
 
 	for _, c := range cases {
