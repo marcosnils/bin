@@ -102,6 +102,10 @@ func (g *gitLab) Fetch() (*File, error) {
 	return f, nil
 }
 
+func (g *gitLab) GetID() string {
+	return "gitlab"
+}
+
 //GetLatestVersion checks the latest repo release and
 //returns the corresponding name and url to fetch the version
 func (g *gitLab) GetLatestVersion() (string, string, error) {

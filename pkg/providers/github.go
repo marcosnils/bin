@@ -81,6 +81,10 @@ func (g *gitHub) GetLatestVersion() (string, string, error) {
 	return release.GetTagName(), release.GetHTMLURL(), nil
 }
 
+func (g *gitHub) GetID() string {
+	return "github"
+}
+
 func newGitHub(u *url.URL) (Provider, error) {
 	s := strings.Split(u.Path, "/")
 	if len(s) < 2 {

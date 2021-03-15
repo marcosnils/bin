@@ -50,6 +50,10 @@ func (d *docker) GetLatestVersion() (string, string, error) {
 	return d.tag, "", nil
 }
 
+func (d *docker) GetID() string {
+	return "docker"
+}
+
 func newDocker(imageURL string) (Provider, error) {
 	imageURL = strings.TrimPrefix(imageURL, "docker://")
 

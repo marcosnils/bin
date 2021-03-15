@@ -76,6 +76,10 @@ func (g *hashiCorpFileInfo) String() string {
 	return g.name
 }
 
+func (g *hashiCorp) GetID() string {
+	return "hashicorp"
+}
+
 func (g *hashiCorp) Fetch() (*File, error) {
 
 	var release *hashiCorpRelease
