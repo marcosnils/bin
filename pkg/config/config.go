@@ -25,7 +25,7 @@ type Binary struct {
 	Version    string `json:"version"`
 	Hash       string `json:"hash"`
 	URL        string `json:"url"`
-	Provider   string `json:"provier"`
+	Provider   string `json:"provider"`
 }
 
 func CheckAndLoad() error {
