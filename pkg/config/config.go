@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
 
@@ -29,9 +28,8 @@ type Binary struct {
 }
 
 func CheckAndLoad() error {
-	u, _ := user.Current()
 
-	configDir := filepath.Join(u.HomeDir, ".bin")
+	configDir := filepath.Join(os.UserHomeDir(), ".bin")
 
 	if err := os.Mkdir(configDir, 0755); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("Error creating config directory [%v]", err)
@@ -99,8 +97,7 @@ func RemoveBinaries(paths []string) error {
 }
 
 func write() error {
-	u, _ := user.Current()
-	f, err := os.OpenFile(filepath.Join(u.HomeDir, ".bin", "config.json"), os.O_RDWR|os.O_CREATE, 0666)
+	f, err := os.OpenFile(filepath.Join(os.UserHomeDir(), ".bin", "config.json"), os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}
