@@ -28,8 +28,8 @@ type Binary struct {
 }
 
 func CheckAndLoad() error {
-
-	configDir := filepath.Join(os.UserHomeDir(), ".bin")
+	home, err := os.UserHomeDir()
+	configDir := filepath.Join(home, ".bin")
 
 	if err := os.Mkdir(configDir, 0755); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("Error creating config directory [%v]", err)
@@ -97,7 +97,8 @@ func RemoveBinaries(paths []string) error {
 }
 
 func write() error {
-	f, err := os.OpenFile(filepath.Join(os.UserHomeDir(), ".bin", "config.json"), os.O_RDWR|os.O_CREATE, 0666)
+	home, err := os.UserHomeDir()
+	f, err := os.OpenFile(filepath.Join(home, ".bin", "config.json"), os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}
