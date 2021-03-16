@@ -106,7 +106,7 @@ func newUpdateCmd() *updateCmd {
 			//use the same code in both places
 			for ui, b := range toUpdate {
 
-				p, err := providers.New(ui.url)
+				p, err := providers.New(ui.url, b.Provider)
 
 				if err != nil {
 					return err
@@ -141,7 +141,7 @@ func newUpdateCmd() *updateCmd {
 }
 
 func getLatestVersion(b *config.Binary) (*updateInfo, error) {
-	p, err := providers.New(b.URL)
+	p, err := providers.New(b.URL, b.Provider)
 
 	if err != nil {
 		return nil, err

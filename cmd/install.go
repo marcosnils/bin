@@ -18,19 +18,20 @@ type installCmd struct {
 }
 
 type installOpts struct {
-	force bool
+	force    bool
+	provider string
 }
 
 func newInstallCmd() *installCmd {
 	var root = &installCmd{}
 	// nolint: dupl
 	var cmd = &cobra.Command{
-		Use:           "install",
+		Use:           "install <url>",
 		Aliases:       []string{"i"},
-		Short:         "Installs the specified project",
+		Short:         "Installs the specified project from a url",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Args:          cobra.MaximumNArgs(2),
+		Args:          cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			//TODO implement --force(-f) flag for install
 			// to override the binary if exists
@@ -59,7 +60,7 @@ func newInstallCmd() *installCmd {
 			//TODO check if binary already exists in config
 			// and triger the update process if that's the case
 
-			p, err := providers.New(u)
+			p, err := providers.New(u, root.opts.provider)
 			if err != nil {
 				return err
 			}
@@ -76,8 +77,7 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
-			force, _ := cmd.LocalFlags().GetBool("force")
-			if err = saveToDisk(pResult, path, force); err != nil {
+			if err = saveToDisk(pResult, path, root.opts.force); err != nil {
 				return fmt.Errorf("Error installing binary: %w", err)
 			}
 
@@ -87,6 +87,7 @@ func newInstallCmd() *installCmd {
 				Version:    pResult.Version,
 				Hash:       fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
 				URL:        u,
+				Provider:   p.GetID(),
 			})
 
 			if err != nil {
@@ -101,6 +102,7 @@ func newInstallCmd() *installCmd {
 
 	root.cmd = cmd
 	root.cmd.Flags().BoolVarP(&root.opts.force, "force", "f", false, "Force the installation even if the file already exists")
+	root.cmd.Flags().StringVarP(&root.opts.provider, "provider", "p", "", "Forces to use a specific provider")
 	return root
 }
 
