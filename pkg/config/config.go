@@ -123,7 +123,6 @@ func GetArch() []string {
 		//Adding x86_64 manually since the uname syscall (man 2 uname)
 		//is not implemented in all systems
 		res = append(res, "x86_64")
-		res = append(res, "amd64")
 		res = append(res, "64")
 	}
 	return res

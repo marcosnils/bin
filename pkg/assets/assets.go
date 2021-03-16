@@ -26,17 +26,25 @@ import (
 )
 
 type Asset struct {
-	Name string
-	URL  string
+	Name        string
+	DisplayName string
+	URL         string
 }
 
-func (g Asset) String() string { return g.Name }
+func (g Asset) String() string {
+	if g.DisplayName != "" {
+		return g.DisplayName
+	}
+	return g.Name
+}
 
 type FilteredAsset struct {
-	RepoName string
-	Name     string
-	URL      string
-	score    int
+	RepoName     string
+	Name         string
+	DisplayName  string
+	URL          string
+	score        int
+	ExtraHeaders map[string]string
 }
 
 type platformResolver interface {
@@ -56,7 +64,12 @@ func (runtimeResolver) GetArch() []string {
 
 var resolver platformResolver = runtimeResolver{}
 
-func (g FilteredAsset) String() string { return g.Name }
+func (g FilteredAsset) String() string {
+	if g.DisplayName != "" {
+		return g.DisplayName
+	}
+	return g.Name
+}
 
 // FilterAssets receives a slice of GL assets and tries to
 // select the proper one and ask the user to manually select one
@@ -68,7 +81,7 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	for _, os := range resolver.GetOS() {
 		scores[os] = 10
 	}
-	for _, arch := range config.GetArch() {
+	for _, arch := range resolver.GetArch() {
 		scores[arch] = 5
 	}
 	scoreKeys := []string{}
@@ -78,20 +91,21 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	for _, a := range as {
 		lowerName := strings.ToLower(a.Name)
 		lowerURLPathBasename := path.Base(strings.ToLower(a.URL))
-		filetype.GetType(lowerName)
 		highestScoreForAsset := 0
-		gf := &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0}
+		gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
 		for _, candidate := range []string{lowerName, lowerURLPathBasename} {
+			candidateScore := 0
 			if bstrings.ContainsAny(candidate, scoreKeys) &&
 				isSupportedExt(candidate) {
 				for toMatch, score := range scores {
-					if strings.Contains(candidate, toMatch) {
-						gf.score += score
+					if strings.Contains(candidate, strings.ToLower(toMatch)) {
+						candidateScore += score
 					}
 				}
-				if gf.score > highestScoreForAsset {
-					highestScoreForAsset = gf.score
+				if candidateScore > highestScoreForAsset {
+					highestScoreForAsset = candidateScore
 					gf.Name = candidate
+					gf.score = candidateScore
 				}
 			}
 		}
@@ -107,7 +121,7 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	}
 	for i := len(matches) - 1; i >= 0; i-- {
 		if matches[i].score < highestAssetScore {
-			log.Debugf("Removing %v with score %v lower than %v", matches[i].Name, matches[i].score, highestAssetScore)
+			log.Debugf("Removing %v (URL %v) with score %v lower than %v", matches[i].Name, matches[i].URL, matches[i].score, highestAssetScore)
 			matches = append(matches[:i], matches[i+1:]...)
 		} else {
 			log.Debugf("Keeping %v (URL %v) with highest score %v", matches[i].Name, matches[i].URL, matches[i].score)
@@ -146,7 +160,7 @@ func SanitizeName(name, version string) string {
 	// generate the replacements? IDK.
 	firstPass := true
 	for _, osName := range resolver.GetOS() {
-		for _, archName := range config.GetArch() {
+		for _, archName := range resolver.GetArch() {
 			replacements = append(replacements, "_"+osName+archName, "")
 			replacements = append(replacements, "-"+osName+archName, "")
 			replacements = append(replacements, "."+osName+archName, "")
@@ -177,8 +191,15 @@ func SanitizeName(name, version string) string {
 // ProcessURL processes a FilteredAsset by uncompressing/unarchiving the URL of the asset.
 func ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
 	// We're not closing the body here since the caller is in charge of that
-	res, err := http.Get(gf.URL)
+	req, err := http.NewRequest(http.MethodGet, gf.URL, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	for name, value := range gf.ExtraHeaders {
+		req.Header.Add(name, value)
+	}
 	log.Debugf("Checking binary from %s", gf.URL)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", nil, err
 	}

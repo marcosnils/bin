@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"sort"
@@ -21,17 +22,21 @@ import (
 type gitLab struct {
 	url    *url.URL
 	client *gitlab.Client
+	token  string
 	owner  string
 	repo   string
 	tag    string
 }
 
 type gitlabFileInfo struct {
-	url, name string
-	score     int
+	url, name, displayName string
+	score                  int
 }
 
 func (g *gitlabFileInfo) String() string {
+	if g.displayName != "" {
+		return g.displayName
+	}
 	return g.name
 }
 
@@ -46,7 +51,7 @@ func (g *gitLab) Fetch() (*File, error) {
 		log.Infof("Getting %s release for %s/%s", g.tag, g.owner, g.repo)
 		release, _, err = g.client.Releases.GetRelease(projectPath, g.tag)
 	} else {
-		//TODO handle case when repo doesn't have releases?
+		// TODO: handle case when repo doesn't have releases?
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
 		name, _, err := g.GetLatestVersion()
 		if err != nil {
@@ -60,8 +65,74 @@ func (g *gitLab) Fetch() (*File, error) {
 	}
 
 	candidates := []*assets.Asset{}
+	candidateURLs := map[string]struct{}{}
+
+	project, _, err := g.client.Projects.GetProject(projectPath, &gitlab.GetProjectOptions{})
+	if err != nil {
+		return nil, err
+	}
+	projectIsPublic := g.token == "" || project.Visibility == "" || project.Visibility == gitlab.PublicVisibility
+	log.Debugf("Project is public: %v", projectIsPublic)
+	tryPackages := projectIsPublic || project.PackagesEnabled
+	if tryPackages {
+		packages, resp, err := g.client.Packages.ListProjectPackages(projectPath, &gitlab.ListProjectPackagesOptions{
+			OrderBy: gitlab.String("version"),
+			Sort:    gitlab.String("desc"),
+		})
+		if err != nil && (resp == nil || resp.StatusCode != http.StatusForbidden) {
+			return nil, err
+		}
+		tagVersion := strings.TrimPrefix(release.TagName, "v")
+		for _, v := range packages {
+			if strings.TrimPrefix(v.Version, "v") == tagVersion {
+				totalPages := -1
+				for page := 1; page != totalPages; page++ {
+					packageFiles, resp, err := g.client.Packages.ListPackageFiles(projectPath, v.ID, &gitlab.ListPackageFilesOptions{
+						Page: page,
+					})
+					if err != nil {
+						return nil, err
+					}
+					totalPages = resp.TotalPages
+					for _, f := range packageFiles {
+						assetURL := fmt.Sprintf("%sprojects/%s/packages/%s/%s/%s/%s",
+							g.client.BaseURL().String(),
+							url.PathEscape(projectPath),
+							v.PackageType,
+							v.Name,
+							v.Version,
+							f.FileName,
+						)
+						if _, exists := candidateURLs[assetURL]; !exists {
+							asset := &assets.Asset{
+								Name:        f.FileName,
+								DisplayName: fmt.Sprintf("%s (%s package)", f.FileName, v.PackageType),
+								URL:         assetURL,
+							}
+							candidates = append(candidates, asset)
+							log.Debugf("Adding %s with URL %s", asset, asset.URL)
+						}
+						candidateURLs[assetURL] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
+	projectUploadsURL := fmt.Sprintf("%s/uploads/", project.WebURL)
 	for _, link := range release.Assets.Links {
-		candidates = append(candidates, &assets.Asset{Name: link.Name, URL: link.URL})
+		if projectIsPublic || !strings.HasPrefix(link.URL, projectUploadsURL) {
+			if _, exists := candidateURLs[link.URL]; !exists {
+				asset := &assets.Asset{
+					Name:        link.Name,
+					DisplayName: fmt.Sprintf("%s (asset link)", link.Name),
+					URL:         link.URL,
+				}
+				candidates = append(candidates, asset)
+				log.Debugf("Adding %s with URL %s", asset, asset.URL)
+			}
+			candidateURLs[link.URL] = struct{}{}
+		}
 	}
 
 	node := goldmark.DefaultParser().Parse(text.NewReader([]byte(release.Description)))
@@ -73,7 +144,18 @@ func (g *gitLab) Fetch() (*File, error) {
 			link := n.(*goldast.Link)
 			name := string(link.Title)
 			assetURL := string(link.Destination)
-			candidates = append(candidates, &assets.Asset{Name: name, URL: assetURL})
+			if projectIsPublic || !strings.HasPrefix(assetURL, projectUploadsURL) {
+				if _, exists := candidateURLs[assetURL]; !exists {
+					asset := &assets.Asset{
+						Name:        name,
+						DisplayName: fmt.Sprintf("%s (from release description)", name),
+						URL:         assetURL,
+					}
+					candidates = append(candidates, asset)
+					log.Debugf("Adding %s with URL %s", asset, asset.URL)
+				}
+				candidateURLs[assetURL] = struct{}{}
+			}
 		}
 		return goldast.WalkContinue, nil
 	}
@@ -85,6 +167,13 @@ func (g *gitLab) Fetch() (*File, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if g.token != "" {
+		if gf.ExtraHeaders == nil {
+			gf.ExtraHeaders = map[string]string{}
+		}
+		gf.ExtraHeaders["PRIVATE-TOKEN"] = g.token
 	}
 
 	name, outputFile, err := assets.ProcessURL(gf)
@@ -165,9 +254,14 @@ func newGitLab(u *url.URL) (Provider, error) {
 	}
 
 	token := os.Getenv("GITLAB_TOKEN")
+	hostnameSpecificEnvVarName := fmt.Sprintf("GITLAB_TOKEN_%s", strings.ReplaceAll(u.Hostname(), `.`, "_"))
+	hostnameSpecificToken := os.Getenv(hostnameSpecificEnvVarName)
+	if hostnameSpecificToken != "" {
+		token = hostnameSpecificToken
+	}
 	client, err := gitlab.NewClient(token, gitlab.WithBaseURL(fmt.Sprintf("https://%s/api/v4", u.Hostname())))
 	if err != nil {
 		return nil, err
 	}
-	return &gitLab{url: u, client: client, owner: s[1], repo: s[2], tag: tag}, nil
+	return &gitLab{url: u, client: client, token: token, owner: s[1], repo: s[2], tag: tag}, nil
 }
