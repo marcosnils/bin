@@ -122,6 +122,7 @@ func GetArch() []string {
 		//Adding x86_64 manually since the uname syscall (man 2 uname)
 		//is not implemented in all systems
 		res = append(res, "x86_64")
+		res = append(res, "x64")
 		res = append(res, "64")
 	}
 	return res
@@ -130,5 +131,10 @@ func GetArch() []string {
 // GetOS is the running program's architecture target:
 // one of 386, amd64, arm, s390x, and so on.
 func GetOS() []string {
-	return []string{runtime.GOOS}
+	res := []string{runtime.GOOS}
+	if runtime.GOOS == "windows" {
+		//Adding win since some repositories release with that as the indicator of a windows binary
+		res = append(res, "win")
+	}
+	return res
 }
