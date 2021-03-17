@@ -55,27 +55,23 @@ func newUpdateCmd() *updateCmd {
 			cfg := config.Get()
 
 			// Update single binary
+			binsToProcess := cfg.Bins
 			if bin != "" {
 				bin, err := getBinPath(bin)
 				if err != nil {
 					return err
 				}
-
-				b := cfg.Bins[bin]
-
-				if ui, err := getLatestVersion(b); err != nil {
+				binsToProcess = map[string]*config.Binary{bin: cfg.Bins[bin]}
+			}
+			for _, b := range binsToProcess {
+				p, err := providers.New(b.URL, b.Provider)
+				if err != nil {
+					return err
+				}
+				if ui, err := getLatestVersion(b, p); err != nil {
 					return err
 				} else if ui != nil {
 					toUpdate[ui] = b
-				}
-
-			} else {
-				for _, b := range cfg.Bins {
-					if ui, err := getLatestVersion(b); err != nil {
-						return err
-					} else if ui != nil {
-						toUpdate[ui] = b
-					}
 				}
 			}
 
@@ -141,13 +137,7 @@ func newUpdateCmd() *updateCmd {
 	return root
 }
 
-func getLatestVersion(b *config.Binary) (*updateInfo, error) {
-	p, err := providers.New(b.URL, b.Provider)
-
-	if err != nil {
-		return nil, err
-	}
-
+func getLatestVersion(b *config.Binary, p providers.Provider) (*updateInfo, error) {
 	log.Debugf("Checking updates for %s", b.Path)
 	v, u, err := p.GetLatestVersion()
 
