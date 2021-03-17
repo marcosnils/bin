@@ -8,6 +8,7 @@ import (
 
 	"github.com/apex/log"
 	"github.com/fatih/color"
+	"github.com/hashicorp/go-version"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
@@ -157,6 +158,13 @@ func getLatestVersion(b *config.Binary) (*updateInfo, error) {
 	if b.Version == v {
 		return nil, nil
 	}
+
+	bSemver, bSemverErr := version.NewVersion(b.Version)
+	vSemver, vSemverErr := version.NewVersion(v)
+	if bSemverErr == nil && vSemverErr == nil && vSemver.LessThanOrEqual(bSemver) {
+		return nil, nil
+	}
+
 	log.Debugf("Found new version %s for %s at %s", v, b.Path, u)
 	log.Infof("%s %s -> %s (%s)", b.Path, color.YellowString(b.Version), color.GreenString(v), u)
 	return &updateInfo{v, u}, nil
