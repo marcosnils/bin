@@ -35,7 +35,7 @@ func CheckAndLoad() error {
 		return fmt.Errorf("Error creating config directory [%v]", err)
 	}
 
-	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE, 0666)
+	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -64,17 +64,15 @@ func CheckAndLoad() error {
 	log.Debugf("Download path set to %s", cfg.DefaultPath)
 
 	return nil
-
 }
 
 func Get() *config {
 	return &cfg
 }
 
-//UpsertBinary adds or updats an existing
-//binary resource in the config
+// UpsertBinary adds or updats an existing
+// binary resource in the config
 func UpsertBinary(c *Binary) error {
-
 	if c != nil {
 		cfg.Bins[c.Path] = c
 		err := write()
@@ -98,7 +96,7 @@ func RemoveBinaries(paths []string) error {
 
 func write() error {
 	home, err := os.UserHomeDir()
-	f, err := os.OpenFile(filepath.Join(home, ".bin", "config.json"), os.O_RDWR|os.O_CREATE, 0666)
+	f, err := os.OpenFile(filepath.Join(home, ".bin", "config.json"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
@@ -119,8 +117,8 @@ func write() error {
 func GetArch() []string {
 	res := []string{runtime.GOARCH}
 	if runtime.GOARCH == "amd64" {
-		//Adding x86_64 manually since the uname syscall (man 2 uname)
-		//is not implemented in all systems
+		// Adding x86_64 manually since the uname syscall (man 2 uname)
+		// is not implemented in all systems
 		res = append(res, "x86_64")
 		res = append(res, "x64")
 		res = append(res, "64")
