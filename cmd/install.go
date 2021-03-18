@@ -140,7 +140,7 @@ func saveToDisk(f *providers.File, path string, overwrite bool) error {
 		extraFlags = 0
 		err := os.Remove(path)
 		log.Debugf("Overwrite flag set, removing file %s\n", path)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}
