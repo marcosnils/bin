@@ -1,6 +1,8 @@
 package assets
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -18,8 +20,8 @@ func (m *mockOSResolver) GetArch() []string {
 }
 
 func TestSanitizeName(t *testing.T) {
-	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64", "x86_64", "64"}}
-	windowsAMDResolver := &mockOSResolver{OS: []string{"windows"}, Arch: []string{"amd64", "x86_64", "64"}}
+	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64", "x86_64", "x64", "64"}}
+	windowsAMDResolver := &mockOSResolver{OS: []string{"windows", "win"}, Arch: []string{"amd64", "x86_64", "x64", "64"}}
 	cases := []struct {
 		in       string
 		v        string
@@ -31,6 +33,8 @@ func TestSanitizeName(t *testing.T) {
 		{"bin_0.0.1_amd64_linux", "v0.0.1", "bin", linuxAMDResolver},
 		{"gitlab-runner-linux-amd64", "v13.2.1", "gitlab-runner", linuxAMDResolver},
 		{"jq-linux64", "jq-1.5", "jq", linuxAMDResolver},
+		{"launchpad-linux-x64", "1.2.0-rc.1", "launchpad", linuxAMDResolver},
+		{"launchpad-win-x64.exe", "1.2.0-rc.1", "launchpad.exe", windowsAMDResolver},
 		{"bin_0.0.1_Windows_x86_64.exe", "0.0.1", "bin.exe", windowsAMDResolver},
 	}
 
@@ -43,13 +47,22 @@ func TestSanitizeName(t *testing.T) {
 
 }
 
-func TestFilterAssets(t *testing.T) {
-	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64", "x86_64", "64"}}
-	windowsAMDResolver := &mockOSResolver{OS: []string{"windows"}, Arch: []string{"amd64", "x86_64", "64"}}
-	type args struct {
-		repoName string
-		as       []*Asset
+type args struct {
+	repoName string
+	as       []*Asset
+}
+
+func (a args) String() string {
+	assetStrings := []string{}
+	for _, asset := range a.as {
+		assetStrings = append(assetStrings, asset.String())
 	}
+	return fmt.Sprintf("%s (%v)", a.repoName, strings.Join(assetStrings, ","))
+}
+
+func TestFilterAssets(t *testing.T) {
+	linuxAMDResolver := &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64", "x86_64", "x64", "64"}}
+	windowsAMDResolver := &mockOSResolver{OS: []string{"windows", "win"}, Arch: []string{"amd64", "x86_64", "x64", "64"}}
 	cases := []struct {
 		in       args
 		out      string
@@ -93,6 +106,14 @@ func TestFilterAssets(t *testing.T) {
 		{args{"tezos", []*Asset{
 			{Name: "x86_64-linux-tezos-binaries.tar.gz", URL: "https://gitlab.com/api/v4/projects/3836952/packages/generic/tezos/8.2.0/x86_64-linux-tezos-binaries.tar.gz"},
 		}}, "x86_64-linux-tezos-binaries.tar.gz", linuxAMDResolver},
+		{args{"launchpad", []*Asset{
+			{Name: "launchpad-linux-x64", URL: "https://github.com/Mirantis/launchpad/releases/download/1.2.0-rc.1/launchpad-linux-x64"},
+			{Name: "launchpad-win-x64.exe", URL: "https://github.com/Mirantis/launchpad/releases/download/1.2.0-rc.1/launchpad-win-x64.exe"},
+		}}, "launchpad-linux-x64", linuxAMDResolver},
+		{args{"launchpad", []*Asset{
+			{Name: "launchpad-linux-x64", URL: "https://github.com/Mirantis/launchpad/releases/download/1.2.0-rc.1/launchpad-linux-x64"},
+			{Name: "launchpad-win-x64.exe", URL: "https://github.com/Mirantis/launchpad/releases/download/1.2.0-rc.1/launchpad-win-x64.exe"},
+		}}, "launchpad-win-x64.exe", windowsAMDResolver},
 	}
 
 	for _, c := range cases {
@@ -100,7 +121,7 @@ func TestFilterAssets(t *testing.T) {
 		if n, err := FilterAssets(c.in.repoName, c.in.as); err != nil {
 			t.Fatalf("Error filtering assets %v", err)
 		} else if n.Name != c.out {
-			t.Fatalf("Error filtering %+v: %+v does not match %s or error %v", c.in, n, c.out, err)
+			t.Fatalf("Error filtering %+v: %+v does not match %s", c.in, n, c.out)
 		}
 	}
 
