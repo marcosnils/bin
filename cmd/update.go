@@ -53,9 +53,9 @@ func newUpdateCmd() *updateCmd {
 
 			toUpdate := map[*updateInfo]*config.Binary{}
 			cfg := config.Get()
+			binsToProcess := cfg.Bins
 
 			// Update single binary
-			binsToProcess := cfg.Bins
 			if bin != "" {
 				bin, err := getBinPath(bin)
 				if err != nil {
