@@ -19,6 +19,7 @@ require (
 	github.com/google/go-github/v31 v31.0.0
 	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/h2non/filetype v1.1.0
+	github.com/hashicorp/go-version v1.2.1
 	github.com/kr/text v0.2.0 // indirect
 	github.com/krolaw/zipstream v0.0.0-20180621105154-0a2661891f94
 	github.com/mattn/go-colorable v0.1.7 // indirect

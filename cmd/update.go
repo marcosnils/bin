@@ -8,6 +8,7 @@ import (
 
 	"github.com/apex/log"
 	"github.com/fatih/color"
+	"github.com/hashicorp/go-version"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
@@ -52,6 +53,7 @@ func newUpdateCmd() *updateCmd {
 
 			toUpdate := map[*updateInfo]*config.Binary{}
 			cfg := config.Get()
+			binsToProcess := cfg.Bins
 
 			// Update single binary
 			if bin != "" {
@@ -59,22 +61,17 @@ func newUpdateCmd() *updateCmd {
 				if err != nil {
 					return err
 				}
-
-				b := cfg.Bins[bin]
-
-				if ui, err := getLatestVersion(b); err != nil {
+				binsToProcess = map[string]*config.Binary{bin: cfg.Bins[bin]}
+			}
+			for _, b := range binsToProcess {
+				p, err := providers.New(b.URL, b.Provider)
+				if err != nil {
+					return err
+				}
+				if ui, err := getLatestVersion(b, p); err != nil {
 					return err
 				} else if ui != nil {
 					toUpdate[ui] = b
-				}
-
-			} else {
-				for _, b := range cfg.Bins {
-					if ui, err := getLatestVersion(b); err != nil {
-						return err
-					} else if ui != nil {
-						toUpdate[ui] = b
-					}
 				}
 			}
 
@@ -140,13 +137,7 @@ func newUpdateCmd() *updateCmd {
 	return root
 }
 
-func getLatestVersion(b *config.Binary) (*updateInfo, error) {
-	p, err := providers.New(b.URL, b.Provider)
-
-	if err != nil {
-		return nil, err
-	}
-
+func getLatestVersion(b *config.Binary, p providers.Provider) (*updateInfo, error) {
 	log.Debugf("Checking updates for %s", b.Path)
 	v, u, err := p.GetLatestVersion()
 
@@ -157,6 +148,13 @@ func getLatestVersion(b *config.Binary) (*updateInfo, error) {
 	if b.Version == v {
 		return nil, nil
 	}
+
+	bSemver, bSemverErr := version.NewVersion(b.Version)
+	vSemver, vSemverErr := version.NewVersion(v)
+	if bSemverErr == nil && vSemverErr == nil && vSemver.LessThanOrEqual(bSemver) {
+		return nil, nil
+	}
+
 	log.Debugf("Found new version %s for %s at %s", v, b.Path, u)
 	log.Infof("%s %s -> %s (%s)", b.Path, color.YellowString(b.Version), color.GreenString(v), u)
 	return &updateInfo{v, u}, nil
