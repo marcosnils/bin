@@ -35,7 +35,7 @@ func CheckAndLoad() error {
 		return fmt.Errorf("Error creating config directory [%v]", err)
 	}
 
-	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE, 0600)
+	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE, 0664)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -96,10 +96,12 @@ func RemoveBinaries(paths []string) error {
 
 func write() error {
 	home, err := os.UserHomeDir()
-	f, err := os.OpenFile(filepath.Join(home, ".bin", "config.json"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	f, err := os.OpenFile(filepath.Join(home, ".bin", "config.json"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0664)
 	if err != nil {
 		return err
 	}
+
+	defer f.Close()
 
 	decoder := json.NewEncoder(f)
 	decoder.SetIndent("", "    ")
