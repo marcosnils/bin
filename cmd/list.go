@@ -11,17 +11,13 @@ import (
 )
 
 type listCmd struct {
-	cmd  *cobra.Command
-	opts listOpts
-}
-
-type listOpts struct {
+	cmd *cobra.Command
 }
 
 func newListCmd() *listCmd {
-	var root = &listCmd{}
+	root := &listCmd{}
 	// nolint: dupl
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "list",
 		Aliases:       []string{"ls"},
 		Short:         "List binaries managed by bin",

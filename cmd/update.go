@@ -15,19 +15,15 @@ import (
 )
 
 type updateCmd struct {
-	cmd  *cobra.Command
-	opts updateOpts
-}
-
-type updateOpts struct {
+	cmd *cobra.Command
 }
 
 type updateInfo struct{ version, url string }
 
 func newUpdateCmd() *updateCmd {
-	var root = &updateCmd{}
+	root := &updateCmd{}
 	// nolint: dupl
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "update [binary_path]",
 		Aliases:       []string{"u"},
 		Short:         "Updates one or multiple binaries managed by bin",
@@ -35,21 +31,20 @@ func newUpdateCmd() *updateCmd {
 		Args:          cobra.MaximumNArgs(1),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			//TODO add support to update from a specific URL.
-			//This allows to update binares from a repo that contains
-			//multiple tags for different binaries
+			// TODO add support to update from a specific URL.
+			// This allows to update binares from a repo that contains
+			// multiple tags for different binaries
 
 			var bin string
 			if len(args) > 0 {
 				bin = args[0]
 			}
 
-			//TODO update should check all binaries with a
-			//certain configured parallelism (default 10, can be changed with -p) and report
-			//which binarines could be potentially upgraded.
-			//It's very likely that we have to extend the provider
-			//interface to support this use-case
+			// TODO update should check all binaries with a
+			// certain configured parallelism (default 10, can be changed with -p) and report
+			// which binarines could be potentially upgraded.
+			// It's very likely that we have to extend the provider
+			// interface to support this use-case
 
 			toUpdate := map[*updateInfo]*config.Binary{}
 			cfg := config.Get()
@@ -80,14 +75,13 @@ func newUpdateCmd() *updateCmd {
 				return nil
 			}
 
-			//TODO will have to refactor this prompt to a separate function
-			//so it can be reused in some other places
+			// TODO will have to refactor this prompt to a separate function
+			// so it can be reused in some other places
 			fmt.Printf("\nDo you want to continue? [Y/n] ")
 			reader := bufio.NewReader(os.Stdin)
 			var response string
 
 			response, err := reader.ReadString('\n')
-
 			if err != nil {
 				return fmt.Errorf("Invalid input")
 			}
@@ -98,19 +92,17 @@ func newUpdateCmd() *updateCmd {
 				return fmt.Errorf("Command aborted")
 			}
 
-			//TODO 	:S code smell here, this pretty much does
-			//the same thing as install logic. Refactor to
-			//use the same code in both places
+			// TODO 	:S code smell here, this pretty much does
+			// the same thing as install logic. Refactor to
+			// use the same code in both places
 			for ui, b := range toUpdate {
 
 				p, err := providers.New(ui.url, b.Provider)
-
 				if err != nil {
 					return err
 				}
 
 				pResult, err := p.Fetch()
-
 				if err != nil {
 					return err
 				}
@@ -126,8 +118,11 @@ func newUpdateCmd() *updateCmd {
 					Hash:       fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
 					URL:        ui.url,
 				})
-				log.Infof("Done updating %s to %s", b.Path, color.GreenString(ui.version))
+				if err != nil {
+					return err
+				}
 
+				log.Infof("Done updating %s to %s", b.Path, color.GreenString(ui.version))
 			}
 			return nil
 		},
@@ -140,7 +135,6 @@ func newUpdateCmd() *updateCmd {
 func getLatestVersion(b *config.Binary, p providers.Provider) (*updateInfo, error) {
 	log.Debugf("Checking updates for %s", b.Path)
 	v, u, err := p.GetLatestVersion()
-
 	if err != nil {
 		return nil, fmt.Errorf("Error checking updates for %s, %w", b.Path, err)
 	}
