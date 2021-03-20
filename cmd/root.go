@@ -20,8 +20,8 @@ func Execute(version string, exit func(int), args []string) {
 
 	log.SetHandler(cli.Default)
 
-	//fmt.Println()
-	//defer fmt.Println()
+	// fmt.Println()
+	// defer fmt.Println()
 	newRootCmd(version, exit).Execute(args)
 }
 
@@ -33,8 +33,8 @@ func (cmd *rootCmd) Execute(args []string) {
 	}
 
 	if err := cmd.cmd.Execute(); err != nil {
-		var code = 1
-		var msg = "command failed"
+		code := 1
+		msg := "command failed"
 		if eerr, ok := err.(*exitError); ok {
 			code = eerr.code
 			if eerr.details != "" {
@@ -53,10 +53,10 @@ type rootCmd struct {
 }
 
 func newRootCmd(version string, exit func(int)) *rootCmd {
-	var root = &rootCmd{
+	root := &rootCmd{
 		exit: exit,
 	}
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "bin",
 		Short:         "Effortless binary manager",
 		Version:       version,
@@ -68,7 +68,7 @@ func newRootCmd(version string, exit func(int)) *rootCmd {
 				log.Debug("debug logs enabled")
 			}
 
-			//check and load config after handlers are configured
+			// check and load config after handlers are configured
 			err := config.CheckAndLoad()
 			if err != nil {
 				log.Fatalf("Error loading config file %v", err)
@@ -79,6 +79,7 @@ func newRootCmd(version string, exit func(int)) *rootCmd {
 	cmd.PersistentFlags().BoolVar(&root.debug, "debug", false, "Enable debug mode")
 	cmd.AddCommand(
 		newInstallCmd().cmd,
+		newEnsureCmd().cmd,
 		newUpdateCmd().cmd,
 		newRemoveCmd().cmd,
 		newListCmd().cmd,
