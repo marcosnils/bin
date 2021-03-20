@@ -60,7 +60,11 @@ func (g *gitHub) Fetch() (*File, error) {
 	// TODO calculate file hash. Not sure if we can / should do it here
 	// since we don't want to read the file unnecesarily. Additionally, sometimes
 	// releases have .sha256 files, so it'd be nice to check for those also
-	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version}
+	sanitizedName := assets.SanitizeName(name, version)
+	if sanitizedName == "" {
+		sanitizedName = g.repo
+	}
+	f := &File{Data: outputFile, Name: sanitizedName, Hash: sha256.New(), Version: version}
 
 	return f, nil
 }

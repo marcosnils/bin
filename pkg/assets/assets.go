@@ -163,17 +163,20 @@ func SanitizeName(name, version string) string {
 			replacements = append(replacements, "_"+osName+archName, "")
 			replacements = append(replacements, "-"+osName+archName, "")
 			replacements = append(replacements, "."+osName+archName, "")
+			replacements = append(replacements, osName+archName, "")
 
 			if firstPass {
 				replacements = append(replacements, "_"+archName, "")
 				replacements = append(replacements, "-"+archName, "")
 				replacements = append(replacements, "."+archName, "")
+				replacements = append(replacements, archName, "")
 			}
 		}
 
 		replacements = append(replacements, "_"+osName, "")
 		replacements = append(replacements, "-"+osName, "")
 		replacements = append(replacements, "."+osName, "")
+		replacements = append(replacements, osName, "")
 
 		firstPass = false
 
