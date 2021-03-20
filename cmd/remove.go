@@ -10,17 +10,13 @@ import (
 )
 
 type removeCmd struct {
-	cmd  *cobra.Command
-	opts removeOpts
-}
-
-type removeOpts struct {
+	cmd *cobra.Command
 }
 
 func newRemoveCmd() *removeCmd {
-	var root = &removeCmd{}
+	root := &removeCmd{}
 	// nolint: dupl
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "remove [<name> | <paths...>]",
 		Aliases:       []string{"rm"},
 		Short:         "Removes binaries managed by bin",
@@ -28,7 +24,6 @@ func newRemoveCmd() *removeCmd {
 		Args:          cobra.MinimumNArgs(1),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			cfg := config.Get()
 
 			existingToRemove := []string{}
@@ -41,9 +36,9 @@ func newRemoveCmd() *removeCmd {
 
 				if _, ok := cfg.Bins[p]; ok {
 					existingToRemove = append(existingToRemove, p)
-					//TODO some providers (like docker) might download
-					//additional things somewhere else, maybe we should
-					//call the provider to do a cleanup here.
+					// TODO some providers (like docker) might download
+					// additional things somewhere else, maybe we should
+					// call the provider to do a cleanup here.
 					err := os.Remove(p)
 					if err != nil {
 						return fmt.Errorf("Error removing path %s: %v", p, err)
@@ -53,8 +48,8 @@ func newRemoveCmd() *removeCmd {
 				log.Infof("Path %s not found in bin, ignoring.", p)
 			}
 
-			config.RemoveBinaries(existingToRemove)
-			return nil
+			err := config.RemoveBinaries(existingToRemove)
+			return err
 		},
 	}
 

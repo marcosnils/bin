@@ -62,7 +62,7 @@ func newDocker(imageURL string) (Provider, error) {
 		return nil, err
 	}
 
-	client, err := client.NewEnvClient()
+	client, err := client.NewClientWithOpts()
 	if err != nil {
 		return nil, err
 	}
@@ -85,5 +85,5 @@ func parseImage(imageURL string) (string, string, error) {
 		image = "library/" + image
 	}
 
-	return fmt.Sprintf("%s", image), tag, nil
+	return image, tag, nil
 }

@@ -141,13 +141,12 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 			return nil, err
 		}
 		gf = choice.(*FilteredAsset)
-		//TODO make user select the proper file
+		// TODO make user select the proper file
 	} else {
 		gf = matches[0]
 	}
 
 	return gf, nil
-
 }
 
 // SanitizeName removes irrelevant information from the
@@ -216,7 +215,7 @@ func ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
 	barReader := bar.NewProxyReader(res.Body)
 	defer bar.Finish()
 	buf := new(bytes.Buffer)
-	io.Copy(buf, barReader)
+	_, err = io.Copy(buf, barReader)
 	if err != nil {
 		return "", nil, err
 	}
@@ -233,7 +232,7 @@ func processReader(repoName string, name string, r io.Reader) (string, io.Reader
 		return "", nil, err
 	}
 
-	var outputFile = io.MultiReader(&buf, r)
+	outputFile := io.MultiReader(&buf, r)
 
 	type processorFunc func(repoName string, r io.Reader) (string, io.Reader, error)
 	var processor processorFunc

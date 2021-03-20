@@ -29,6 +29,10 @@ type Binary struct {
 
 func CheckAndLoad() error {
 	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
 	configDir := filepath.Join(home, ".bin")
 
 	if err := os.Mkdir(configDir, 0755); err != nil && !os.IsExist(err) {
@@ -96,6 +100,10 @@ func RemoveBinaries(paths []string) error {
 
 func write() error {
 	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
 	f, err := os.OpenFile(filepath.Join(home, ".bin", "config.json"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0664)
 	if err != nil {
 		return err
@@ -133,7 +141,7 @@ func GetArch() []string {
 func GetOS() []string {
 	res := []string{runtime.GOOS}
 	if runtime.GOOS == "windows" {
-		//Adding win since some repositories release with that as the indicator of a windows binary
+		// Adding win since some repositories release with that as the indicator of a windows binary
 		res = append(res, "win")
 	}
 	return res

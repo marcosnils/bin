@@ -30,7 +30,6 @@ Doesn't tell me anything about why you're doing that
 
 Tells me the problem that you have found, and the pull request shows me the action you have taken to solve it.
 
-
 ### Is it of good quality
 
 * There are no spelling mistakes
@@ -48,3 +47,21 @@ The aim of this repository is:
 ### Does it follow the contributor covenant
 
 This repository has a [code of conduct](CODE_OF_CONDUCT.md), This repository has a code of conduct, I will remove things that do not respect it.
+
+## Development
+
+### Linting
+
+We use `golangci-lint` in order to maintain a good code quality and a consistent style.
+
+Get the `golangci-lint` by following their installation instructions on [golangci-lint.run](https://golangci-lint.run/) or simply run:
+
+```shell
+bin install github.com/golangci/golangci-lint
+```
+
+Lint the source code by executing:
+
+```shell
+golangci-lint run ./...
+```

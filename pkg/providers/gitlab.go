@@ -28,20 +28,7 @@ type gitLab struct {
 	tag    string
 }
 
-type gitlabFileInfo struct {
-	url, name, displayName string
-	score                  int
-}
-
-func (g *gitlabFileInfo) String() string {
-	if g.displayName != "" {
-		return g.displayName
-	}
-	return g.name
-}
-
 func (g *gitLab) Fetch() (*File, error) {
-
 	var release *gitlab.Release
 
 	// If we have a tag, let's fetch from there
@@ -53,7 +40,8 @@ func (g *gitLab) Fetch() (*File, error) {
 	} else {
 		// TODO: handle case when repo doesn't have releases?
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
-		name, _, err := g.GetLatestVersion()
+		var name string
+		name, _, err = g.GetLatestVersion()
 		if err != nil {
 			return nil, err
 		}
@@ -164,7 +152,6 @@ func (g *gitLab) Fetch() (*File, error) {
 	}
 
 	gf, err := assets.FilterAssets(g.repo, candidates)
-
 	if err != nil {
 		return nil, err
 	}
@@ -183,9 +170,9 @@ func (g *gitLab) Fetch() (*File, error) {
 
 	version := release.TagName
 
-	//TODO calculate file hash. Not sure if we can / should do it here
-	//since we don't want to read the file unnecesarily. Additionally, sometimes
-	//releases have .sha256 files, so it'd be nice to check for those also
+	// TODO calculate file hash. Not sure if we can / should do it here
+	// since we don't want to read the file unnecesarily. Additionally, sometimes
+	// releases have .sha256 files, so it'd be nice to check for those also
 	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version}
 
 	return f, nil
@@ -195,8 +182,8 @@ func (g *gitLab) GetID() string {
 	return "gitlab"
 }
 
-//GetLatestVersion checks the latest repo release and
-//returns the corresponding name and url to fetch the version
+// GetLatestVersion checks the latest repo release and
+// returns the corresponding name and url to fetch the version
 func (g *gitLab) GetLatestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
 	projectPath := fmt.Sprintf("%s/%s", g.owner, g.repo)
@@ -246,8 +233,8 @@ func newGitLab(u *url.URL) (Provider, error) {
 	// it's a specific releases URL
 	var tag string
 	if strings.Contains(u.Path, "/releases/") {
-		//For release URL's, the
-		//path is usually /releases/v0.1.
+		// For release URL's, the
+		// path is usually /releases/v0.1.
 		ps := strings.Split(u.Path, "/")
 		for i, p := range ps {
 			if p == "releases" {
