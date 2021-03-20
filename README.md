@@ -51,12 +51,13 @@ bin install docker://quay.io/calico/node # install the latest version of calico/
 ```
 
 ```shell
-bin install <repo> [path] # Downloads the latest binary and makes it executable
 bin ensure # Ensures that all binaries listed in the configuration are present
-bin update [bin]... # Scans binaries and prompts for update
-bin ls # List current binaries and it's versions
+bin help # Help about any command
+bin install <repo> [path] # Downloads the latest binary and makes it executable
+bin list # List current binaries and it's versions
+bin prune # Removes from the DB missing binaries
 bin remove <bin>... # Deletes one or more binaries
-bin purge # Removes from the DB missing binaries
+bin update [bin]... # Scans binaries and prompts for update
 ```
 
 ## FAQ
