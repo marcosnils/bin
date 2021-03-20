@@ -89,11 +89,10 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 		scoreKeys = append(scoreKeys, key)
 	}
 	for _, a := range as {
-		lowerName := strings.ToLower(a.Name)
 		lowerURLPathBasename := path.Base(strings.ToLower(a.URL))
 		highestScoreForAsset := 0
 		gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
-		for _, candidate := range []string{lowerName, lowerURLPathBasename} {
+		for _, candidate := range []string{a.Name, lowerURLPathBasename} {
 			candidateScore := 0
 			if bstrings.ContainsAny(candidate, scoreKeys) &&
 				isSupportedExt(candidate) {
