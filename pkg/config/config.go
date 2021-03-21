@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 
@@ -28,17 +29,16 @@ type Binary struct {
 }
 
 func CheckAndLoad() error {
-	home, err := os.UserHomeDir()
+	configDir, err := getConfigPath()
 	if err != nil {
 		return err
 	}
-
-	configDir := filepath.Join(home, ".bin")
 
 	if err := os.Mkdir(configDir, 0755); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("Error creating config directory [%v]", err)
 	}
 
+	log.Debugf("Config directory is: %s", configDir)
 	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE, 0664)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -99,12 +99,12 @@ func RemoveBinaries(paths []string) error {
 }
 
 func write() error {
-	home, err := os.UserHomeDir()
+	configDir, err := getConfigPath()
 	if err != nil {
 		return err
 	}
 
-	f, err := os.OpenFile(filepath.Join(home, ".bin", "config.json"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0664)
+	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0664)
 	if err != nil {
 		return err
 	}
@@ -145,4 +145,29 @@ func GetOS() []string {
 		res = append(res, "win")
 	}
 	return res
+}
+
+// getConfigPath returns the path to the configuration directory respecting
+// the `XDG Base Directory specification` using the following strategy:
+//   - if "XDG_CONFIG_HOME" is set, return "$XDG_CONFIG_HOME/bin"
+//   - if "$HOME/.config" exists, return "$home/.config/bin"
+//   - default to "$HOME/.bin/"
+// ToDo: move the function to config_unix.go and add a similar function for windows,
+//       %APPDATA% might be the right place on windows
+func getConfigPath() (string, error) {
+	c := os.Getenv("XDG_CONFIG_HOME")
+	if _, err := os.Stat(c); !os.IsNotExist(err) {
+		return path.Join(c, "bin"), nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	c = path.Join(home, ".config")
+	if _, err := os.Stat(c); !os.IsNotExist(err) {
+		return path.Join(c, "bin"), nil
+	}
+
+	return path.Join(home, ".bin"), nil
 }
