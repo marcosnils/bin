@@ -351,15 +351,15 @@ func processZip(name string, r io.Reader) (string, io.Reader, error) {
 		return "", nil, errors.New("No files found in zip archive")
 	}
 
-	generic := make([]fmt.Stringer, 0)
+	as := make([]*Asset, 0)
 	for f := range zipFiles {
-		generic = append(generic, options.LiteralStringer(f))
+		as = append(as, &Asset{Name: f, URL: ""})
 	}
-	choice, err := options.Select("Select file to extract:", generic)
+	choice, err := FilterAssets(name, as)
 	if err != nil {
 		return "", nil, err
 	}
-	selectedFile := choice.(fmt.Stringer).String()
+	selectedFile := choice.String()
 
 	fr := bytes.NewReader(zipFiles[selectedFile])
 
