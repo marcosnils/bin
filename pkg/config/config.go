@@ -149,20 +149,28 @@ func GetOS() []string {
 
 // getConfigPath returns the path to the configuration directory respecting
 // the `XDG Base Directory specification` using the following strategy:
+//   - to prevent breaking of existing configurations, check if "$HOME/.bin/config.json"
+//     exists and return "$HOME/.bin"
 //   - if "XDG_CONFIG_HOME" is set, return "$XDG_CONFIG_HOME/bin"
 //   - if "$HOME/.config" exists, return "$home/.config/bin"
 //   - default to "$HOME/.bin/"
 // ToDo: move the function to config_unix.go and add a similar function for windows,
 //       %APPDATA% might be the right place on windows
 func getConfigPath() (string, error) {
+	home, homeErr := os.UserHomeDir()
+	if homeErr == nil {
+		if _, err := os.Stat(path.Join(home, ".bin", "config.json")); !os.IsNotExist(err) {
+			return path.Join(path.Join(home, ".bin")), nil
+		}
+	}
+
 	c := os.Getenv("XDG_CONFIG_HOME")
 	if _, err := os.Stat(c); !os.IsNotExist(err) {
 		return path.Join(c, "bin"), nil
 	}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
+	if homeErr != nil {
+		return "", homeErr
 	}
 	c = path.Join(home, ".config")
 	if _, err := os.Stat(c); !os.IsNotExist(err) {
