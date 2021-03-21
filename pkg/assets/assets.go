@@ -3,6 +3,7 @@ package assets
 import (
 	"archive/tar"
 	"bytes"
+	"compress/bzip2"
 	"compress/gzip"
 	"errors"
 	"fmt"
@@ -255,6 +256,8 @@ func processReader(repoName string, name string, r io.Reader) (string, io.Reader
 		processor = processTar
 	case matchers.TypeXz:
 		processor = processXz
+	case matchers.TypeBz2:
+		processor = processBz2
 	case matchers.TypeZip:
 		processor = processZip
 	}
@@ -319,6 +322,12 @@ func processTar(name string, r io.Reader) (string, io.Reader, error) {
 	return filepath.Base(selectedFile), bytes.NewReader(tf), nil
 }
 
+func processBz2(name string, r io.Reader) (string, io.Reader, error) {
+	br := bzip2.NewReader(r)
+
+	return "", br, nil
+}
+
 func processXz(name string, r io.Reader) (string, io.Reader, error) {
 	xr, err := xz.NewReader(r, 0)
 	if err != nil {
@@ -375,7 +384,7 @@ func isSupportedExt(filename string) bool {
 		switch filetype.GetType(ext) {
 		case msiType, matchers.TypeDeb, matchers.TypeRpm, ascType:
 			return false
-		case matchers.TypeGz, types.Unknown, matchers.TypeZip, matchers.TypeXz, matchers.TypeTar, matchers.TypeExe:
+		case matchers.TypeGz, types.Unknown, matchers.TypeZip, matchers.TypeXz, matchers.TypeTar, matchers.TypeBz2, matchers.TypeExe:
 			break
 		default:
 			return false
