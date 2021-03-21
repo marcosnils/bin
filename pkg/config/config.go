@@ -146,3 +146,14 @@ func GetOS() []string {
 	}
 	return res
 }
+
+func GetOSSpecificExtensions() []string {
+	switch runtime.GOOS {
+	case "linux":
+		return []string{"AppImage"}
+	case "windows":
+		return []string{"exe"}
+	default:
+		return nil
+	}
+}
