@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/WeiZhang555/tabwriter"
 	"github.com/fatih/color"
@@ -32,7 +33,13 @@ func newListCmd() *listCmd {
 			cfg := config.Get()
 
 			fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", "Path", "Version", "URL", "Status")
-			for _, b := range cfg.Bins {
+			binPaths := []string{}
+			for k := range cfg.Bins {
+				binPaths = append(binPaths, k)
+			}
+			sort.Strings(binPaths)
+			for _, k := range binPaths {
+				b := cfg.Bins[k]
 
 				_, err := os.Stat(b.Path)
 
