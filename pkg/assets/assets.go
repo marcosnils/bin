@@ -25,6 +25,11 @@ import (
 	"github.com/xi2/xz"
 )
 
+var (
+	msiType = filetype.AddType("msi", "application/octet-stream")
+	ascType = filetype.AddType("asc", "text/plain")
+)
+
 type Asset struct {
 	Name        string
 	DisplayName string
@@ -50,6 +55,7 @@ type FilteredAsset struct {
 type platformResolver interface {
 	GetOS() []string
 	GetArch() []string
+	GetOSSpecificExtensions() []string
 }
 
 type runtimeResolver struct{}
@@ -60,6 +66,10 @@ func (runtimeResolver) GetOS() []string {
 
 func (runtimeResolver) GetArch() []string {
 	return config.GetArch()
+}
+
+func (runtimeResolver) GetOSSpecificExtensions() []string {
+	return config.GetOSSpecificExtensions()
 }
 
 var resolver platformResolver = runtimeResolver{}
@@ -84,21 +94,23 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	for _, arch := range resolver.GetArch() {
 		scores[arch] = 5
 	}
+	for _, osSpecificExtension := range resolver.GetOSSpecificExtensions() {
+		scores[osSpecificExtension] = 15
+	}
 	scoreKeys := []string{}
 	for key := range scores {
-		scoreKeys = append(scoreKeys, key)
+		scoreKeys = append(scoreKeys, strings.ToLower(key))
 	}
 	for _, a := range as {
-		lowerName := strings.ToLower(a.Name)
-		lowerURLPathBasename := path.Base(strings.ToLower(a.URL))
+		urlPathBasename := path.Base(a.URL)
 		highestScoreForAsset := 0
 		gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
-		for _, candidate := range []string{lowerName, lowerURLPathBasename} {
+		for _, candidate := range []string{a.Name, urlPathBasename} {
 			candidateScore := 0
-			if bstrings.ContainsAny(candidate, scoreKeys) &&
+			if bstrings.ContainsAny(strings.ToLower(candidate), scoreKeys) &&
 				isSupportedExt(candidate) {
 				for toMatch, score := range scores {
-					if strings.Contains(candidate, strings.ToLower(toMatch)) {
+					if strings.Contains(strings.ToLower(candidate), strings.ToLower(toMatch)) {
 						candidateScore += score
 					}
 				}
@@ -361,6 +373,8 @@ func processZip(name string, r io.Reader) (string, io.Reader, error) {
 func isSupportedExt(filename string) bool {
 	if ext := strings.TrimPrefix(filepath.Ext(filename), "."); len(ext) > 0 {
 		switch filetype.GetType(ext) {
+		case msiType, matchers.TypeDeb, matchers.TypeRpm, ascType:
+			return false
 		case matchers.TypeGz, types.Unknown, matchers.TypeZip, matchers.TypeXz, matchers.TypeTar, matchers.TypeExe:
 			break
 		default:
