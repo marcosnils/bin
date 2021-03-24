@@ -179,3 +179,14 @@ func getConfigPath() (string, error) {
 
 	return path.Join(home, ".bin"), nil
 }
+
+func GetOSSpecificExtensions() []string {
+	switch runtime.GOOS {
+	case "linux":
+		return []string{"AppImage"}
+	case "windows":
+		return []string{"exe"}
+	default:
+		return nil
+	}
+}
