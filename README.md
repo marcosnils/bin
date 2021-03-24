@@ -65,3 +65,15 @@ bin update [bin]... # Scans binaries and prompts for update
 ### There are some bugs and the code is not tested
 
 I know.. and that's not planning to change any time soon unless I start getting some contributions. I did this as a personal tool and I'll probably be fixing stuff and adding features as I personally need them. Contributions are welcome though and I'll be happy to discuss and review them.
+
+### I see releases on Github, but bin does not pick them up
+
+At the moment, `bin` does only consider the [latest release from Github](https://docs.github.com/en/rest/reference/repos#get-the-latest-release) according to the following definition:
+
+> The latest release is the most recent non-prerelease, non-draft release, sorted by the `created_at` attribute. The `created_at` attribute is the date of the commit used for the release, and not the date when the release was drafted or published.
+
+### I used bin and I got rate limited by Github, what can I do
+
+Create a Github personal access token by following the steps in this guide: [Creating a personal access token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token). The access token used with `bin` does not need any scopes.
+
+Create an environment variable named `GITHUB_AUTH_TOKEN` with the value of your newly created access token. For example in bash: `export GITHUB_ACCESS_TOKEN=<your_token_value>`.
