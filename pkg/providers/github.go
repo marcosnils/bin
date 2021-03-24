@@ -82,6 +82,20 @@ func (g *gitHub) GetLatestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
 	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
 	if err != nil {
+		// If the error is that no latest release was found, it could be that there are only pre-releases
+		if ghErrResp, ok := err.(*github.ErrorResponse); ok && ghErrResp.Response.StatusCode == http.StatusNotFound {
+			// Get the first release returned by ListReleases
+			releases, _, listErr := g.client.Repositories.ListReleases(context.TODO(), g.owner, g.repo, &github.ListOptions{PerPage: 1})
+			if listErr != nil {
+				return "", "", listErr
+			}
+			if len(releases) > 0 {
+				return releases[0].GetTagName(), releases[0].GetHTMLURL(), nil
+			}
+			// Return original 404/StatusNotFound error from GetLatestRelease
+			return "", "", err
+		}
+
 		return "", "", err
 	}
 
