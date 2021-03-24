@@ -46,7 +46,11 @@ func newInstallCmd() *installCmd {
 
 			var path string
 			if len(args) > 1 {
-				path = args[1]
+				var err error
+				// Resolve to absolute path
+				if path, err = filepath.Abs(args[1]); err != nil {
+					return err
+				}
 			} else if len(config.Get().DefaultPath) > 0 {
 				path = config.Get().DefaultPath
 			} else {
