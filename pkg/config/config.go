@@ -159,25 +159,25 @@ func GetOS() []string {
 func getConfigPath() (string, error) {
 	home, homeErr := os.UserHomeDir()
 	if homeErr == nil {
-		if _, err := os.Stat(path.Join(home, ".bin", "config.json")); !os.IsNotExist(err) {
-			return path.Join(path.Join(home, ".bin")), nil
+		if _, err := os.Stat(filepath.Join(home, ".bin", "config.json")); !os.IsNotExist(err) {
+			return filepath.Join(path.Join(home, ".bin")), nil
 		}
 	}
 
 	c := os.Getenv("XDG_CONFIG_HOME")
 	if _, err := os.Stat(c); !os.IsNotExist(err) {
-		return path.Join(c, "bin"), nil
+		return filepath.Join(c, "bin"), nil
 	}
 
 	if homeErr != nil {
 		return "", homeErr
 	}
-	c = path.Join(home, ".config")
+	c = filepath.Join(home, ".config")
 	if _, err := os.Stat(c); !os.IsNotExist(err) {
-		return path.Join(c, "bin"), nil
+		return filepath.Join(c, "bin"), nil
 	}
 
-	return path.Join(home, ".bin"), nil
+	return filepath.Join(home, ".bin"), nil
 }
 
 func GetOSSpecificExtensions() []string {
