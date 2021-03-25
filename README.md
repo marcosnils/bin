@@ -78,4 +78,4 @@ You _can_ however install a specific pre-release by specifying the URL for the p
 
 Create a Github personal access token by following the steps in this guide: [Creating a personal access token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token). The access token used with `bin` does not need any scopes.
 
-Create an environment variable named `GITHUB_AUTH_TOKEN` with the value of your newly created access token. For example in bash: `export GITHUB_ACCESS_TOKEN=<your_token_value>`.
+Create an environment variable named `GITHUB_AUTH_TOKEN` with the value of your newly created access token. For example in bash: `export GITHUB_AUTH_TOKEN=<your_token_value>`.
