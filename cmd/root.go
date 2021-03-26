@@ -123,9 +123,9 @@ func getBinPath(name string) (string, error) {
 		return name, nil
 	}
 
-	cfg := config.Get()
+	_, bins := config.Get()
 
-	for _, bin := range cfg.Bins {
+	for _, bin := range bins {
 		if bin.RemoteName == name {
 			return bin.Path, nil
 		}

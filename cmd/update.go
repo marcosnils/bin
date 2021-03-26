@@ -47,8 +47,8 @@ func newUpdateCmd() *updateCmd {
 			// interface to support this use-case
 
 			toUpdate := map[*updateInfo]*config.Binary{}
-			cfg := config.Get()
-			binsToProcess := cfg.Bins
+			_, bins := config.Get()
+			binsToProcess := bins
 
 			// Update single binary
 			if bin != "" {
@@ -56,7 +56,7 @@ func newUpdateCmd() *updateCmd {
 				if err != nil {
 					return err
 				}
-				binsToProcess = map[string]*config.Binary{bin: cfg.Bins[bin]}
+				binsToProcess = map[string]*config.Binary{bin: bins[bin]}
 			}
 			for _, b := range binsToProcess {
 				p, err := providers.New(b.URL, b.Provider)
