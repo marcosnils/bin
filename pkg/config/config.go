@@ -167,6 +167,8 @@ func GetValue(key string) (interface{}, error) {
 	return nil, fmt.Errorf("configuration field not found: %s", key)
 }
 
+// ToDo: compare the type of the field with the value and
+//       set only if they match/are compatible
 func SetValue(key string, value interface{}) error {
   val := reflect.ValueOf(&cfg).Elem()
   for i := 0; i < val.NumField(); i++ {
@@ -174,9 +176,10 @@ func SetValue(key string, value interface{}) error {
     tag := field.Tag.Get("json")
     if field.Name == key || tag == key {
       val.Field(i).SetString(value.(string))
+      return writeConfig()
     }
   }
-  return writeConfig()
+  return fmt.Errorf("configuration field not found: %s", key)
 }
 
 // UpsertBinary adds or updats an existing
