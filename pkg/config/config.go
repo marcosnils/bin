@@ -1,22 +1,31 @@
 package config
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
+  "encoding/json"
+  "fmt"
+  "github.com/tidwall/gjson"
+  "io"
+  "os"
+  "path"
+  "path/filepath"
+  "reflect"
+  "runtime"
 
-	"github.com/apex/log"
+  "github.com/apex/log"
 )
 
-var cfg config
+const (
+	configFile = "config.json"
+	binaryFile = "bins.json"
+)
+
+var (
+	cfg  config
+	bins map[string]*Binary
+)
 
 type config struct {
-	DefaultPath string             `json:"default_path"`
-	Bins        map[string]*Binary `json:"bins"`
+	DefaultPath string `json:"default_path"`
 }
 
 type Binary struct {
@@ -28,7 +37,7 @@ type Binary struct {
 	Provider   string `json:"provider"`
 }
 
-func CheckAndLoad() error {
+func CheckAndLoad(ensureBasePath bool) error {
 	configDir, err := getConfigPath()
 	if err != nil {
 		return err
@@ -37,49 +46,145 @@ func CheckAndLoad() error {
 	if err := os.Mkdir(configDir, 0755); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("Error creating config directory [%v]", err)
 	}
-
 	log.Debugf("Config directory is: %s", configDir)
-	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE, 0664)
-	if err != nil && !os.IsNotExist(err) {
+
+	_, err = os.Stat(filepath.Join(configDir, configFile))
+	_, binErr := os.Stat(filepath.Join(configDir, binaryFile))
+
+	// we have a `config.json` but no `bins.json`, let's try to load a legacy configuration
+	if !os.IsNotExist(err) && os.IsNotExist(binErr) {
+		err = loadLegacyConfig(filepath.Join(configDir, configFile))
+		if bins != nil {
+      // successfully loaded binary from legacy config, write them to disk
+		  err = writeConfig()
+    }
+	} else {
+		err = loadConfig(filepath.Join(configDir, configFile), filepath.Join(configDir, binaryFile))
+	}
+	if err != nil {
 		return err
 	}
 
-	defer f.Close()
-
-	if err := json.NewDecoder(f).Decode(&cfg); err != nil {
-		if err == io.EOF {
-			// Empty file and/or was just created, initialize cfg.Bins
-			cfg.Bins = map[string]*Binary{}
-		} else {
+	if bins == nil {
+		bins = make(map[string]*Binary)
+		if err := writeBins(); err != nil {
 			return err
 		}
 	}
 
-	if len(cfg.DefaultPath) == 0 {
+	if ensureBasePath && len(cfg.DefaultPath) == 0 {
 		cfg.DefaultPath, err = getDefaultPath()
 		if err != nil {
 			return err
 		}
-		f.Close()
-		if err := write(); err != nil {
+		if err := writeConfig(); err != nil {
 			return err
 		}
+		log.Debugf("Download path set to %s", cfg.DefaultPath)
 	}
-	log.Debugf("Download path set to %s", cfg.DefaultPath)
-
 	return nil
 }
 
-func Get() *config {
-	return &cfg
+func loadConfig(cfgPath, binPath string) error {
+	cf, err := os.Open(cfgPath)
+	if os.IsNotExist(err) {
+		cfg = config{}
+	} else if os.IsNotExist(err) {
+		return err
+	} else {
+		defer cf.Close()
+		err = json.NewDecoder(cf).Decode(&cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	bf, err := os.Open(binPath)
+	if os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	defer bf.Close()
+	err = json.NewDecoder(bf).Decode(&bins)
+	return err
+}
+
+func loadLegacyConfig(cfgPath string) error {
+	err := backupConfig(cfgPath, cfgPath+".sav")
+	if err != nil {
+		return err
+	}
+
+	jStr, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(jStr, &cfg)
+	if err != nil {
+		return err
+	}
+
+	b := gjson.Get(string(jStr), "bins")
+	if b.Type == gjson.JSON && len(b.Raw) > 0 {
+		err = json.Unmarshal([]byte(b.Raw), &bins)
+	}
+	return err
+}
+
+func backupConfig(src, dst string) error {
+	log.Debugf("Found a legacy configuration, doing a backup: [%s]", dst)
+	cfgFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer cfgFile.Close()
+
+	bakFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer bakFile.Close()
+
+	_, err = io.Copy(bakFile, cfgFile)
+	return err
+}
+
+func Get() (*config, map[string]*Binary) {
+	return &cfg, bins
+}
+
+func GetValue(key string) (interface{}, error) {
+	val := reflect.ValueOf(&cfg).Elem()
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Type().Field(i)
+		tag := field.Tag.Get("json")
+		if field.Name == key || tag == key {
+			return val.Field(i).Interface(), nil
+		}
+	}
+
+	return nil, fmt.Errorf("configuration field not found: %s", key)
+}
+
+func SetValue(key string, value interface{}) error {
+  val := reflect.ValueOf(&cfg).Elem()
+  for i := 0; i < val.NumField(); i++ {
+    field := val.Type().Field(i)
+    tag := field.Tag.Get("json")
+    if field.Name == key || tag == key {
+      val.Field(i).SetString(value.(string))
+    }
+  }
+  return writeConfig()
 }
 
 // UpsertBinary adds or updats an existing
 // binary resource in the config
 func UpsertBinary(c *Binary) error {
 	if c != nil {
-		cfg.Bins[c.Path] = c
-		err := write()
+		bins[c.Path] = c
+		err := writeBins()
 		if err != nil {
 			return err
 		}
@@ -92,28 +197,35 @@ func UpsertBinary(c *Binary) error {
 // from bin configuration. It doesn't care about the order
 func RemoveBinaries(paths []string) error {
 	for _, p := range paths {
-		delete(cfg.Bins, p)
+		delete(bins, p)
 	}
 
-	return write()
+	return writeBins()
 }
 
-func write() error {
+func writeConfig() error {
+	return write(configFile, cfg)
+}
+
+func writeBins() error {
+	return write(binaryFile, bins)
+}
+
+func write(file string, data interface{}) error {
 	configDir, err := getConfigPath()
 	if err != nil {
 		return err
 	}
 
-	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0664)
+	f, err := os.OpenFile(filepath.Join(configDir, file), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0664)
 	if err != nil {
 		return err
 	}
-
 	defer f.Close()
 
-	decoder := json.NewEncoder(f)
-	decoder.SetIndent("", "    ")
-	err = decoder.Encode(cfg)
+	encoder := json.NewEncoder(f)
+	encoder.SetIndent("", "    ")
+	err = encoder.Encode(data)
 
 	if err != nil {
 		return err
