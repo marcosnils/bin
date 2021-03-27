@@ -15,7 +15,12 @@ import (
 )
 
 type updateCmd struct {
-	cmd *cobra.Command
+	cmd  *cobra.Command
+	opts updateOpts
+}
+
+type updateOpts struct {
+	dryRun bool
 }
 
 type updateInfo struct{ version, url string }
@@ -73,6 +78,8 @@ func newUpdateCmd() *updateCmd {
 			if len(toUpdate) == 0 {
 				log.Infof("All binaries are up to date")
 				return nil
+			} else if root.opts.dryRun {
+				return fmt.Errorf("Command aborted, dry-run mode")
 			}
 
 			// TODO will have to refactor this prompt to a separate function
@@ -129,6 +136,7 @@ func newUpdateCmd() *updateCmd {
 	}
 
 	root.cmd = cmd
+	root.cmd.Flags().BoolVarP(&root.opts.dryRun, "dry-run", "", false, "Only show status, don't prompt for update")
 	return root
 }
 
