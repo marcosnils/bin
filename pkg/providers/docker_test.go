@@ -20,14 +20,12 @@ func TestParseImage(t *testing.T) {
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			repo, tag, err := parseImage(test.imageURL)
+			repo, tag := parseImage(test.imageURL)
 			switch {
 			case test.expectedRepo != repo:
 				t.Errorf("expected repo was %s, got %s", test.expectedRepo, repo)
 			case test.expectedTag != tag:
 				t.Errorf("expected tag was %s, got %s", test.expectedTag, tag)
-			case test.withErr != (err != nil):
-				t.Errorf("expected err != nil to be %v", test.withErr)
 			}
 		})
 	}

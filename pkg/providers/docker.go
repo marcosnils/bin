@@ -57,10 +57,7 @@ func (d *docker) GetID() string {
 func newDocker(imageURL string) (Provider, error) {
 	imageURL = strings.TrimPrefix(imageURL, "docker://")
 
-	repo, tag, err := parseImage(imageURL)
-	if err != nil {
-		return nil, err
-	}
+	repo, tag := parseImage(imageURL)
 
 	client, err := client.NewClientWithOpts()
 	if err != nil {
@@ -73,7 +70,7 @@ func newDocker(imageURL string) (Provider, error) {
 // parseImage parses the image returning the repository, tag
 // and an error if it fails. ParseImage handles non-canonical
 // URLs like `hashicorp/terraform`.
-func parseImage(imageURL string) (string, string, error) {
+func parseImage(imageURL string) (string, string) {
 	image := imageURL
 	tag := "latest"
 	if i := strings.LastIndex(imageURL, ":"); i > -1 {
@@ -85,5 +82,5 @@ func parseImage(imageURL string) (string, string, error) {
 		image = "library/" + image
 	}
 
-	return image, tag, nil
+	return image, tag
 }
