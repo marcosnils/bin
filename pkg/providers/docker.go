@@ -67,9 +67,8 @@ func newDocker(imageURL string) (Provider, error) {
 	return &docker{repo: repo, tag: tag, client: client}, nil
 }
 
-// parseImage parses the image returning the repository, tag
-// and an error if it fails. ParseImage handles non-canonical
-// URLs like `hashicorp/terraform`.
+// parseImage parses the image returning the repository and tag.
+// It handles non-canonical URLs like `hashicorp/terraform`.
 func parseImage(imageURL string) (string, string) {
 	image := imageURL
 	tag := "latest"
