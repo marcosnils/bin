@@ -79,9 +79,9 @@ func newUpdateCmd() *updateCmd {
 				log.Infof("All binaries are up to date")
 				return nil
 			}
-			
+
 			if root.opts.dryRun {
-				return fmt.Errorf("Updates found, exit (dry-run mode).")
+				return wrapErrorWithCode(fmt.Errorf("Updates found, exit (dry-run mode)."), 3, "")
 			}
 
 			// TODO will have to refactor this prompt to a separate function
