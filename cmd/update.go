@@ -15,7 +15,12 @@ import (
 )
 
 type updateCmd struct {
-	cmd *cobra.Command
+	cmd  *cobra.Command
+	opts updateOpts
+}
+
+type updateOpts struct {
+	dryRun bool
 }
 
 type updateInfo struct{ version, url string }
@@ -75,6 +80,10 @@ func newUpdateCmd() *updateCmd {
 				return nil
 			}
 
+			if root.opts.dryRun {
+				return wrapErrorWithCode(fmt.Errorf("Updates found, exit (dry-run mode)."), 3, "")
+			}
+
 			// TODO will have to refactor this prompt to a separate function
 			// so it can be reused in some other places
 			fmt.Printf("\nDo you want to continue? [Y/n] ")
@@ -129,6 +138,7 @@ func newUpdateCmd() *updateCmd {
 	}
 
 	root.cmd = cmd
+	root.cmd.Flags().BoolVarP(&root.opts.dryRun, "dry-run", "", false, "Only show status, don't prompt for update")
 	return root
 }
 
