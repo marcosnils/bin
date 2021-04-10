@@ -87,58 +87,64 @@ func (g FilteredAsset) String() string {
 // in case it can't determine it
 func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	matches := []*FilteredAsset{}
-	scores := map[string]int{}
-	scores[repoName] = 1
-	for _, os := range resolver.GetOS() {
-		scores[os] = 10
-	}
-	for _, arch := range resolver.GetArch() {
-		scores[arch] = 5
-	}
-	for _, osSpecificExtension := range resolver.GetOSSpecificExtensions() {
-		scores[osSpecificExtension] = 15
-	}
-	scoreKeys := []string{}
-	for key := range scores {
-		scoreKeys = append(scoreKeys, strings.ToLower(key))
-	}
-	for _, a := range as {
-		urlPathBasename := path.Base(a.URL)
-		highestScoreForAsset := 0
-		gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
-		for _, candidate := range []string{a.Name, urlPathBasename} {
-			candidateScore := 0
-			if bstrings.ContainsAny(strings.ToLower(candidate), scoreKeys) &&
-				isSupportedExt(candidate) {
-				for toMatch, score := range scores {
-					if strings.Contains(strings.ToLower(candidate), strings.ToLower(toMatch)) {
-						candidateScore += score
+	if len(as) == 1 {
+		a := as[0]
+		matches = append(matches, &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0})
+	} else {
+		scores := map[string]int{}
+		scores[repoName] = 1
+		for _, os := range resolver.GetOS() {
+			scores[os] = 10
+		}
+		for _, arch := range resolver.GetArch() {
+			scores[arch] = 5
+		}
+		for _, osSpecificExtension := range resolver.GetOSSpecificExtensions() {
+			scores[osSpecificExtension] = 15
+		}
+		scoreKeys := []string{}
+		for key := range scores {
+			scoreKeys = append(scoreKeys, strings.ToLower(key))
+		}
+		for _, a := range as {
+			urlPathBasename := path.Base(a.URL)
+			highestScoreForAsset := 0
+			gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
+			for _, candidate := range []string{a.Name, urlPathBasename} {
+				candidateScore := 0
+				if bstrings.ContainsAny(strings.ToLower(candidate), scoreKeys) &&
+					isSupportedExt(candidate) {
+					for toMatch, score := range scores {
+						if strings.Contains(strings.ToLower(candidate), strings.ToLower(toMatch)) {
+							candidateScore += score
+						}
+					}
+					if candidateScore > highestScoreForAsset {
+						highestScoreForAsset = candidateScore
+						gf.Name = candidate
+						gf.score = candidateScore
 					}
 				}
-				if candidateScore > highestScoreForAsset {
-					highestScoreForAsset = candidateScore
-					gf.Name = candidate
-					gf.score = candidateScore
-				}
+			}
+			if highestScoreForAsset > 0 {
+				matches = append(matches, gf)
 			}
 		}
-		if highestScoreForAsset > 0 {
-			matches = append(matches, gf)
+		highestAssetScore := 0
+		for i := range matches {
+			if matches[i].score > highestAssetScore {
+				highestAssetScore = matches[i].score
+			}
 		}
-	}
-	highestAssetScore := 0
-	for i := range matches {
-		if matches[i].score > highestAssetScore {
-			highestAssetScore = matches[i].score
+		for i := len(matches) - 1; i >= 0; i-- {
+			if matches[i].score < highestAssetScore {
+				log.Debugf("Removing %v (URL %v) with score %v lower than %v", matches[i].Name, matches[i].URL, matches[i].score, highestAssetScore)
+				matches = append(matches[:i], matches[i+1:]...)
+			} else {
+				log.Debugf("Keeping %v (URL %v) with highest score %v", matches[i].Name, matches[i].URL, matches[i].score)
+			}
 		}
-	}
-	for i := len(matches) - 1; i >= 0; i-- {
-		if matches[i].score < highestAssetScore {
-			log.Debugf("Removing %v (URL %v) with score %v lower than %v", matches[i].Name, matches[i].URL, matches[i].score, highestAssetScore)
-			matches = append(matches[:i], matches[i+1:]...)
-		} else {
-			log.Debugf("Keeping %v (URL %v) with highest score %v", matches[i].Name, matches[i].URL, matches[i].score)
-		}
+
 	}
 
 	var gf *FilteredAsset

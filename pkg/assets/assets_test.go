@@ -180,3 +180,27 @@ func TestIsSupportedExt(t *testing.T) {
 	}
 
 }
+
+func TestFilterSingleAsset(t *testing.T) {
+	type args struct {
+		repoName string
+		as       []*Asset
+	}
+	cases := []struct {
+		in  args
+		out string
+	}{
+		{args{"cli", []*Asset{
+			{Name: "dapr", URL: ""},
+		}}, "dapr"},
+	}
+
+	for _, c := range cases {
+		if n, err := FilterAssets(c.in.repoName, c.in.as); err != nil {
+			t.Fatalf("Error filtering asset [%v]", err)
+		} else if n.Name != c.out {
+			t.Fatalf("Error filtering %+v: %+v does not match %s", c.in, n, c.out)
+		}
+	}
+
+}
