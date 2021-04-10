@@ -68,8 +68,9 @@ func newRootCmd(version string, exit func(int)) *rootCmd {
 				log.Debug("debug logs enabled")
 			}
 
-			// check and load config after handlers are configured
-			err := config.CheckAndLoad()
+			// check and load config after handlers are configured, ignore if the
+			// base path is set, if the command is the `config` command
+			err := config.CheckAndLoad( cmd.Parent().Name() != "config")
 			if err != nil {
 				log.Fatalf("Error loading config file %v", err)
 			}
@@ -84,6 +85,7 @@ func newRootCmd(version string, exit func(int)) *rootCmd {
 		newRemoveCmd().cmd,
 		newListCmd().cmd,
 		newPruneCmd().cmd,
+		newConfigCmd().cmd,
 	)
 
 	root.cmd = cmd
@@ -121,9 +123,9 @@ func getBinPath(name string) (string, error) {
 		return name, nil
 	}
 
-	cfg := config.Get()
+	_, bins := config.Get()
 
-	for _, bin := range cfg.Bins {
+	for _, bin := range bins {
 		if bin.RemoteName == name {
 			return bin.Path, nil
 		}

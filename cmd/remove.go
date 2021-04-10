@@ -24,17 +24,16 @@ func newRemoveCmd() *removeCmd {
 		Args:          cobra.MinimumNArgs(1),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.Get()
+			_, bins := config.Get()
 
 			existingToRemove := []string{}
-
 			for _, p := range args {
 				p, err := getBinPath(p)
 				if err != nil {
 					return err
 				}
 
-				if _, ok := cfg.Bins[p]; ok {
+				if _, ok := bins[p]; ok {
 					existingToRemove = append(existingToRemove, p)
 					// TODO some providers (like docker) might download
 					// additional things somewhere else, maybe we should

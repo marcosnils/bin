@@ -22,10 +22,10 @@ func newPruneCmd() *pruneCmd {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.Get()
+			_, bins := config.Get()
 
 			pathsToDel := []string{}
-			for _, b := range cfg.Bins {
+			for _, b := range bins {
 				if _, err := os.Stat(b.Path); os.IsNotExist(err) {
 					log.Infof("%s not found removing", b.Path)
 					pathsToDel = append(pathsToDel, b.Path)

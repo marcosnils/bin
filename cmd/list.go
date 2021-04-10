@@ -30,16 +30,16 @@ func newListCmd() *listCmd {
 
 			defer w.Flush()
 
-			cfg := config.Get()
+			_, bins := config.Get()
 
 			fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", "Path", "Version", "URL", "Status")
 			binPaths := []string{}
-			for k := range cfg.Bins {
+			for k := range bins {
 				binPaths = append(binPaths, k)
 			}
 			sort.Strings(binPaths)
 			for _, k := range binPaths {
-				b := cfg.Bins[k]
+				b := bins[k]
 
 				_, err := os.Stat(b.Path)
 

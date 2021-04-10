@@ -44,6 +44,7 @@ func newInstallCmd() *installCmd {
 			//have to calculate it each time. Afterwards, bin users can change this
 			//path by editing bin's config file or maybe introdice the `bin config` command
 
+			cfg, _ := config.Get()
 			var path string
 			if len(args) > 1 {
 				var err error
@@ -51,8 +52,8 @@ func newInstallCmd() *installCmd {
 				if path, err = filepath.Abs(args[1]); err != nil {
 					return err
 				}
-			} else if len(config.Get().DefaultPath) > 0 {
-				path = config.Get().DefaultPath
+			} else if len(cfg.DefaultPath) > 0 {
+				path = cfg.DefaultPath
 			} else {
 				var err error
 				path, err = os.Getwd()

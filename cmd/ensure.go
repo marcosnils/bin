@@ -26,8 +26,7 @@ func newEnsureCmd() *ensureCmd {
 		Args:          cobra.MaximumNArgs(0),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.Get()
-			binsToProcess := cfg.Bins
+			_, binsToProcess := config.Get()
 
 			// TODO: code smell here, this pretty much does
 			// the same thing as install logic. Refactor to
