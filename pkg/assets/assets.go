@@ -3,6 +3,7 @@ package assets
 import (
 	"archive/tar"
 	"bytes"
+	"compress/bzip2"
 	"compress/gzip"
 	"errors"
 	"fmt"
@@ -25,61 +26,103 @@ import (
 	"github.com/xi2/xz"
 )
 
+var (
+	msiType = filetype.AddType("msi", "application/octet-stream")
+	ascType = filetype.AddType("asc", "text/plain")
+)
+
 type Asset struct {
-	Name string
-	URL  string
+	Name        string
+	DisplayName string
+	URL         string
 }
 
-func (g Asset) String() string { return g.Name }
+func (g Asset) String() string {
+	if g.DisplayName != "" {
+		return g.DisplayName
+	}
+	return g.Name
+}
 
 type FilteredAsset struct {
-	RepoName string
-	Name     string
-	URL      string
-	score    int
+	RepoName     string
+	Name         string
+	DisplayName  string
+	URL          string
+	score        int
+	ExtraHeaders map[string]string
 }
 
-func (g FilteredAsset) String() string { return g.Name }
+type platformResolver interface {
+	GetOS() []string
+	GetArch() []string
+	GetOSSpecificExtensions() []string
+}
+
+type runtimeResolver struct{}
+
+func (runtimeResolver) GetOS() []string {
+	return config.GetOS()
+}
+
+func (runtimeResolver) GetArch() []string {
+	return config.GetArch()
+}
+
+func (runtimeResolver) GetOSSpecificExtensions() []string {
+	return config.GetOSSpecificExtensions()
+}
+
+var resolver platformResolver = runtimeResolver{}
+
+func (g FilteredAsset) String() string {
+	if g.DisplayName != "" {
+		return g.DisplayName
+	}
+	return g.Name
+}
 
 // FilterAssets receives a slice of GL assets and tries to
 // select the proper one and ask the user to manually select one
 // in case it can't determine it
 func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	matches := []*FilteredAsset{}
-	// if there's a single file don't filter by score
 	if len(as) == 1 {
 		a := as[0]
 		matches = append(matches, &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0})
 	} else {
 		scores := map[string]int{}
 		scores[repoName] = 1
-		for _, os := range config.GetOS() {
+		for _, os := range resolver.GetOS() {
 			scores[os] = 10
 		}
-		for _, arch := range config.GetArch() {
+		for _, arch := range resolver.GetArch() {
 			scores[arch] = 5
+		}
+		for _, osSpecificExtension := range resolver.GetOSSpecificExtensions() {
+			scores[osSpecificExtension] = 15
 		}
 		scoreKeys := []string{}
 		for key := range scores {
-			scoreKeys = append(scoreKeys, key)
+			scoreKeys = append(scoreKeys, strings.ToLower(key))
 		}
 		for _, a := range as {
-			lowerName := strings.ToLower(a.Name)
-			lowerURLPathBasename := path.Base(strings.ToLower(a.URL))
-			filetype.GetType(lowerName)
+			urlPathBasename := path.Base(a.URL)
 			highestScoreForAsset := 0
-			gf := &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0}
-			for _, candidate := range []string{lowerName, lowerURLPathBasename} {
-				if bstrings.ContainsAny(candidate, scoreKeys) &&
+			gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
+			for _, candidate := range []string{a.Name, urlPathBasename} {
+				candidateScore := 0
+				if bstrings.ContainsAny(strings.ToLower(candidate), scoreKeys) &&
 					isSupportedExt(candidate) {
 					for toMatch, score := range scores {
-						if strings.Contains(candidate, toMatch) {
-							gf.score += score
+						if strings.Contains(strings.ToLower(candidate), strings.ToLower(toMatch)) {
+							candidateScore += score
 						}
 					}
-					if gf.score > highestScoreForAsset {
-						highestScoreForAsset = gf.score
+					if candidateScore > highestScoreForAsset {
+						highestScoreForAsset = candidateScore
 						gf.Name = candidate
+						gf.score = candidateScore
 					}
 				}
 			}
@@ -95,12 +138,13 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 		}
 		for i := len(matches) - 1; i >= 0; i-- {
 			if matches[i].score < highestAssetScore {
-				log.Debugf("Removing %v with score %v lower than %v", matches[i].Name, matches[i].score, highestAssetScore)
+				log.Debugf("Removing %v (URL %v) with score %v lower than %v", matches[i].Name, matches[i].URL, matches[i].score, highestAssetScore)
 				matches = append(matches[:i], matches[i+1:]...)
 			} else {
 				log.Debugf("Keeping %v (URL %v) with highest score %v", matches[i].Name, matches[i].URL, matches[i].score)
 			}
 		}
+
 	}
 
 	var gf *FilteredAsset
@@ -116,13 +160,12 @@ func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 			return nil, err
 		}
 		gf = choice.(*FilteredAsset)
-		//TODO make user select the proper file
+		// TODO make user select the proper file
 	} else {
 		gf = matches[0]
 	}
 
 	return gf, nil
-
 }
 
 // SanitizeName removes irrelevant information from the
@@ -134,8 +177,8 @@ func SanitizeName(name, version string) string {
 	// TODO maybe instead of doing this put everything in a map (set) and then
 	// generate the replacements? IDK.
 	firstPass := true
-	for _, osName := range config.GetOS() {
-		for _, archName := range config.GetArch() {
+	for _, osName := range resolver.GetOS() {
+		for _, archName := range resolver.GetArch() {
 			replacements = append(replacements, "_"+osName+archName, "")
 			replacements = append(replacements, "-"+osName+archName, "")
 			replacements = append(replacements, "."+osName+archName, "")
@@ -166,8 +209,15 @@ func SanitizeName(name, version string) string {
 // ProcessURL processes a FilteredAsset by uncompressing/unarchiving the URL of the asset.
 func ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
 	// We're not closing the body here since the caller is in charge of that
-	res, err := http.Get(gf.URL)
+	req, err := http.NewRequest(http.MethodGet, gf.URL, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	for name, value := range gf.ExtraHeaders {
+		req.Header.Add(name, value)
+	}
 	log.Debugf("Checking binary from %s", gf.URL)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", nil, err
 	}
@@ -184,7 +234,7 @@ func ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
 	barReader := bar.NewProxyReader(res.Body)
 	defer bar.Finish()
 	buf := new(bytes.Buffer)
-	io.Copy(buf, barReader)
+	_, err = io.Copy(buf, barReader)
 	if err != nil {
 		return "", nil, err
 	}
@@ -201,11 +251,10 @@ func processReader(repoName string, name string, r io.Reader) (string, io.Reader
 		return "", nil, err
 	}
 
-	var outputFile = io.MultiReader(&buf, r)
+	outputFile := io.MultiReader(&buf, r)
 
 	type processorFunc func(repoName string, r io.Reader) (string, io.Reader, error)
 	var processor processorFunc
-
 	switch t {
 	case matchers.TypeGz:
 		processor = processGz
@@ -213,6 +262,8 @@ func processReader(repoName string, name string, r io.Reader) (string, io.Reader
 		processor = processTar
 	case matchers.TypeXz:
 		processor = processXz
+	case matchers.TypeBz2:
+		processor = processBz2
 	case matchers.TypeZip:
 		processor = processZip
 	}
@@ -277,6 +328,12 @@ func processTar(name string, r io.Reader) (string, io.Reader, error) {
 	return filepath.Base(selectedFile), bytes.NewReader(tf), nil
 }
 
+func processBz2(name string, r io.Reader) (string, io.Reader, error) {
+	br := bzip2.NewReader(r)
+
+	return "", br, nil
+}
+
 func processXz(name string, r io.Reader) (string, io.Reader, error) {
 	xr, err := xz.NewReader(r, 0)
 	if err != nil {
@@ -309,15 +366,15 @@ func processZip(name string, r io.Reader) (string, io.Reader, error) {
 		return "", nil, errors.New("No files found in zip archive")
 	}
 
-	generic := make([]fmt.Stringer, 0)
+	as := make([]*Asset, 0)
 	for f := range zipFiles {
-		generic = append(generic, options.LiteralStringer(f))
+		as = append(as, &Asset{Name: f, URL: ""})
 	}
-	choice, err := options.Select("Select file to extract:", generic)
+	choice, err := FilterAssets(name, as)
 	if err != nil {
 		return "", nil, err
 	}
-	selectedFile := choice.(fmt.Stringer).String()
+	selectedFile := choice.String()
 
 	fr := bytes.NewReader(zipFiles[selectedFile])
 
@@ -331,7 +388,9 @@ func processZip(name string, r io.Reader) (string, io.Reader, error) {
 func isSupportedExt(filename string) bool {
 	if ext := strings.TrimPrefix(filepath.Ext(filename), "."); len(ext) > 0 {
 		switch filetype.GetType(ext) {
-		case matchers.TypeGz, types.Unknown, matchers.TypeZip, matchers.TypeXz, matchers.TypeTar:
+		case msiType, matchers.TypeDeb, matchers.TypeRpm, ascType:
+			return false
+		case matchers.TypeGz, types.Unknown, matchers.TypeZip, matchers.TypeXz, matchers.TypeTar, matchers.TypeBz2, matchers.TypeExe:
 			break
 		default:
 			return false

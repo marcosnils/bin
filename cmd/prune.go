@@ -10,17 +10,13 @@ import (
 )
 
 type pruneCmd struct {
-	cmd  *cobra.Command
-	opts pruneOpts
-}
-
-type pruneOpts struct {
+	cmd *cobra.Command
 }
 
 func newPruneCmd() *pruneCmd {
-	var root = &pruneCmd{}
+	root := &pruneCmd{}
 	// nolint: dupl
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "prune",
 		Short:         "Prunes binaries that no longer exist in the system",
 		SilenceUsage:  true,
@@ -36,14 +32,13 @@ func newPruneCmd() *pruneCmd {
 				}
 			}
 
-			//TODO will have to refactor this prompt to a separate function
-			//so it can be reused in some other places
+			// TODO will have to refactor this prompt to a separate function
+			// so it can be reused in some other places
 			// TODO add force flag to bypass prompt
 			fmt.Printf("\nThe following paths will be removed. Continue? [Y/n] ")
 			var response string
 
 			_, err := fmt.Scanln(&response)
-
 			if err != nil {
 				return fmt.Errorf("Invalid input")
 			}

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/WeiZhang555/tabwriter"
 	"github.com/fatih/color"
@@ -11,17 +12,13 @@ import (
 )
 
 type listCmd struct {
-	cmd  *cobra.Command
-	opts listOpts
-}
-
-type listOpts struct {
+	cmd *cobra.Command
 }
 
 func newListCmd() *listCmd {
-	var root = &listCmd{}
+	root := &listCmd{}
 	// nolint: dupl
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "list",
 		Aliases:       []string{"ls"},
 		Short:         "List binaries managed by bin",
@@ -36,7 +33,13 @@ func newListCmd() *listCmd {
 			cfg := config.Get()
 
 			fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", "Path", "Version", "URL", "Status")
-			for _, b := range cfg.Bins {
+			binPaths := []string{}
+			for k := range cfg.Bins {
+				binPaths = append(binPaths, k)
+			}
+			sort.Strings(binPaths)
+			for _, k := range binPaths {
+				b := cfg.Bins[k]
 
 				_, err := os.Stat(b.Path)
 

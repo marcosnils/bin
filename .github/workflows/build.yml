@@ -8,13 +8,20 @@ on:
 
 name: Go
 jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
   build:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598
+      uses: actions/checkout@v2
     - name: Install Go
-      uses: actions/setup-go@9fbc767707c286e568c92927bbf57d76b73e0892
+      uses: actions/setup-go@v2
       with:
         go-version: 1.14
     - name: Test

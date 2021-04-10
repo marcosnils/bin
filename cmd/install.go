@@ -18,19 +18,20 @@ type installCmd struct {
 }
 
 type installOpts struct {
-	force bool
+	force    bool
+	provider string
 }
 
 func newInstallCmd() *installCmd {
 	var root = &installCmd{}
 	// nolint: dupl
 	var cmd = &cobra.Command{
-		Use:           "install",
+		Use:           "install <url>",
 		Aliases:       []string{"i"},
-		Short:         "Installs the specified project",
+		Short:         "Installs the specified project from a url",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Args:          cobra.MaximumNArgs(2),
+		Args:          cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			//TODO implement --force(-f) flag for install
 			// to override the binary if exists
@@ -45,7 +46,11 @@ func newInstallCmd() *installCmd {
 
 			var path string
 			if len(args) > 1 {
-				path = args[1]
+				var err error
+				// Resolve to absolute path
+				if path, err = filepath.Abs(args[1]); err != nil {
+					return err
+				}
 			} else if len(config.Get().DefaultPath) > 0 {
 				path = config.Get().DefaultPath
 			} else {
@@ -59,7 +64,7 @@ func newInstallCmd() *installCmd {
 			//TODO check if binary already exists in config
 			// and triger the update process if that's the case
 
-			p, err := providers.New(u)
+			p, err := providers.New(u, root.opts.provider)
 			if err != nil {
 				return err
 			}
@@ -76,8 +81,7 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
-			force, _ := cmd.LocalFlags().GetBool("force")
-			if err = saveToDisk(pResult, path, force); err != nil {
+			if err = saveToDisk(pResult, path, root.opts.force); err != nil {
 				return fmt.Errorf("Error installing binary: %w", err)
 			}
 
@@ -87,6 +91,7 @@ func newInstallCmd() *installCmd {
 				Version:    pResult.Version,
 				Hash:       fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
 				URL:        u,
+				Provider:   p.GetID(),
 			})
 
 			if err != nil {
@@ -101,11 +106,12 @@ func newInstallCmd() *installCmd {
 
 	root.cmd = cmd
 	root.cmd.Flags().BoolVarP(&root.opts.force, "force", "f", false, "Force the installation even if the file already exists")
+	root.cmd.Flags().StringVarP(&root.opts.provider, "provider", "p", "", "Forces to use a specific provider")
 	return root
 }
 
-// getFinalPath checks if path exists and returns
-// true if it's a directory. If false, it also
+// getFinalPath checks if path exists and if it's a dir or not
+// and returns the correct final file path. It also
 // checks if the path already exists and prompts
 // the user to override
 func getFinalPath(path, fileName string) (string, error) {
@@ -136,6 +142,11 @@ func saveToDisk(f *providers.File, path string, overwrite bool) error {
 
 	if overwrite {
 		extraFlags = 0
+		err := os.Remove(path)
+		log.Debugf("Overwrite flag set, removing file %s\n", path)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
 	}
 
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|extraFlags, 0766)

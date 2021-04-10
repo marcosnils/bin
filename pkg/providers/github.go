@@ -23,10 +23,7 @@ type gitHub struct {
 	tag    string
 }
 
-type githubFileInfo struct{ url, name string }
-
 func (g *gitHub) Fetch() (*File, error) {
-
 	var release *github.RepositoryRelease
 
 	// If we have a tag, let's fetch from there
@@ -35,7 +32,7 @@ func (g *gitHub) Fetch() (*File, error) {
 		log.Infof("Getting %s release for %s/%s", g.tag, g.owner, g.repo)
 		release, _, err = g.client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repo, g.tag)
 	} else {
-		//TODO handle case when repo doesn't have releases?
+		// TODO handle case when repo doesn't have releases?
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
 		release, _, err = g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
 	}
@@ -49,7 +46,6 @@ func (g *gitHub) Fetch() (*File, error) {
 		candidates = append(candidates, &assets.Asset{Name: a.GetName(), URL: a.GetBrowserDownloadURL()})
 	}
 	gf, err := assets.FilterAssets(g.repo, candidates)
-
 	if err != nil {
 		return nil, err
 	}
@@ -61,16 +57,16 @@ func (g *gitHub) Fetch() (*File, error) {
 
 	version := release.GetTagName()
 
-	//TODO calculate file hash. Not sure if we can / should do it here
-	//since we don't want to read the file unnecesarily. Additionally, sometimes
-	//releases have .sha256 files, so it'd be nice to check for those also
+	// TODO calculate file hash. Not sure if we can / should do it here
+	// since we don't want to read the file unnecesarily. Additionally, sometimes
+	// releases have .sha256 files, so it'd be nice to check for those also
 	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version}
 
 	return f, nil
 }
 
-//GetLatestVersion checks the latest repo release and
-//returns the corresponding name and url to fetch the version
+// GetLatestVersion checks the latest repo release and
+// returns the corresponding name and url to fetch the version
 func (g *gitHub) GetLatestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
 	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
@@ -79,6 +75,10 @@ func (g *gitHub) GetLatestVersion() (string, string, error) {
 	}
 
 	return release.GetTagName(), release.GetHTMLURL(), nil
+}
+
+func (g *gitHub) GetID() string {
+	return "github"
 }
 
 func newGitHub(u *url.URL) (Provider, error) {
@@ -90,8 +90,8 @@ func newGitHub(u *url.URL) (Provider, error) {
 	// it's a specific releases URL
 	var tag string
 	if strings.Contains(u.Path, "/releases/") {
-		//For release and download URL's, the
-		//path is usually /releases/tag/v0.1
+		// For release and download URL's, the
+		// path is usually /releases/tag/v0.1
 		// or /releases/download/v0.1.
 		ps := strings.Split(u.Path, "/")
 		for i, p := range ps {

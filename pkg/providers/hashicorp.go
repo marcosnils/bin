@@ -67,17 +67,11 @@ func (g *hashiCorp) listReleases(repoName string) (*hashiCorpRepo, error) {
 	return &repo, nil
 }
 
-type hashiCorpFileInfo struct {
-	url, name string
-	score     int
-}
-
-func (g *hashiCorpFileInfo) String() string {
-	return g.name
+func (g *hashiCorp) GetID() string {
+	return "hashicorp"
 }
 
 func (g *hashiCorp) Fetch() (*File, error) {
-
 	var release *hashiCorpRelease
 
 	// If we have a tag, let's fetch from there
@@ -86,7 +80,8 @@ func (g *hashiCorp) Fetch() (*File, error) {
 		log.Infof("Getting %s release for %s", g.tag, g.repo)
 		release, err = g.getRelease(g.repo, g.tag)
 	} else {
-		version, _, err := g.GetLatestVersion()
+		var version string
+		version, _, err = g.GetLatestVersion()
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +98,6 @@ func (g *hashiCorp) Fetch() (*File, error) {
 	}
 
 	gf, err := assets.FilterAssets(g.repo, candidates)
-
 	if err != nil {
 		return nil, err
 	}
@@ -115,16 +109,16 @@ func (g *hashiCorp) Fetch() (*File, error) {
 
 	version := release.Version
 
-	//TODO calculate file hash. Not sure if we can / should do it here
-	//since we don't want to read the file unnecesarily. Additionally, sometimes
-	//releases have .sha256 files, so it'd be nice to check for those also
+	// TODO calculate file hash. Not sure if we can / should do it here
+	// since we don't want to read the file unnecesarily. Additionally, sometimes
+	// releases have .sha256 files, so it'd be nice to check for those also
 	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version}
 
 	return f, nil
 }
 
-//GetLatestVersion checks the latest repo release and
-//returns the corresponding name and url to fetch the version
+// GetLatestVersion checks the latest repo release and
+// returns the corresponding name and url to fetch the version
 func (g *hashiCorp) GetLatestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for %s", g.repo)
 
@@ -139,7 +133,8 @@ func (g *hashiCorp) GetLatestVersion() (string, string, error) {
 	for _, version := range releases.Versions {
 		sv, err := semver.NewVersion(version.Version)
 		if err != nil {
-			return "", "", err
+			log.Debugf("unable to parse %q as a semantic version: %+v", version.Version, err)
+			continue
 		}
 		if sv.PreRelease == "" && sv.Metadata == "" {
 			svs = append(svs, sv)
