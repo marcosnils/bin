@@ -46,54 +46,60 @@ func (g FilteredAsset) String() string { return g.Name }
 // in case it can't determine it
 func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	matches := []*FilteredAsset{}
-	scores := map[string]int{}
-	scores[repoName] = 1
-	for _, os := range config.GetOS() {
-		scores[os] = 10
-	}
-	for _, arch := range config.GetArch() {
-		scores[arch] = 5
-	}
-	scoreKeys := []string{}
-	for key := range scores {
-		scoreKeys = append(scoreKeys, key)
-	}
-	for _, a := range as {
-		lowerName := strings.ToLower(a.Name)
-		lowerURLPathBasename := path.Base(strings.ToLower(a.URL))
-		filetype.GetType(lowerName)
-		highestScoreForAsset := 0
-		gf := &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0}
-		for _, candidate := range []string{lowerName, lowerURLPathBasename} {
-			if bstrings.ContainsAny(candidate, scoreKeys) &&
-				isSupportedExt(candidate) {
-				for toMatch, score := range scores {
-					if strings.Contains(candidate, toMatch) {
-						gf.score += score
+	// if there's a single file don't filter by score
+	if len(as) == 1 {
+		a := as[0]
+		matches = append(matches, &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0})
+	} else {
+		scores := map[string]int{}
+		scores[repoName] = 1
+		for _, os := range config.GetOS() {
+			scores[os] = 10
+		}
+		for _, arch := range config.GetArch() {
+			scores[arch] = 5
+		}
+		scoreKeys := []string{}
+		for key := range scores {
+			scoreKeys = append(scoreKeys, key)
+		}
+		for _, a := range as {
+			lowerName := strings.ToLower(a.Name)
+			lowerURLPathBasename := path.Base(strings.ToLower(a.URL))
+			filetype.GetType(lowerName)
+			highestScoreForAsset := 0
+			gf := &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0}
+			for _, candidate := range []string{lowerName, lowerURLPathBasename} {
+				if bstrings.ContainsAny(candidate, scoreKeys) &&
+					isSupportedExt(candidate) {
+					for toMatch, score := range scores {
+						if strings.Contains(candidate, toMatch) {
+							gf.score += score
+						}
+					}
+					if gf.score > highestScoreForAsset {
+						highestScoreForAsset = gf.score
+						gf.Name = candidate
 					}
 				}
-				if gf.score > highestScoreForAsset {
-					highestScoreForAsset = gf.score
-					gf.Name = candidate
-				}
+			}
+			if highestScoreForAsset > 0 {
+				matches = append(matches, gf)
 			}
 		}
-		if highestScoreForAsset > 0 {
-			matches = append(matches, gf)
+		highestAssetScore := 0
+		for i := range matches {
+			if matches[i].score > highestAssetScore {
+				highestAssetScore = matches[i].score
+			}
 		}
-	}
-	highestAssetScore := 0
-	for i := range matches {
-		if matches[i].score > highestAssetScore {
-			highestAssetScore = matches[i].score
-		}
-	}
-	for i := len(matches) - 1; i >= 0; i-- {
-		if matches[i].score < highestAssetScore {
-			log.Debugf("Removing %v with score %v lower than %v", matches[i].Name, matches[i].score, highestAssetScore)
-			matches = append(matches[:i], matches[i+1:]...)
-		} else {
-			log.Debugf("Keeping %v (URL %v) with highest score %v", matches[i].Name, matches[i].URL, matches[i].score)
+		for i := len(matches) - 1; i >= 0; i-- {
+			if matches[i].score < highestAssetScore {
+				log.Debugf("Removing %v with score %v lower than %v", matches[i].Name, matches[i].score, highestAssetScore)
+				matches = append(matches[:i], matches[i+1:]...)
+			} else {
+				log.Debugf("Keeping %v (URL %v) with highest score %v", matches[i].Name, matches[i].URL, matches[i].score)
+			}
 		}
 	}
 
@@ -199,6 +205,7 @@ func processReader(repoName string, name string, r io.Reader) (string, io.Reader
 
 	type processorFunc func(repoName string, r io.Reader) (string, io.Reader, error)
 	var processor processorFunc
+
 	switch t {
 	case matchers.TypeGz:
 		processor = processGz
