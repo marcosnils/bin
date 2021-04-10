@@ -144,6 +144,9 @@ func TestFilterAssets(t *testing.T) {
 			{Name: "usql-0.8.2-linux-amd64.tar.bz2", URL: "https://github.com/xo/usql/releases/download/v0.8.2/usql-0.8.2-linux-amd64.tar.bz2"},
 			{Name: "usql-0.8.2-windows-amd64.zip", URL: "https://github.com/xo/usql/releases/download/v0.8.2/usql-0.8.2-windows-amd64.zip"},
 		}}, "usql-0.8.2-windows-amd64.zip", testWindowsAMDResolver},
+		{args{"cli", []*Asset{
+			{Name: "dapr", URL: ""},
+		}}, "dapr", testLinuxAMDResolver},
 	}
 
 	for _, c := range cases {
@@ -176,30 +179,6 @@ func TestIsSupportedExt(t *testing.T) {
 		result := isSupportedExt(c.in)
 		if result != c.out {
 			t.Fatalf("Expected result for extension %v to be %v, but got result %v", c.in, c.out, result)
-		}
-	}
-
-}
-
-func TestFilterSingleAsset(t *testing.T) {
-	type args struct {
-		repoName string
-		as       []*Asset
-	}
-	cases := []struct {
-		in  args
-		out string
-	}{
-		{args{"cli", []*Asset{
-			{Name: "dapr", URL: ""},
-		}}, "dapr"},
-	}
-
-	for _, c := range cases {
-		if n, err := FilterAssets(c.in.repoName, c.in.as); err != nil {
-			t.Fatalf("Error filtering asset [%v]", err)
-		} else if n.Name != c.out {
-			t.Fatalf("Error filtering %+v: %+v does not match %s", c.in, n, c.out)
 		}
 	}
 
