@@ -28,7 +28,7 @@ type gitLab struct {
 	tag    string
 }
 
-func (g *gitLab) Fetch() (*File, error) {
+func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 	var release *gitlab.Release
 
 	// If we have a tag, let's fetch from there
@@ -151,7 +151,9 @@ func (g *gitLab) Fetch() (*File, error) {
 		return nil, err
 	}
 
-	gf, err := assets.FilterAssets(g.repo, candidates)
+	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All})
+
+	gf, err := f.FilterAssets(g.repo, candidates)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +165,7 @@ func (g *gitLab) Fetch() (*File, error) {
 		gf.ExtraHeaders["PRIVATE-TOKEN"] = g.token
 	}
 
-	name, outputFile, err := assets.ProcessURL(gf)
+	name, outputFile, err := f.ProcessURL(gf)
 	if err != nil {
 		return nil, err
 	}
@@ -173,9 +175,9 @@ func (g *gitLab) Fetch() (*File, error) {
 	// TODO calculate file hash. Not sure if we can / should do it here
 	// since we don't want to read the file unnecesarily. Additionally, sometimes
 	// releases have .sha256 files, so it'd be nice to check for those also
-	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version}
+	file := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version}
 
-	return f, nil
+	return file, nil
 }
 
 func (g *gitLab) GetID() string {

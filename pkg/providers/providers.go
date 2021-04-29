@@ -20,10 +20,14 @@ type File struct {
 	Length  int64
 }
 
+type FetchOpts struct {
+	All bool
+}
+
 type Provider interface {
 	// Fetch returns the file metadata to retrieve a specific binary given
 	// for a provider
-	Fetch() (*File, error)
+	Fetch(*FetchOpts) (*File, error)
 	// GetLatestVersion returns the version and the URL of the
 	// latest version for this binary
 	GetLatestVersion() (string, string, error)

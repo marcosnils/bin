@@ -21,6 +21,7 @@ type updateCmd struct {
 
 type updateOpts struct {
 	dryRun bool
+	all    bool
 }
 
 type updateInfo struct{ version, url string }
@@ -111,7 +112,7 @@ func newUpdateCmd() *updateCmd {
 					return err
 				}
 
-				pResult, err := p.Fetch()
+				pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all})
 				if err != nil {
 					return err
 				}
@@ -139,6 +140,7 @@ func newUpdateCmd() *updateCmd {
 
 	root.cmd = cmd
 	root.cmd.Flags().BoolVarP(&root.opts.dryRun, "dry-run", "", false, "Only show status, don't prompt for update")
+	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
 	return root
 }
 

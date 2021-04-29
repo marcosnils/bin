@@ -18,7 +18,7 @@ type docker struct {
 	repo, tag string
 }
 
-func (d *docker) Fetch() (*File, error) {
+func (d *docker) Fetch(opts *FetchOpts) (*File, error) {
 	log.Infof("Pulling docker image %s:%s", d.repo, d.tag)
 	out, err := d.client.ImageCreate(context.Background(), fmt.Sprintf("%s:%s", d.repo, d.tag), types.ImageCreateOptions{})
 	if err != nil {
