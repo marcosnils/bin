@@ -23,7 +23,7 @@ type gitHub struct {
 	tag    string
 }
 
-func (g *gitHub) Fetch() (*File, error) {
+func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 	var release *github.RepositoryRelease
 
 	// If we have a tag, let's fetch from there
@@ -45,12 +45,14 @@ func (g *gitHub) Fetch() (*File, error) {
 	for _, a := range release.Assets {
 		candidates = append(candidates, &assets.Asset{Name: a.GetName(), URL: a.GetBrowserDownloadURL()})
 	}
-	gf, err := assets.FilterAssets(g.repo, candidates)
+	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All})
+
+	gf, err := f.FilterAssets(g.repo, candidates)
 	if err != nil {
 		return nil, err
 	}
 
-	name, outputFile, err := assets.ProcessURL(gf)
+	name, outputFile, err := f.ProcessURL(gf)
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +62,9 @@ func (g *gitHub) Fetch() (*File, error) {
 	// TODO calculate file hash. Not sure if we can / should do it here
 	// since we don't want to read the file unnecesarily. Additionally, sometimes
 	// releases have .sha256 files, so it'd be nice to check for those also
-	f := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version}
+	file := &File{Data: outputFile, Name: assets.SanitizeName(name, version), Hash: sha256.New(), Version: version}
 
-	return f, nil
+	return file, nil
 }
 
 // GetLatestVersion checks the latest repo release and

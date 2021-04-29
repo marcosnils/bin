@@ -59,6 +59,14 @@ type platformResolver interface {
 	GetOSSpecificExtensions() []string
 }
 
+type Filter struct {
+	opts *FilterOpts
+}
+
+type FilterOpts struct {
+	SkipScoring bool
+}
+
 type runtimeResolver struct{}
 
 func (runtimeResolver) GetOS() []string {
@@ -82,30 +90,41 @@ func (g FilteredAsset) String() string {
 	return g.Name
 }
 
+func NewFilter(opts *FilterOpts) *Filter {
+	return &Filter{opts}
+}
+
 // FilterAssets receives a slice of GL assets and tries to
 // select the proper one and ask the user to manually select one
 // in case it can't determine it
-func FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
+func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
 	matches := []*FilteredAsset{}
 	if len(as) == 1 {
 		a := as[0]
 		matches = append(matches, &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0})
 	} else {
 		scores := map[string]int{}
-		scores[repoName] = 1
-		for _, os := range resolver.GetOS() {
-			scores[os] = 10
-		}
-		for _, arch := range resolver.GetArch() {
-			scores[arch] = 5
-		}
-		for _, osSpecificExtension := range resolver.GetOSSpecificExtensions() {
-			scores[osSpecificExtension] = 15
-		}
 		scoreKeys := []string{}
+		scores[repoName] = 1
+
+		if !f.opts.SkipScoring {
+			for _, os := range resolver.GetOS() {
+				scores[os] = 10
+			}
+			for _, arch := range resolver.GetArch() {
+				scores[arch] = 5
+			}
+			for _, osSpecificExtension := range resolver.GetOSSpecificExtensions() {
+				scores[osSpecificExtension] = 15
+			}
+		} else {
+			log.Debugf("--all flag was supplied, skipping scoring")
+		}
+
 		for key := range scores {
 			scoreKeys = append(scoreKeys, strings.ToLower(key))
 		}
+
 		for _, a := range as {
 			urlPathBasename := path.Base(a.URL)
 			highestScoreForAsset := 0
@@ -207,7 +226,7 @@ func SanitizeName(name, version string) string {
 }
 
 // ProcessURL processes a FilteredAsset by uncompressing/unarchiving the URL of the asset.
-func ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
+func (f *Filter) ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
 	// We're not closing the body here since the caller is in charge of that
 	req, err := http.NewRequest(http.MethodGet, gf.URL, nil)
 	if err != nil {
@@ -239,10 +258,10 @@ func ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
 		return "", nil, err
 	}
 	bar.Finish()
-	return processReader(gf.RepoName, gf.Name, buf)
+	return f.processReader(gf.RepoName, gf.Name, buf)
 }
 
-func processReader(repoName string, name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processReader(repoName string, name string, r io.Reader) (string, io.Reader, error) {
 	var buf bytes.Buffer
 	tee := io.TeeReader(r, &buf)
 
@@ -257,15 +276,15 @@ func processReader(repoName string, name string, r io.Reader) (string, io.Reader
 	var processor processorFunc
 	switch t {
 	case matchers.TypeGz:
-		processor = processGz
+		processor = f.processGz
 	case matchers.TypeTar:
-		processor = processTar
+		processor = f.processTar
 	case matchers.TypeXz:
-		processor = processXz
+		processor = f.processXz
 	case matchers.TypeBz2:
-		processor = processBz2
+		processor = f.processBz2
 	case matchers.TypeZip:
-		processor = processZip
+		processor = f.processZip
 	}
 	if processor != nil {
 		// log.Debugf("Processing %s file %s with %s", repoName, name, runtime.FuncForPC(reflect.ValueOf(processor).Pointer()).Name())
@@ -274,7 +293,7 @@ func processReader(repoName string, name string, r io.Reader) (string, io.Reader
 			return "", nil, err
 		}
 		// In case of e.g. a .tar.gz, process the uncompressed archive by calling recursively
-		return processReader(repoName, name, outputFile)
+		return f.processReader(repoName, name, outputFile)
 	}
 
 	return name, outputFile, err
@@ -282,7 +301,7 @@ func processReader(repoName string, name string, r io.Reader) (string, io.Reader
 
 // processGz receives a tar.gz file and returns the
 // correct file for bin to download
-func processGz(name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processGz(name string, r io.Reader) (string, io.Reader, error) {
 	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return "", nil, err
@@ -291,7 +310,7 @@ func processGz(name string, r io.Reader) (string, io.Reader, error) {
 	return gr.Name, gr, nil
 }
 
-func processTar(name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processTar(name string, r io.Reader) (string, io.Reader, error) {
 	tr := tar.NewReader(r)
 	tarFiles := map[string][]byte{}
 	for {
@@ -318,7 +337,7 @@ func processTar(name string, r io.Reader) (string, io.Reader, error) {
 	for f := range tarFiles {
 		as = append(as, &Asset{Name: f, URL: ""})
 	}
-	choice, err := FilterAssets(name, as)
+	choice, err := f.FilterAssets(name, as)
 	if err != nil {
 		return "", nil, err
 	}
@@ -328,13 +347,13 @@ func processTar(name string, r io.Reader) (string, io.Reader, error) {
 	return filepath.Base(selectedFile), bytes.NewReader(tf), nil
 }
 
-func processBz2(name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processBz2(name string, r io.Reader) (string, io.Reader, error) {
 	br := bzip2.NewReader(r)
 
 	return "", br, nil
 }
 
-func processXz(name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processXz(name string, r io.Reader) (string, io.Reader, error) {
 	xr, err := xz.NewReader(r, 0)
 	if err != nil {
 		return "", nil, err
@@ -343,7 +362,7 @@ func processXz(name string, r io.Reader) (string, io.Reader, error) {
 	return "", xr, nil
 }
 
-func processZip(name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processZip(name string, r io.Reader) (string, io.Reader, error) {
 	zr := zipstream.NewReader(r)
 
 	zipFiles := map[string][]byte{}
@@ -370,7 +389,7 @@ func processZip(name string, r io.Reader) (string, io.Reader, error) {
 	for f := range zipFiles {
 		as = append(as, &Asset{Name: f, URL: ""})
 	}
-	choice, err := FilterAssets(name, as)
+	choice, err := f.FilterAssets(name, as)
 	if err != nil {
 		return "", nil, err
 	}

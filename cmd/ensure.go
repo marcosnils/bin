@@ -43,7 +43,7 @@ func newEnsureCmd() *ensureCmd {
 					return err
 				}
 
-				pResult, err := p.Fetch()
+				pResult, err := p.Fetch(&providers.FetchOpts{})
 				if err != nil {
 					return err
 				}

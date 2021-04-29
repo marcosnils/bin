@@ -20,6 +20,7 @@ type installCmd struct {
 type installOpts struct {
 	force    bool
 	provider string
+	all      bool
 }
 
 func newInstallCmd() *installCmd {
@@ -33,16 +34,7 @@ func newInstallCmd() *installCmd {
 		SilenceErrors: true,
 		Args:          cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//TODO implement --force(-f) flag for install
-			// to override the binary if exists
 			u := args[0]
-
-			//TODO make this path optional. If the path
-			//is not specified bin could automatically
-			//select a PATH that could write and install the binaries there.
-			//Additionally, it could store that path in the config file so it doesn't
-			//have to calculate it each time. Afterwards, bin users can change this
-			//path by editing bin's config file or maybe introdice the `bin config` command
 
 			var path string
 			if len(args) > 1 {
@@ -69,7 +61,7 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
-			pResult, err := p.Fetch()
+			pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all})
 
 			if err != nil {
 				return err
@@ -106,6 +98,7 @@ func newInstallCmd() *installCmd {
 
 	root.cmd = cmd
 	root.cmd.Flags().BoolVarP(&root.opts.force, "force", "f", false, "Force the installation even if the file already exists")
+	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
 	root.cmd.Flags().StringVarP(&root.opts.provider, "provider", "p", "", "Forces to use a specific provider")
 	return root
 }
