@@ -34,17 +34,11 @@ func newUpdateCmd() *updateCmd {
 		Aliases:       []string{"u"},
 		Short:         "Updates one or multiple binaries managed by bin",
 		SilenceUsage:  true,
-		Args:          cobra.MaximumNArgs(1),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// TODO add support to update from a specific URL.
 			// This allows to update binares from a repo that contains
 			// multiple tags for different binaries
-
-			var bin string
-			if len(args) > 0 {
-				bin = args[0]
-			}
 
 			// TODO update should check all binaries with a
 			// certain configured parallelism (default 10, can be changed with -p) and report
@@ -54,16 +48,21 @@ func newUpdateCmd() *updateCmd {
 
 			toUpdate := map[*updateInfo]*config.Binary{}
 			cfg := config.Get()
-			binsToProcess := cfg.Bins
+			binsToProcess := map[string]*config.Binary{}
 
-			// Update single binary
-			if bin != "" {
-				bin, err := getBinPath(bin)
-				if err != nil {
-					return err
+			// Update specific binaries
+			if len(args) > 0 {
+				for _, a := range args {
+					bin, err := getBinPath(a)
+					if err != nil {
+						return err
+					}
+					binsToProcess[bin] = cfg.Bins[bin]
 				}
-				binsToProcess = map[string]*config.Binary{bin: cfg.Bins[bin]}
+			} else {
+				binsToProcess = cfg.Bins
 			}
+
 			for _, b := range binsToProcess {
 				p, err := providers.New(b.URL, b.Provider)
 				if err != nil {
