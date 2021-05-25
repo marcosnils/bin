@@ -3,16 +3,14 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"os"
-	"strings"
-
 	"github.com/apex/log"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-version"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"os"
+	"strings"
 )
 
 type updateCmd struct {
@@ -21,7 +19,7 @@ type updateCmd struct {
 }
 
 type updateOpts struct {
-	forceUpdate bool
+	yesToUpdate bool
 	dryRun      bool
 	all         bool
 }
@@ -86,7 +84,7 @@ func newUpdateCmd() *updateCmd {
 				return wrapErrorWithCode(fmt.Errorf("Updates found, exit (dry-run mode)."), 3, "")
 			}
 
-			if !viper.GetBool("force") {
+			if !root.opts.yesToUpdate {
 				// TODO will have to refactor this prompt to a separate function
 				// so it can be reused in some other places
 				fmt.Printf("\nDo you want to continue? [Y/n] ")
@@ -143,7 +141,7 @@ func newUpdateCmd() *updateCmd {
 
 	root.cmd = cmd
 	root.cmd.Flags().BoolVarP(&root.opts.dryRun, "dry-run", "", false, "Only show status, don't prompt for update")
-	root.cmd.Flags().BoolVarP(&root.opts.forceUpdate, "force", "f", false, "Force update to run")
+	root.cmd.Flags().BoolVarP(&root.opts.yesToUpdate, "yes", "", false, "Allow updates (do not ask)")
 	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
 	return root
 }
