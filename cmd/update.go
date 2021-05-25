@@ -12,6 +12,7 @@ import (
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type updateCmd struct {
@@ -20,8 +21,9 @@ type updateCmd struct {
 }
 
 type updateOpts struct {
-	dryRun bool
-	all    bool
+	forceUpdate bool
+	dryRun      bool
+	all         bool
 }
 
 type updateInfo struct{ version, url string }
@@ -84,21 +86,23 @@ func newUpdateCmd() *updateCmd {
 				return wrapErrorWithCode(fmt.Errorf("Updates found, exit (dry-run mode)."), 3, "")
 			}
 
-			// TODO will have to refactor this prompt to a separate function
-			// so it can be reused in some other places
-			fmt.Printf("\nDo you want to continue? [Y/n] ")
-			reader := bufio.NewReader(os.Stdin)
-			var response string
+			if !viper.GetBool("force") {
+				// TODO will have to refactor this prompt to a separate function
+				// so it can be reused in some other places
+				fmt.Printf("\nDo you want to continue? [Y/n] ")
+				reader := bufio.NewReader(os.Stdin)
+				var response string
 
-			response, err := reader.ReadString('\n')
-			if err != nil {
-				return fmt.Errorf("Invalid input")
-			}
+				response, err := reader.ReadString('\n')
+				if err != nil {
+					return fmt.Errorf("Invalid input")
+				}
 
-			switch strings.ToLower(strings.TrimSpace(response)) {
-			case "y", "yes":
-			default:
-				return fmt.Errorf("Command aborted")
+				switch strings.ToLower(strings.TrimSpace(response)) {
+				case "y", "yes":
+				default:
+					return fmt.Errorf("Command aborted")
+				}
 			}
 
 			// TODO 	:S code smell here, this pretty much does
@@ -139,6 +143,7 @@ func newUpdateCmd() *updateCmd {
 
 	root.cmd = cmd
 	root.cmd.Flags().BoolVarP(&root.opts.dryRun, "dry-run", "", false, "Only show status, don't prompt for update")
+	root.cmd.Flags().BoolVarP(&root.opts.forceUpdate, "force", "f", false, "Force update to run")
 	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
 	return root
 }
