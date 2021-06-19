@@ -204,10 +204,7 @@ func (g *gitLab) GetLatestVersion() (string, string, error) {
 	svToTagName := map[string]string{}
 	tagNameToRelease := map[string]*gitlab.Release{}
 	for _, release := range releases {
-		tagName := release.TagName
-		if strings.HasPrefix(tagName, "v") {
-			tagName = strings.TrimPrefix(tagName, "v")
-		}
+		tagName := strings.TrimPrefix(release.TagName, "v")
 		sv, err := semver.NewVersion(tagName)
 		if err != nil {
 			continue
