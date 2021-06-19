@@ -103,11 +103,11 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 		a := as[0]
 		matches = append(matches, &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0})
 	} else {
-		scores := map[string]int{}
-		scoreKeys := []string{}
-		scores[repoName] = 1
 
 		if !f.opts.SkipScoring {
+			scores := map[string]int{}
+			scoreKeys := []string{}
+			scores[repoName] = 1
 			for _, os := range resolver.GetOS() {
 				scores[os] = 10
 			}
@@ -117,50 +117,55 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 			for _, osSpecificExtension := range resolver.GetOSSpecificExtensions() {
 				scores[osSpecificExtension] = 15
 			}
-		} else {
-			log.Debugf("--all flag was supplied, skipping scoring")
-		}
 
-		for key := range scores {
-			scoreKeys = append(scoreKeys, strings.ToLower(key))
-		}
+			for key := range scores {
+				scoreKeys = append(scoreKeys, strings.ToLower(key))
+			}
 
-		for _, a := range as {
-			urlPathBasename := path.Base(a.URL)
-			highestScoreForAsset := 0
-			gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
-			for _, candidate := range []string{a.Name, urlPathBasename} {
-				candidateScore := 0
-				if bstrings.ContainsAny(strings.ToLower(candidate), scoreKeys) &&
-					isSupportedExt(candidate) {
-					for toMatch, score := range scores {
-						if strings.Contains(strings.ToLower(candidate), strings.ToLower(toMatch)) {
-							candidateScore += score
+			for _, a := range as {
+				urlPathBasename := path.Base(a.URL)
+				highestScoreForAsset := 0
+				gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
+				for _, candidate := range []string{a.Name, urlPathBasename} {
+					candidateScore := 0
+					if bstrings.ContainsAny(strings.ToLower(candidate), scoreKeys) &&
+						isSupportedExt(candidate) {
+						for toMatch, score := range scores {
+							if strings.Contains(strings.ToLower(candidate), strings.ToLower(toMatch)) {
+								candidateScore += score
+							}
+						}
+						if candidateScore > highestScoreForAsset {
+							highestScoreForAsset = candidateScore
+							gf.Name = candidate
+							gf.score = candidateScore
 						}
 					}
-					if candidateScore > highestScoreForAsset {
-						highestScoreForAsset = candidateScore
-						gf.Name = candidate
-						gf.score = candidateScore
-					}
+				}
+
+				if highestScoreForAsset > 0 {
+					matches = append(matches, gf)
 				}
 			}
-			if highestScoreForAsset > 0 {
-				matches = append(matches, gf)
+			highestAssetScore := 0
+			for i := range matches {
+				if matches[i].score > highestAssetScore {
+					highestAssetScore = matches[i].score
+				}
 			}
-		}
-		highestAssetScore := 0
-		for i := range matches {
-			if matches[i].score > highestAssetScore {
-				highestAssetScore = matches[i].score
+			for i := len(matches) - 1; i >= 0; i-- {
+				if matches[i].score < highestAssetScore {
+					log.Debugf("Removing %v (URL %v) with score %v lower than %v", matches[i].Name, matches[i].URL, matches[i].score, highestAssetScore)
+					matches = append(matches[:i], matches[i+1:]...)
+				} else {
+					log.Debugf("Keeping %v (URL %v) with highest score %v", matches[i].Name, matches[i].URL, matches[i].score)
+				}
 			}
-		}
-		for i := len(matches) - 1; i >= 0; i-- {
-			if matches[i].score < highestAssetScore {
-				log.Debugf("Removing %v (URL %v) with score %v lower than %v", matches[i].Name, matches[i].URL, matches[i].score, highestAssetScore)
-				matches = append(matches[:i], matches[i+1:]...)
-			} else {
-				log.Debugf("Keeping %v (URL %v) with highest score %v", matches[i].Name, matches[i].URL, matches[i].score)
+
+		} else {
+			log.Debugf("--all flag was supplied, skipping scoring")
+			for _, a := range as {
+				matches = append(matches, &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0})
 			}
 		}
 
@@ -372,6 +377,8 @@ func (f *Filter) processZip(name string, r io.Reader) (string, io.Reader, error)
 			break
 		} else if err != nil {
 			return "", nil, err
+		} else if header.Mode().IsDir() {
+			continue
 		}
 
 		bs, err := ioutil.ReadAll(zr)

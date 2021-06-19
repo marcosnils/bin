@@ -149,10 +149,13 @@ func TestFilterAssets(t *testing.T) {
 		}}, "dapr", testLinuxAMDResolver},
 	}
 
-	f := NewFilter(&FilterOpts{})
+	f := NewFilter(&FilterOpts{SkipScoring: false})
 	for _, c := range cases {
 		resolver = c.resolver
 		if n, err := f.FilterAssets(c.in.repoName, c.in.as); err != nil {
+			for _, a := range c.in.as {
+				fmt.Println(a.Name, c.resolver)
+			}
 			t.Fatalf("Error filtering assets %v", err)
 		} else if n.Name != c.out {
 			t.Fatalf("Error filtering %+v: %+v does not match %s", c.in, n, c.out)
