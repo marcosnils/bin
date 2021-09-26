@@ -3,14 +3,15 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/apex/log"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-version"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
-	"os"
-	"strings"
 )
 
 type updateCmd struct {

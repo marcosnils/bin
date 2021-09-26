@@ -1,8 +1,11 @@
+//go:build !windows
 // +build !windows
 
 package config
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -24,8 +27,7 @@ func getDefaultPath() (string, error) {
 	for _, p := range strings.Split(penv, ":") {
 		log.Debugf("Checking path %s", p)
 
-		//TODO make this work in non unix platforms
-		err := unix.Access(p, unix.W_OK)
+		err := checkDirExistsAndWritable(p)
 
 		if err != nil {
 			log.Debugf("Error [%s] checking path", err)
@@ -37,9 +39,43 @@ func getDefaultPath() (string, error) {
 
 	}
 
+	if len(opts) == 0 {
+
+		for {
+			log.Info("Could not find a PATH directory automatically, falling back to manualy selection")
+			reader := bufio.NewReader(os.Stdin)
+			var response string
+			fmt.Printf("\nPlease specify a download directory: ")
+			response, err := reader.ReadString('\n')
+			if err != nil {
+				return "", fmt.Errorf("Invalid input")
+			}
+
+			if err = checkDirExistsAndWritable(strings.TrimSpace(response)); err != nil {
+				log.Debugf("Could not set download directory [%s]: [%v]", response, err)
+				// Keep looping until writable and existing dir is selected
+				continue
+			}
+
+			return response, nil
+		}
+
+	}
+
 	choice, err := options.Select("Pick a default download dir: ", opts)
 	if err != nil {
 		return "", err
 	}
 	return choice.(fmt.Stringer).String(), nil
+}
+
+func checkDirExistsAndWritable(dir string) error {
+	if fi, err := os.Stat(dir); err != nil {
+		return fmt.Errorf("Error setting download path [%w]", err)
+	} else if !fi.IsDir() {
+		return errors.New("Download path is not a directory")
+	}
+	//TODO make this work in non unix platforms
+	err := unix.Access(dir, unix.W_OK)
+	return err
 }
