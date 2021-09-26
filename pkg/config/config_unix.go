@@ -42,7 +42,7 @@ func getDefaultPath() (string, error) {
 	if len(opts) == 0 {
 
 		for {
-			log.Info("Could not find a PATH directory automatically, falling back to manualy selection")
+			log.Info("Could not find a PATH directory automatically, falling back to manual selection")
 			reader := bufio.NewReader(os.Stdin)
 			var response string
 			fmt.Printf("\nPlease specify a download directory: ")
