@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/apex/log"
 )
@@ -64,9 +66,28 @@ func CheckAndLoad() error {
 		if err := write(); err != nil {
 			return err
 		}
+	} else {
+		for {
+			log.Info("Could not find a PATH directory automatically, falling back to manual selection")
+			reader := bufio.NewReader(os.Stdin)
+			var response string
+			fmt.Printf("\nPlease specify a download directory: ")
+			response, err := reader.ReadString('\n')
+			if err != nil {
+				return fmt.Errorf("Invalid input")
+			}
+
+			if err = checkDirExistsAndWritable(strings.TrimSpace(response)); err != nil {
+				log.Debugf("Could not set download directory [%s]: [%v]", response, err)
+				// Keep looping until writable and existing dir is selected
+				continue
+			}
+
+			cfg.DefaultPath = response
+
+		}
 	}
 	log.Debugf("Download path set to %s", cfg.DefaultPath)
-
 	return nil
 }
 

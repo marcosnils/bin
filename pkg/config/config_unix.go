@@ -4,7 +4,6 @@
 package config
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -39,29 +38,8 @@ func getDefaultPath() (string, error) {
 
 	}
 
-	if len(opts) == 0 {
-
-		for {
-			log.Info("Could not find a PATH directory automatically, falling back to manual selection")
-			reader := bufio.NewReader(os.Stdin)
-			var response string
-			fmt.Printf("\nPlease specify a download directory: ")
-			response, err := reader.ReadString('\n')
-			if err != nil {
-				return "", fmt.Errorf("Invalid input")
-			}
-
-			if err = checkDirExistsAndWritable(strings.TrimSpace(response)); err != nil {
-				log.Debugf("Could not set download directory [%s]: [%v]", response, err)
-				// Keep looping until writable and existing dir is selected
-				continue
-			}
-
-			return response, nil
-		}
-
-	}
-
+	// TODO this logic is also duplicated in the windows config. We should
+	// move it to config.go
 	choice, err := options.Select("Pick a default download dir: ", opts)
 	if err != nil {
 		return "", err
