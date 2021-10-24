@@ -1,8 +1,10 @@
+//go:build !windows
 // +build !windows
 
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -24,8 +26,7 @@ func getDefaultPath() (string, error) {
 	for _, p := range strings.Split(penv, ":") {
 		log.Debugf("Checking path %s", p)
 
-		//TODO make this work in non unix platforms
-		err := unix.Access(p, unix.W_OK)
+		err := checkDirExistsAndWritable(p)
 
 		if err != nil {
 			log.Debugf("Error [%s] checking path", err)
@@ -37,9 +38,22 @@ func getDefaultPath() (string, error) {
 
 	}
 
+	// TODO this logic is also duplicated in the windows config. We should
+	// move it to config.go
 	choice, err := options.Select("Pick a default download dir: ", opts)
 	if err != nil {
 		return "", err
 	}
 	return choice.(fmt.Stringer).String(), nil
+}
+
+func checkDirExistsAndWritable(dir string) error {
+	if fi, err := os.Stat(dir); err != nil {
+		return fmt.Errorf("Error setting download path [%w]", err)
+	} else if !fi.IsDir() {
+		return errors.New("Download path is not a directory")
+	}
+	//TODO make this work in non unix platforms
+	err := unix.Access(dir, unix.W_OK)
+	return err
 }
