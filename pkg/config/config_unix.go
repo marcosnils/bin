@@ -40,6 +40,10 @@ func getDefaultPath() (string, error) {
 
 	// TODO this logic is also duplicated in the windows config. We should
 	// move it to config.go
+	if len(opts) == 0 {
+		return "", errors.New("Automatic path detection didn't return any results")
+	}
+
 	choice, err := options.Select("Pick a default download dir: ", opts)
 	if err != nil {
 		return "", err
