@@ -85,7 +85,6 @@ func CheckAndLoad() error {
 			return err
 		}
 
-	} else {
 	}
 	log.Debugf("Download path set to %s", cfg.DefaultPath)
 	return nil
