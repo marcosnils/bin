@@ -85,7 +85,7 @@ func (g *gitHub) GetID() string {
 
 func newGitHub(u *url.URL) (Provider, error) {
 	s := strings.Split(u.Path, "/")
-	if len(s) < 2 {
+	if len(s) < 3 {
 		return nil, fmt.Errorf("Error parsing Github URL %s, can't find owner and repo", u.String())
 	}
 
