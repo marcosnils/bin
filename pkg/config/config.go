@@ -69,15 +69,16 @@ func CheckAndLoad() error {
 				if err != nil {
 					return fmt.Errorf("Invalid input")
 				}
+				response = strings.TrimSpace(response)
 
-				if err = checkDirExistsAndWritable(strings.TrimSpace(response)); err != nil {
+				if err = checkDirExistsAndWritable(response); err != nil {
 					log.Debugf("Could not set download directory [%s]: [%v]", response, err)
 					// Keep looping until writable and existing dir is selected
 					continue
 				}
 
 				cfg.DefaultPath = response
-
+				break
 			}
 		}
 
