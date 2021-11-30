@@ -98,7 +98,7 @@ func newUpdateCmd() *updateCmd {
 				}
 
 				switch strings.ToLower(strings.TrimSpace(response)) {
-				case "y", "yes":
+				case "", "y", "yes":
 				default:
 					return fmt.Errorf("Command aborted")
 				}
