@@ -355,7 +355,7 @@ func (f *Filter) processTar(name string, r io.Reader) (string, io.Reader, error)
 func (f *Filter) processBz2(name string, r io.Reader) (string, io.Reader, error) {
 	br := bzip2.NewReader(r)
 
-	return "", br, nil
+	return name, br, nil
 }
 
 func (f *Filter) processXz(name string, r io.Reader) (string, io.Reader, error) {
