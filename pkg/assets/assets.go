@@ -364,7 +364,7 @@ func (f *Filter) processXz(name string, r io.Reader) (string, io.Reader, error) 
 		return "", nil, err
 	}
 
-	return "", xr, nil
+	return name, xr, nil
 }
 
 func (f *Filter) processZip(name string, r io.Reader) (string, io.Reader, error) {
