@@ -64,7 +64,7 @@ bin update [bin]... # Scans binaries and prompts for update
 
 ### Can you give some example tools
 
-Yes. Follwing [list](https://github.com/marcosnils/bin/wiki/Tools-list)
+Yes. Following [list](https://github.com/marcosnils/bin/wiki/Tools-list)
 
 ### There are some bugs and the code is not tested
 
