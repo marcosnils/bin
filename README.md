@@ -1,6 +1,6 @@
 # bin
 
-Manages bin files downloaded from different sources
+Manages binary files downloaded from different sources
 
 ![bin](https://user-images.githubusercontent.com/1578458/87901619-ee629a80-ca2d-11ea-8609-8a8eb39801d2.gif)
 
@@ -64,9 +64,9 @@ bin update [bin]... # Scans binaries and prompts for update
 
 ### There are some bugs and the code is not tested
 
-I know.. and that's not planning to change any time soon unless I start getting some contributions. I did this as a personal tool and I'll probably be fixing stuff and adding features as I personally need them. Contributions are welcome though and I'll be happy to discuss and review them.
+I know... and that's not planning to change any time soon unless I start getting some contributions. I did this as a personal tool and I'll probably be fixing stuff and adding features as I personally need them. Contributions are welcome though and I'll be happy to discuss and review them.
 
-### I see releases on Github, but bin does not pick them up
+### I see releases on Github, but `bin` does not pick them up
 
 At the moment, `bin` does only consider the [latest release from Github](https://docs.github.com/en/rest/reference/repos#get-the-latest-release) according to the following definition:
 
@@ -74,7 +74,7 @@ At the moment, `bin` does only consider the [latest release from Github](https:/
 
 You _can_ however install a specific pre-release by specifying the URL for the pre-release, e.g. `bin install https://github.com/bufbuild/buf/releases/tag/v0.40.0`.
 
-### I used bin and I got rate limited by Github, what can I do
+### I used `bin` and I got rate limited by Github or want to access private repos, what can I do?
 
 Create a Github personal access token by following the steps in this guide: [Creating a personal access token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token). The access token used with `bin` does not need any scopes.
 
