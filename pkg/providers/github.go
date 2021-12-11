@@ -21,6 +21,7 @@ type gitHub struct {
 	owner  string
 	repo   string
 	tag    string
+	token  string
 }
 
 func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
@@ -43,13 +44,20 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 
 	candidates := []*assets.Asset{}
 	for _, a := range release.Assets {
-		candidates = append(candidates, &assets.Asset{Name: a.GetName(), URL: a.GetBrowserDownloadURL()})
+		candidates = append(candidates, &assets.Asset{Name: a.GetName(), URL: a.GetURL()})
 	}
 	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All})
 
 	gf, err := f.FilterAssets(g.repo, candidates)
 	if err != nil {
 		return nil, err
+	}
+
+	gf.ExtraHeaders = map[string]string{"Accept": "application/octet-stream"}
+	if g.token != "" {
+		if gf.ExtraHeaders == nil {
+		}
+		gf.ExtraHeaders["Authorization"] = fmt.Sprintf("token %s", g.token)
 	}
 
 	name, outputFile, err := f.ProcessURL(gf)
@@ -112,5 +120,5 @@ func newGitHub(u *url.URL) (Provider, error) {
 		))
 	}
 	client := github.NewClient(tc)
-	return &gitHub{url: u, client: client, owner: s[1], repo: s[2], tag: tag}, nil
+	return &gitHub{url: u, client: client, owner: s[1], repo: s[2], tag: tag, token: token}, nil
 }
