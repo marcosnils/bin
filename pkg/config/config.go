@@ -28,6 +28,10 @@ type Binary struct {
 	Hash       string `json:"hash"`
 	URL        string `json:"url"`
 	Provider   string `json:"provider"`
+	// if file is installed from a package format (zip, tar, etc) store
+	// the package path in config so we don't ask the user to select
+	// the path again when upgrading
+	PackagePath string `json:"package_path"`
 }
 
 func CheckAndLoad() error {

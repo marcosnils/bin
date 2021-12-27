@@ -20,9 +20,10 @@ type updateCmd struct {
 }
 
 type updateOpts struct {
-	yesToUpdate bool
-	dryRun      bool
-	all         bool
+	yesToUpdate   bool
+	dryRun        bool
+	all           bool
+	skipPathCheck bool
 }
 
 type updateInfo struct{ version, url string }
@@ -104,7 +105,7 @@ func newUpdateCmd() *updateCmd {
 				}
 			}
 
-			// TODO 	:S code smell here, this pretty much does
+			// TODO	:S code smell here, this pretty much does
 			// the same thing as install logic. Refactor to
 			// use the same code in both places
 			for ui, b := range toUpdate {
@@ -114,7 +115,7 @@ func newUpdateCmd() *updateCmd {
 					return err
 				}
 
-				pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all})
+				pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all, PackagePath: b.PackagePath, SkipPatchCheck: root.opts.skipPathCheck})
 				if err != nil {
 					return err
 				}
@@ -124,11 +125,12 @@ func newUpdateCmd() *updateCmd {
 				}
 
 				err = config.UpsertBinary(&config.Binary{
-					RemoteName: pResult.Name,
-					Path:       b.Path,
-					Version:    pResult.Version,
-					Hash:       fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
-					URL:        ui.url,
+					RemoteName:  pResult.Name,
+					Path:        b.Path,
+					Version:     pResult.Version,
+					Hash:        fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
+					URL:         ui.url,
+					PackagePath: pResult.PackagePath,
 				})
 				if err != nil {
 					return err
@@ -144,6 +146,7 @@ func newUpdateCmd() *updateCmd {
 	root.cmd.Flags().BoolVarP(&root.opts.dryRun, "dry-run", "", false, "Only show status, don't prompt for update")
 	root.cmd.Flags().BoolVarP(&root.opts.yesToUpdate, "yes", "y", false, "Assume yes to update prompt")
 	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
+	root.cmd.Flags().BoolVarP(&root.opts.skipPathCheck, "skip-patch-check", "p", false, "Skips patch checking when looking into packages")
 	return root
 }
 
