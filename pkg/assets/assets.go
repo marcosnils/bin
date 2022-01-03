@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/bzip2"
 	"compress/gzip"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,7 +31,10 @@ var (
 )
 
 type Asset struct {
-	Name        string
+	Name string
+	// Some providers (like gitlab) have non-descriptive names for files,
+	// so we're using this DisplayName as a helper to produce prettier
+	// outputs for bin
 	DisplayName string
 	URL         string
 }
@@ -53,6 +55,12 @@ type FilteredAsset struct {
 	ExtraHeaders map[string]string
 }
 
+type finalFile struct {
+	Source      io.Reader
+	Name        string
+	PackagePath string
+}
+
 type platformResolver interface {
 	GetOS() []string
 	GetArch() []string
@@ -60,11 +68,20 @@ type platformResolver interface {
 }
 
 type Filter struct {
-	opts *FilterOpts
+	opts        *FilterOpts
+	repoName    string
+	name        string
+	packagePath string
 }
 
 type FilterOpts struct {
-	SkipScoring bool
+	SkipScoring   bool
+	SkipPathCheck bool
+
+	// If target file is in a package format (tar, zip,etc) use this
+	// variable to filter the resulting outputs. This is very useful
+	// so we don't prompt the user to pick the file again on updates
+	PackagePath string
 }
 
 type runtimeResolver struct{}
@@ -91,7 +108,7 @@ func (g FilteredAsset) String() string {
 }
 
 func NewFilter(opts *FilterOpts) *Filter {
-	return &Filter{opts}
+	return &Filter{opts: opts}
 }
 
 // FilterAssets receives a slice of GL assets and tries to
@@ -231,11 +248,11 @@ func SanitizeName(name, version string) string {
 }
 
 // ProcessURL processes a FilteredAsset by uncompressing/unarchiving the URL of the asset.
-func (f *Filter) ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
+func (f *Filter) ProcessURL(gf *FilteredAsset) (*finalFile, error) {
 	// We're not closing the body here since the caller is in charge of that
 	req, err := http.NewRequest(http.MethodGet, gf.URL, nil)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	for name, value := range gf.ExtraHeaders {
 		req.Header.Add(name, value)
@@ -243,11 +260,11 @@ func (f *Filter) ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
 	log.Debugf("Checking binary from %s", gf.URL)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	if res.StatusCode > 299 || res.StatusCode < 200 {
-		return "", nil, fmt.Errorf("%d response when checking binary from %s", res.StatusCode, gf.URL)
+		return nil, fmt.Errorf("%d response when checking binary from %s", res.StatusCode, gf.URL)
 	}
 
 	// We're caching the whole file into memory so we can prompt
@@ -260,24 +277,24 @@ func (f *Filter) ProcessURL(gf *FilteredAsset) (string, io.Reader, error) {
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, barReader)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	bar.Finish()
-	return f.processReader(gf.RepoName, gf.Name, buf)
+	return f.processReader(buf)
 }
 
-func (f *Filter) processReader(repoName string, name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processReader(r io.Reader) (*finalFile, error) {
 	var buf bytes.Buffer
 	tee := io.TeeReader(r, &buf)
 
 	t, err := filetype.MatchReader(tee)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
 	outputFile := io.MultiReader(&buf, r)
 
-	type processorFunc func(repoName string, r io.Reader) (string, io.Reader, error)
+	type processorFunc func(repoName string, r io.Reader) (*finalFile, error)
 	var processor processorFunc
 	switch t {
 	case matchers.TypeGz:
@@ -293,49 +310,69 @@ func (f *Filter) processReader(repoName string, name string, r io.Reader) (strin
 	}
 	if processor != nil {
 		// log.Debugf("Processing %s file %s with %s", repoName, name, runtime.FuncForPC(reflect.ValueOf(processor).Pointer()).Name())
-		name, outputFile, err = processor(repoName, outputFile)
+		outFile, err := processor(f.repoName, outputFile)
+
 		if err != nil {
-			return "", nil, err
+			return nil, err
 		}
+
+		outputFile = outFile.Source
+
+		f.name = outFile.Name
+		f.packagePath = outFile.PackagePath
+
 		// In case of e.g. a .tar.gz, process the uncompressed archive by calling recursively
-		return f.processReader(repoName, name, outputFile)
+		return f.processReader(outputFile)
 	}
 
-	return name, outputFile, err
+	return &finalFile{Source: outputFile, Name: f.name, PackagePath: f.packagePath}, err
 }
 
 // processGz receives a tar.gz file and returns the
 // correct file for bin to download
-func (f *Filter) processGz(name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processGz(name string, r io.Reader) (*finalFile, error) {
 	gr, err := gzip.NewReader(r)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	return gr.Name, gr, nil
+	return &finalFile{Source: gr, Name: gr.Name}, nil
 }
 
-func (f *Filter) processTar(name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
 	tr := tar.NewReader(r)
 	tarFiles := map[string][]byte{}
+	if len(f.opts.PackagePath) > 0 {
+		log.Debugf("Processing tag with PackagePath %s\n", f.opts.PackagePath)
+	}
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return "", nil, err
+			return nil, err
+		} else if header.FileInfo().IsDir() {
+			continue
+		}
+
+		if !f.opts.SkipPathCheck && len(f.opts.PackagePath) > 0 && header.Name != f.opts.PackagePath {
+			continue
 		}
 
 		if header.Typeflag == tar.TypeReg {
+			//TODO we're basically reading all the files
+			//isn't there a way just to store the reference
+			//where this data is so we don't have to do this or
+			//re-scan the archive twice afterwards?
 			bs, err := ioutil.ReadAll(tr)
 			if err != nil {
-				return "", nil, err
+				return nil, err
 			}
 			tarFiles[header.Name] = bs
 		}
 	}
 	if len(tarFiles) == 0 {
-		return "", nil, errors.New("No files found in tar archive")
+		return nil, fmt.Errorf("No files found in tar archive. PackagePath [%s]", f.opts.PackagePath)
 	}
 
 	as := make([]*Asset, 0)
@@ -344,52 +381,64 @@ func (f *Filter) processTar(name string, r io.Reader) (string, io.Reader, error)
 	}
 	choice, err := f.FilterAssets(name, as)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	selectedFile := choice.String()
 
 	tf := tarFiles[selectedFile]
-	return filepath.Base(selectedFile), bytes.NewReader(tf), nil
+
+	return &finalFile{Source: bytes.NewReader(tf), Name: filepath.Base(selectedFile), PackagePath: selectedFile}, nil
 }
 
-func (f *Filter) processBz2(name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processBz2(name string, r io.Reader) (*finalFile, error) {
 	br := bzip2.NewReader(r)
 
-	return name, br, nil
+	return &finalFile{Source: br, Name: name}, nil
 }
 
-func (f *Filter) processXz(name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processXz(name string, r io.Reader) (*finalFile, error) {
 	xr, err := xz.NewReader(r, 0)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	return name, xr, nil
+	return &finalFile{Source: xr, Name: name}, nil
 }
 
-func (f *Filter) processZip(name string, r io.Reader) (string, io.Reader, error) {
+func (f *Filter) processZip(name string, r io.Reader) (*finalFile, error) {
 	zr := zipstream.NewReader(r)
 
 	zipFiles := map[string][]byte{}
+	if len(f.opts.PackagePath) > 0 {
+		log.Debugf("Processing tag with PackagePath %s\n", f.opts.PackagePath)
+	}
 	for {
 		header, err := zr.Next()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return "", nil, err
+			return nil, err
 		} else if header.Mode().IsDir() {
 			continue
 		}
 
+		if !f.opts.SkipPathCheck && len(f.opts.PackagePath) > 0 && header.Name != f.opts.PackagePath {
+			continue
+		}
+
+		//TODO we're basically reading all the files
+		//isn't there a way just to store the reference
+		//where this data is so we don't have to do this or
+		//re-scan the archive twice afterwards?
 		bs, err := ioutil.ReadAll(zr)
 		if err != nil {
-			return "", nil, err
+			return nil, err
 		}
 
 		zipFiles[header.Name] = bs
 	}
 	if len(zipFiles) == 0 {
-		return "", nil, errors.New("No files found in zip archive")
+		return nil, fmt.Errorf("No files found in zip archive. PackagePath [%s]", f.opts.PackagePath)
 	}
 
 	as := make([]*Asset, 0)
@@ -398,7 +447,7 @@ func (f *Filter) processZip(name string, r io.Reader) (string, io.Reader, error)
 	}
 	choice, err := f.FilterAssets(name, as)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	selectedFile := choice.String()
 
@@ -406,7 +455,7 @@ func (f *Filter) processZip(name string, r io.Reader) (string, io.Reader, error)
 
 	// return base of selected file since tar
 	// files usually have folders inside
-	return filepath.Base(selectedFile), fr, nil
+	return &finalFile{Name: filepath.Base(selectedFile), Source: fr, PackagePath: selectedFile}, nil
 }
 
 // isSupportedExt checks if this provider supports

@@ -13,15 +13,18 @@ import (
 var ErrInvalidProvider = errors.New("invalid provider")
 
 type File struct {
-	Data    io.Reader
-	Name    string
-	Hash    hash.Hash
-	Version string
-	Length  int64
+	Data        io.Reader
+	Name        string
+	Hash        hash.Hash
+	Version     string
+	Length      int64
+	PackagePath string
 }
 
 type FetchOpts struct {
-	All bool
+	All            bool
+	PackagePath    string
+	SkipPatchCheck bool
 }
 
 type Provider interface {
