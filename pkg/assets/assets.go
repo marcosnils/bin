@@ -249,6 +249,7 @@ func SanitizeName(name, version string) string {
 
 // ProcessURL processes a FilteredAsset by uncompressing/unarchiving the URL of the asset.
 func (f *Filter) ProcessURL(gf *FilteredAsset) (*finalFile, error) {
+	f.name = gf.Name
 	// We're not closing the body here since the caller is in charge of that
 	req, err := http.NewRequest(http.MethodGet, gf.URL, nil)
 	if err != nil {

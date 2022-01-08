@@ -18,7 +18,7 @@ import (
 func getDefaultPath() (string, error) {
 	penv := os.Getenv("PATH")
 	log.Debugf("User PATH is [%s]", penv)
-	opts := []fmt.Stringer{}
+	opts := map[fmt.Stringer]struct{}{}
 	for _, p := range strings.Split(penv, ";") {
 
 		if err := checkDirExistsAndWritable(p); err != nil {
@@ -27,7 +27,7 @@ func getDefaultPath() (string, error) {
 		}
 
 		log.Debugf("%s seems to be a dir and writable, adding option.", p)
-		opts = append(opts, options.LiteralStringer(p))
+		opts[options.LiterlaStringer(p)] = struct{}{}
 
 	}
 
@@ -35,7 +35,12 @@ func getDefaultPath() (string, error) {
 		return "", errors.New("Automatic path detection didn't return any results")
 	}
 
-	choice, err := options.Select("Pick a default download dir: ", opts)
+	sopts := []fmt.Stringer{}
+	for k, _ := range opts {
+		sopts = append(sopts, k)
+	}
+
+	choice, err := options.Select("Pick a default download dir: ", sopts)
 	if err != nil {
 		return "", err
 	}
