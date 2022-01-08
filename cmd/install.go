@@ -40,7 +40,7 @@ func newInstallCmd() *installCmd {
 			if len(args) > 1 {
 				var err error
 				// Resolve to absolute path
-				if path, err = filepath.Abs(args[1]); err != nil {
+				if path, err = filepath.Abs(os.ExpandEnv(args[1])); err != nil {
 					return err
 				}
 			} else if len(config.Get().DefaultPath) > 0 {
@@ -52,6 +52,7 @@ func newInstallCmd() *installCmd {
 					return err
 				}
 			}
+
 
 			//TODO check if binary already exists in config
 			// and triger the update process if that's the case

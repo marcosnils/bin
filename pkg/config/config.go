@@ -91,6 +91,7 @@ func CheckAndLoad() error {
 		}
 
 	}
+	cfg.DefaultPath = os.ExpandEnv(cfg.DefaultPath)
 	log.Debugf("Download path set to %s", cfg.DefaultPath)
 	return nil
 }
