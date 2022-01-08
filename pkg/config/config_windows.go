@@ -27,7 +27,7 @@ func getDefaultPath() (string, error) {
 		}
 
 		log.Debugf("%s seems to be a dir and writable, adding option.", p)
-		opts[options.LiterlaStringer(p)] = struct{}{}
+		opts[options.LiteralStringer(p)] = struct{}{}
 
 	}
 
