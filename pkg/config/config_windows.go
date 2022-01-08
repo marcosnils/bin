@@ -36,7 +36,7 @@ func getDefaultPath() (string, error) {
 	}
 
 	sopts := []fmt.Stringer{}
-	for k, _ := range opts {
+	for k := range opts {
 		sopts = append(sopts, k)
 	}
 
