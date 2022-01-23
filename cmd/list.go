@@ -41,14 +41,16 @@ func newListCmd() *listCmd {
 			for _, k := range binPaths {
 				b := cfg.Bins[k]
 
-				_, err := os.Stat(b.Path)
+				p := os.ExpandEnv(b.Path)
+
+				_, err := os.Stat(p)
 
 				status := color.GreenString("OK")
 				if err != nil {
 					status = color.RedString("missing file")
 				}
 
-				fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", b.Path, b.Version, b.URL, status)
+				fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", os.ExpandEnv(b.Path), b.Version, b.URL, status)
 			}
 			fmt.Fprintf(w, "\n\n")
 			return nil

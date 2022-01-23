@@ -28,26 +28,28 @@ func newRemoveCmd() *removeCmd {
 
 			existingToRemove := []string{}
 
-			for _, p := range args {
-				p, err := getBinPath(p)
-				if err != nil {
-					return err
-				}
+			for _, b := range cfg.Bins {
 
-				if _, ok := cfg.Bins[p]; ok {
-					existingToRemove = append(existingToRemove, p)
-					// TODO some providers (like docker) might download
-					// additional things somewhere else, maybe we should
-					// call the provider to do a cleanup here.
-					err := os.Remove(p)
+				for _, p := range args {
+					bp, err := getBinPath(p)
 					if err != nil {
-						return fmt.Errorf("Error removing path %s: %v", p, err)
+						return err
 					}
-					continue
-				}
-				log.Infof("Path %s not found in bin, ignoring.", p)
-			}
+					if os.ExpandEnv(b.Path) == os.ExpandEnv(bp) {
+						err := os.Remove(os.ExpandEnv(bp))
+						existingToRemove = append(existingToRemove, b.Path)
+						// TODO some providers (like docker) might download
+						// additional things somewhere else, maybe we should
+						// call the provider to do a cleanup here.
+						if err != nil {
+							return fmt.Errorf("Error removing path %s: %v", os.ExpandEnv(bp), err)
+						}
+						continue
 
+					}
+					log.Infof("Path %s not found in bin, ignoring.", bp)
+				}
+			}
 			err := config.RemoveBinaries(existingToRemove)
 			return err
 		},

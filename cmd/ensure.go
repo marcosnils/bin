@@ -33,7 +33,8 @@ func newEnsureCmd() *ensureCmd {
 			// the same thing as install logic. Refactor to
 			// use the same code in both places
 			for _, binCfg := range binsToProcess {
-				_, err := os.Stat(binCfg.Path)
+				ep := os.ExpandEnv(binCfg.Path)
+				_, err := os.Stat(ep)
 				if !os.IsNotExist(err) {
 					continue
 				}
@@ -48,7 +49,7 @@ func newEnsureCmd() *ensureCmd {
 					return err
 				}
 
-				if err = saveToDisk(pResult, binCfg.Path, true); err != nil {
+				if err = saveToDisk(pResult, ep, true); err != nil {
 					return fmt.Errorf("Error installing binary %w", err)
 				}
 

@@ -36,8 +36,9 @@ func newInstallCmd() *installCmd {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			u := args[0]
 
-			var path string
+			var path, argpath string
 			if len(args) > 1 {
+				argpath = args[1]
 				var err error
 				// Resolve to absolute path
 				if path, err = filepath.Abs(os.ExpandEnv(args[1])); err != nil {
@@ -53,7 +54,6 @@ func newInstallCmd() *installCmd {
 				}
 			}
 
-
 			//TODO check if binary already exists in config
 			// and triger the update process if that's the case
 
@@ -68,10 +68,13 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
-			path, err = getFinalPath(path, pResult.Name)
-
+			path, err = checkFinalPath(path, pResult.Name)
 			if err != nil {
 				return err
+			}
+
+			if len(argpath) == 0 {
+				argpath = path
 			}
 
 			if err = saveToDisk(pResult, path, root.opts.force); err != nil {
@@ -80,7 +83,7 @@ func newInstallCmd() *installCmd {
 
 			err = config.UpsertBinary(&config.Binary{
 				RemoteName:  pResult.Name,
-				Path:        path,
+				Path:        argpath,
 				Version:     pResult.Version,
 				Hash:        fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
 				URL:         u,
@@ -105,12 +108,12 @@ func newInstallCmd() *installCmd {
 	return root
 }
 
-// getFinalPath checks if path exists and if it's a dir or not
+// checkFinalPath checks if path exists and if it's a dir or not
 // and returns the correct final file path. It also
 // checks if the path already exists and prompts
 // the user to override
-func getFinalPath(path, fileName string) (string, error) {
-	fi, err := os.Stat(path)
+func checkFinalPath(path, fileName string) (string, error) {
+	fi, err := os.Stat(os.ExpandEnv(path))
 
 	//TODO implement file existence and override logic
 	if err != nil && !os.IsNotExist(err) {
@@ -133,18 +136,20 @@ func getFinalPath(path, fileName string) (string, error) {
 //TODO if the file is zipped, tared, whatever then extract it
 func saveToDisk(f *providers.File, path string, overwrite bool) error {
 
+	var epath = os.ExpandEnv((path))
+
 	var extraFlags int = os.O_EXCL
 
 	if overwrite {
 		extraFlags = 0
-		err := os.Remove(path)
-		log.Debugf("Overwrite flag set, removing file %s\n", path)
+		err := os.Remove(epath)
+		log.Debugf("Overwrite flag set, removing file %s\n", epath)
 		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}
 
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|extraFlags, 0766)
+	file, err := os.OpenFile(epath, os.O_RDWR|os.O_CREATE|extraFlags, 0766)
 
 	if err != nil {
 		return err
@@ -152,7 +157,7 @@ func saveToDisk(f *providers.File, path string, overwrite bool) error {
 
 	defer file.Close()
 
-	log.Infof("Copying for %s@%s into %s", f.Name, f.Version, path)
+	log.Infof("Copying for %s@%s into %s", f.Name, f.Version, epath)
 	_, err = io.Copy(file, f.Data)
 	if err != nil {
 		return err

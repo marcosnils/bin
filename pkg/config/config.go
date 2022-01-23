@@ -17,6 +17,9 @@ import (
 var cfg config
 
 type config struct {
+	// DefaultPath might not be expanded so it's important that
+	// the caller expands this variable with os.ExpandEnv(string)
+	// if necessary
 	DefaultPath string             `json:"default_path"`
 	Bins        map[string]*Binary `json:"bins"`
 }
@@ -91,7 +94,6 @@ func CheckAndLoad() error {
 		}
 
 	}
-	cfg.DefaultPath = os.ExpandEnv(cfg.DefaultPath)
 	log.Debugf("Download path set to %s", cfg.DefaultPath)
 	return nil
 }
