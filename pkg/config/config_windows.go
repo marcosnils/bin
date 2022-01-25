@@ -35,12 +35,7 @@ func getDefaultPath() (string, error) {
 		return "", errors.New("Automatic path detection didn't return any results")
 	}
 
-	sopts := []fmt.Stringer{}
-	for k := range opts {
-		sopts = append(sopts, k)
-	}
-
-	choice, err := options.Select("Pick a default download dir: ", sopts)
+	choice, err := options.SelectCustom("Pick a default download dir: ", opts)
 	if err != nil {
 		return "", err
 	}
