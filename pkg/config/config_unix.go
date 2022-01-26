@@ -38,15 +38,15 @@ func getDefaultPath() (string, error) {
 
 	}
 
-	sopts := []fmt.Stringer{}
-	for k := range opts {
-		sopts = append(sopts, k)
-	}
-
 	// TODO this logic is also duplicated in the windows config. We should
 	// move it to config.go
 	if len(opts) == 0 {
 		return "", errors.New("Automatic path detection didn't return any results")
+	}
+
+	sopts := []fmt.Stringer{}
+	for k := range opts {
+		sopts = append(sopts, k)
 	}
 
 	choice, err := options.SelectCustom("Pick a default download dir: ", sopts)
