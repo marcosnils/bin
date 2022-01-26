@@ -26,10 +26,15 @@ func newPruneCmd() *pruneCmd {
 
 			pathsToDel := []string{}
 			for _, b := range cfg.Bins {
-				if _, err := os.Stat(b.Path); os.IsNotExist(err) {
-					log.Infof("%s not found removing", b.Path)
+				ep := os.ExpandEnv(b.Path)
+				if _, err := os.Stat(ep); os.IsNotExist(err) {
+					log.Infof("%s not found removing", ep)
 					pathsToDel = append(pathsToDel, b.Path)
 				}
+			}
+
+			if len(pathsToDel) == 0 {
+				return nil
 			}
 
 			// TODO will have to refactor this prompt to a separate function

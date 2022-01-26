@@ -136,7 +136,7 @@ func newUpdateCmd() *updateCmd {
 					return err
 				}
 
-				log.Infof("Done updating %s to %s", b.Path, color.GreenString(ui.version))
+				log.Infof("Done updating %s to %s", os.ExpandEnv(b.Path), color.GreenString(ui.version))
 			}
 			return nil
 		},

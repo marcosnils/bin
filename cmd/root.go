@@ -129,5 +129,5 @@ func getBinPath(name string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("Binary path %s not found", name)
+	return "", fmt.Errorf("binary path %s not found", name)
 }
