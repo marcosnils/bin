@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -140,10 +139,9 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 			}
 
 			for _, a := range as {
-				urlPathBasename := path.Base(a.URL)
 				highestScoreForAsset := 0
 				gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
-				for _, candidate := range []string{a.Name, urlPathBasename} {
+				for _, candidate := range []string{a.Name} {
 					candidateScore := 0
 					if bstrings.ContainsAny(strings.ToLower(candidate), scoreKeys) &&
 						isSupportedExt(candidate) {
@@ -465,10 +463,12 @@ func isSupportedExt(filename string) bool {
 	if ext := strings.TrimPrefix(filepath.Ext(filename), "."); len(ext) > 0 {
 		switch filetype.GetType(ext) {
 		case msiType, matchers.TypeDeb, matchers.TypeRpm, ascType:
+			log.Debugf("Filename %s doesn't have a supported extension", filename)
 			return false
 		case matchers.TypeGz, types.Unknown, matchers.TypeZip, matchers.TypeXz, matchers.TypeTar, matchers.TypeBz2, matchers.TypeExe:
 			break
 		default:
+			log.Debugf("Filename %s doesn't have a supported extension", filename)
 			return false
 		}
 	}
