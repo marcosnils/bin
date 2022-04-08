@@ -10,7 +10,12 @@ import (
 )
 
 type pruneCmd struct {
-	cmd *cobra.Command
+	cmd  *cobra.Command
+	opts pruneOpts
+}
+
+type pruneOpts struct {
+	force bool
 }
 
 func newPruneCmd() *pruneCmd {
@@ -39,17 +44,19 @@ func newPruneCmd() *pruneCmd {
 
 			// TODO will have to refactor this prompt to a separate function
 			// so it can be reused in some other places
-			// TODO add force flag to bypass prompt
-			fmt.Printf("\nThe following paths will be removed. Continue? [Y/n] ")
-			var response string
+			if !root.opts.force {
+				fmt.Printf("\nThe following paths will be removed. Continue? [Y/n] ")
+				var response string
 
-			_, err := fmt.Scanln(&response)
-			if err != nil {
-				return fmt.Errorf("Invalid input")
-			}
+				_, err := fmt.Scanln(&response)
+				if err != nil {
+					return fmt.Errorf("Invalid input")
+				}
 
-			if response != "Y" {
-				return fmt.Errorf("Command aborted")
+				if response != "Y" {
+					return fmt.Errorf("Command aborted")
+				}
+
 			}
 
 			return config.RemoveBinaries(pathsToDel)
@@ -57,5 +64,6 @@ func newPruneCmd() *pruneCmd {
 	}
 
 	root.cmd = cmd
+	root.cmd.Flags().BoolVarP(&root.opts.force, "force", "f", false, "Bypass confirmation prompt")
 	return root
 }
