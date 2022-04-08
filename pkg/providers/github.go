@@ -29,13 +29,16 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 
 	// If we have a tag, let's fetch from there
 	var err error
+	var resp *github.Response
 	if len(g.tag) > 0 {
 		log.Infof("Getting %s release for %s/%s", g.tag, g.owner, g.repo)
 		release, _, err = g.client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repo, g.tag)
 	} else {
-		// TODO handle case when repo doesn't have releases?
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
-		release, _, err = g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
+		release, resp, err = g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
+		if resp.StatusCode == http.StatusNotFound {
+			err = fmt.Errorf("repository %s/%s does not have releases", g.owner, g.repo)
+		}
 	}
 
 	if err != nil {
