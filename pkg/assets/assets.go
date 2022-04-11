@@ -197,7 +197,7 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 		}
 
 		sort.SliceStable(generic, func(i, j int) bool {
-			return fmt.Sprint(generic[i]) < fmt.Sprint(generic[j])
+			return generic[i].String() < generic[j].String()
 		})
 
 		choice, err := options.Select("Multiple matches found, please select one:", generic)
