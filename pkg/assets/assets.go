@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/apex/log"
@@ -194,6 +195,11 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 		for _, f := range matches {
 			generic = append(generic, f)
 		}
+
+		sort.SliceStable(generic, func(i, j int) bool {
+			return generic[i].String() < generic[j].String()
+		})
+
 		choice, err := options.Select("Multiple matches found, please select one:", generic)
 		if err != nil {
 			return nil, err
@@ -307,6 +313,7 @@ func (f *Filter) processReader(r io.Reader) (*finalFile, error) {
 	case matchers.TypeZip:
 		processor = f.processZip
 	}
+
 	if processor != nil {
 		// log.Debugf("Processing %s file %s with %s", repoName, name, runtime.FuncForPC(reflect.ValueOf(processor).Pointer()).Name())
 		outFile, err := processor(f.repoName, outputFile)
