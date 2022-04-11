@@ -3,16 +3,19 @@ package prompt
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
+
+var stdin io.Reader = os.Stdin
 
 // Confirm prints a confirmation prompt
 // for the given message and waits for the
 // users input.
 func Confirm(message string) error {
 	fmt.Printf("\n%s [Y/n] ", message)
-	reader := bufio.NewReader(os.Stdin)
+	reader := bufio.NewReader(stdin)
 	var response string
 
 	response, err := reader.ReadString('\n')
