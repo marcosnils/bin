@@ -146,7 +146,7 @@ func newUpdateCmd() *updateCmd {
 	root.cmd.Flags().BoolVarP(&root.opts.dryRun, "dry-run", "", false, "Only show status, don't prompt for update")
 	root.cmd.Flags().BoolVarP(&root.opts.yesToUpdate, "yes", "y", false, "Assume yes to update prompt")
 	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
-	root.cmd.Flags().BoolVarP(&root.opts.skipPathCheck, "skip-patch-check", "p", false, "Skips patch checking when looking into packages")
+	root.cmd.Flags().BoolVarP(&root.opts.skipPathCheck, "skip-path-check", "p", false, "Skips path checking when looking into packages")
 	return root
 }
 
