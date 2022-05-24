@@ -120,7 +120,6 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 		a := as[0]
 		matches = append(matches, &FilteredAsset{RepoName: repoName, Name: a.Name, URL: a.URL, score: 0})
 	} else {
-
 		if !f.opts.SkipScoring {
 			scores := map[string]int{}
 			scoreKeys := []string{}
@@ -184,7 +183,6 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 				matches = append(matches, &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0})
 			}
 		}
-
 	}
 
 	var gf *FilteredAsset
@@ -317,7 +315,6 @@ func (f *Filter) processReader(r io.Reader) (*finalFile, error) {
 	if processor != nil {
 		// log.Debugf("Processing %s file %s with %s", repoName, name, runtime.FuncForPC(reflect.ValueOf(processor).Pointer()).Name())
 		outFile, err := processor(f.repoName, outputFile)
-
 		if err != nil {
 			return nil, err
 		}
@@ -366,10 +363,10 @@ func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
 		}
 
 		if header.Typeflag == tar.TypeReg {
-			//TODO we're basically reading all the files
-			//isn't there a way just to store the reference
-			//where this data is so we don't have to do this or
-			//re-scan the archive twice afterwards?
+			// TODO we're basically reading all the files
+			// isn't there a way just to store the reference
+			// where this data is so we don't have to do this or
+			// re-scan the archive twice afterwards?
 			bs, err := ioutil.ReadAll(tr)
 			if err != nil {
 				return nil, err
@@ -378,7 +375,7 @@ func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
 		}
 	}
 	if len(tarFiles) == 0 {
-		return nil, fmt.Errorf("No files found in tar archive. PackagePath [%s]", f.opts.PackagePath)
+		return nil, fmt.Errorf("no files found in tar archive, use -p flag to manually select . PackagePath [%s]", f.opts.PackagePath)
 	}
 
 	as := make([]*Asset, 0)
@@ -432,10 +429,10 @@ func (f *Filter) processZip(name string, r io.Reader) (*finalFile, error) {
 			continue
 		}
 
-		//TODO we're basically reading all the files
-		//isn't there a way just to store the reference
-		//where this data is so we don't have to do this or
-		//re-scan the archive twice afterwards?
+		// TODO we're basically reading all the files
+		// isn't there a way just to store the reference
+		// where this data is so we don't have to do this or
+		// re-scan the archive twice afterwards?
 		bs, err := ioutil.ReadAll(zr)
 		if err != nil {
 			return nil, err
