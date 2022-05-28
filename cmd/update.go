@@ -20,10 +20,11 @@ type updateCmd struct {
 }
 
 type updateOpts struct {
-	yesToUpdate   bool
-	dryRun        bool
-	all           bool
-	skipPathCheck bool
+	yesToUpdate     bool
+	dryRun          bool
+	all             bool
+	skipPathCheck   bool
+	continueOnError bool
 }
 
 type updateInfo struct{ version, url string }
@@ -65,19 +66,25 @@ func newUpdateCmd() *updateCmd {
 				binsToProcess = cfg.Bins
 			}
 
+			updateFailures := map[*config.Binary]error{}
+
 			for _, b := range binsToProcess {
 				p, err := providers.New(b.URL, b.Provider)
 				if err != nil {
 					return err
 				}
 				if ui, err := getLatestVersion(b, p); err != nil {
+					if root.opts.continueOnError {
+						updateFailures[b] = fmt.Errorf("Error while getting latest version of %v: %v", b.Path, err)
+						continue
+					}
 					return err
 				} else if ui != nil {
 					toUpdate[ui] = b
 				}
 			}
 
-			if len(toUpdate) == 0 {
+			if len(toUpdate) == 0 && len(updateFailures) == 0 {
 				log.Infof("All binaries are up to date")
 				return nil
 			}
@@ -86,7 +93,12 @@ func newUpdateCmd() *updateCmd {
 				return wrapErrorWithCode(fmt.Errorf("Updates found, exit (dry-run mode)."), 3, "")
 			}
 
-			if !root.opts.yesToUpdate {
+			if len(toUpdate) > 0 && !root.opts.yesToUpdate {
+				for _, err := range updateFailures {
+					log.Warnf("%v", err)
+				}
+				updateFailures = map[*config.Binary]error{}
+
 				// TODO will have to refactor this prompt to a separate function
 				// so it can be reused in some other places
 				fmt.Printf("\nDo you want to continue? [Y/n] ")
@@ -117,6 +129,10 @@ func newUpdateCmd() *updateCmd {
 
 				pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all, PackagePath: b.PackagePath, SkipPatchCheck: root.opts.skipPathCheck})
 				if err != nil {
+					if root.opts.continueOnError {
+						updateFailures[b] = fmt.Errorf("Error while fetching %v: %w", ui.url, err)
+						continue
+					}
 					return err
 				}
 
@@ -138,6 +154,10 @@ func newUpdateCmd() *updateCmd {
 
 				log.Infof("Done updating %s to %s", os.ExpandEnv(b.Path), color.GreenString(ui.version))
 			}
+			for _, err := range updateFailures {
+				log.Warnf("%v", err)
+			}
+			// TODO: Return wrapping error with specific exit code if len(updateFailures) > 0?
 			return nil
 		},
 	}
@@ -147,6 +167,7 @@ func newUpdateCmd() *updateCmd {
 	root.cmd.Flags().BoolVarP(&root.opts.yesToUpdate, "yes", "y", false, "Assume yes to update prompt")
 	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
 	root.cmd.Flags().BoolVarP(&root.opts.skipPathCheck, "skip-path-check", "p", false, "Skips path checking when looking into packages")
+	root.cmd.Flags().BoolVarP(&root.opts.continueOnError, "continue-on-error", "c", false, "Continues to update next package if an error is encountered")
 	return root
 }
 
