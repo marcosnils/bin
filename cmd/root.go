@@ -65,7 +65,7 @@ func newRootCmd(version string, exit func(int)) *rootCmd {
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if root.debug {
 				log.SetLevel(log.DebugLevel)
-				log.Debug("debug logs enabled")
+				log.Debugf("debug logs enabled, version: %s\n", version)
 			}
 
 			// check and load config after handlers are configured

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/apex/log"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +28,6 @@ func newRemoveCmd() *removeCmd {
 			existingToRemove := []string{}
 
 			for _, b := range cfg.Bins {
-
 				for _, p := range args {
 					bp, err := getBinPath(p)
 					if err != nil {
@@ -47,7 +45,6 @@ func newRemoveCmd() *removeCmd {
 						continue
 
 					}
-					log.Infof("Path %s not found in bin, ignoring.", bp)
 				}
 			}
 			err := config.RemoveBinaries(existingToRemove)

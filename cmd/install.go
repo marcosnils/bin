@@ -24,9 +24,9 @@ type installOpts struct {
 }
 
 func newInstallCmd() *installCmd {
-	var root = &installCmd{}
+	root := &installCmd{}
 	// nolint: dupl
-	var cmd = &cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "install <url>",
 		Aliases:       []string{"i"},
 		Short:         "Installs the specified project from a url",
@@ -54,7 +54,7 @@ func newInstallCmd() *installCmd {
 				}
 			}
 
-			//TODO check if binary already exists in config
+			// TODO check if binary already exists in config
 			// and triger the update process if that's the case
 
 			p, err := providers.New(u, root.opts.provider)
@@ -63,7 +63,6 @@ func newInstallCmd() *installCmd {
 			}
 
 			pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all})
-
 			if err != nil {
 				return err
 			}
@@ -78,7 +77,7 @@ func newInstallCmd() *installCmd {
 			}
 
 			if err = saveToDisk(pResult, path, root.opts.force); err != nil {
-				return fmt.Errorf("Error installing binary: %w", err)
+				return fmt.Errorf("error installing binary: %w", err)
 			}
 
 			err = config.UpsertBinary(&config.Binary{
@@ -115,7 +114,7 @@ func newInstallCmd() *installCmd {
 func checkFinalPath(path, fileName string) (string, error) {
 	fi, err := os.Stat(os.ExpandEnv(path))
 
-	//TODO implement file existence and override logic
+	// TODO implement file existence and override logic
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
@@ -125,18 +124,16 @@ func checkFinalPath(path, fileName string) (string, error) {
 	}
 
 	return path, nil
-
 }
 
 // saveToDisk saves the specified binary to the desired path
 // and makes it executable. It also checks if any other binary
 // has the same hash and exists if so.
 
-//TODO check if other binary has the same hash and warn about it.
-//TODO if the file is zipped, tared, whatever then extract it
+// TODO check if other binary has the same hash and warn about it.
+// TODO if the file is zipped, tared, whatever then extract it
 func saveToDisk(f *providers.File, path string, overwrite bool) error {
-
-	var epath = os.ExpandEnv((path))
+	epath := os.ExpandEnv((path))
 
 	var extraFlags int = os.O_EXCL
 
@@ -149,8 +146,7 @@ func saveToDisk(f *providers.File, path string, overwrite bool) error {
 		}
 	}
 
-	file, err := os.OpenFile(epath, os.O_RDWR|os.O_CREATE|extraFlags, 0766)
-
+	file, err := os.OpenFile(epath, os.O_RDWR|os.O_CREATE|extraFlags, 0o766)
 	if err != nil {
 		return err
 	}
