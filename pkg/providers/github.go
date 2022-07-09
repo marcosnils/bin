@@ -62,7 +62,6 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 	}
 
 	outFile, err := f.ProcessURL(gf)
-
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +95,7 @@ func (g *gitHub) GetID() string {
 func newGitHub(u *url.URL) (Provider, error) {
 	s := strings.Split(u.Path, "/")
 	if len(s) < 3 {
-		return nil, fmt.Errorf("Error parsing Github URL %s, can't find owner and repo", u.String())
+		return nil, fmt.Errorf("error parsing Github URL %s, can't find owner and repo", u.String())
 	}
 
 	// it's a specific releases URL
@@ -115,12 +114,34 @@ func newGitHub(u *url.URL) (Provider, error) {
 	}
 
 	token := os.Getenv("GITHUB_AUTH_TOKEN")
+
+	// GHES client
+	gbu := os.Getenv("GHES_BASE_URL")
+	guu := os.Getenv("GHES_UPLOAD_URL")
+	gau := os.Getenv("GHES_AUTH_TOKEN")
+
 	var tc *http.Client
-	if token != "" {
+
+	if len(gbu) > 0 && len(guu) > 0 && len(gau) > 0 {
+		tc = oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: gau},
+		))
+	} else if token != "" {
 		tc = oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		))
 	}
-	client := github.NewClient(tc)
+
+	var client *github.Client
+	var err error
+
+	if len(gbu) > 0 && len(guu) > 0 && len(gau) > 0 {
+		if client, err = github.NewEnterpriseClient(gbu, guu, tc); err != nil {
+			return nil, fmt.Errorf("error initializing GHES client %v", err)
+		}
+	} else {
+		client = github.NewClient(tc)
+	}
+
 	return &gitHub{url: u, client: client, owner: s[1], repo: s[2], tag: tag, token: token}, nil
 }
