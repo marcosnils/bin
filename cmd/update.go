@@ -1,15 +1,14 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/apex/log"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-version"
 	"github.com/marcosnils/bin/pkg/config"
+	"github.com/marcosnils/bin/pkg/prompt"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
 )
@@ -99,21 +98,9 @@ func newUpdateCmd() *updateCmd {
 				}
 				updateFailures = map[*config.Binary]error{}
 
-				// TODO will have to refactor this prompt to a separate function
-				// so it can be reused in some other places
-				fmt.Printf("\nDo you want to continue? [Y/n] ")
-				reader := bufio.NewReader(os.Stdin)
-				var response string
-
-				response, err := reader.ReadString('\n')
+				err := prompt.Confirm("Do you want to continue?")
 				if err != nil {
-					return fmt.Errorf("Invalid input")
-				}
-
-				switch strings.ToLower(strings.TrimSpace(response)) {
-				case "", "y", "yes":
-				default:
-					return fmt.Errorf("Command aborted")
+					return err
 				}
 			}
 

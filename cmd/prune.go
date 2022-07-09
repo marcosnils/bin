@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/apex/log"
 	"github.com/marcosnils/bin/pkg/config"
+	"github.com/marcosnils/bin/pkg/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -42,21 +42,11 @@ func newPruneCmd() *pruneCmd {
 				return nil
 			}
 
-			// TODO will have to refactor this prompt to a separate function
-			// so it can be reused in some other places
 			if !root.opts.force {
-				fmt.Printf("\nThe following paths will be removed. Continue? [Y/n] ")
-				var response string
-
-				_, err := fmt.Scanln(&response)
+				err := prompt.Confirm("The following paths will be removed. Continue?")
 				if err != nil {
-					return fmt.Errorf("Invalid input")
+					return err
 				}
-
-				if response != "Y" {
-					return fmt.Errorf("Command aborted")
-				}
-
 			}
 
 			return config.RemoveBinaries(pathsToDel)
