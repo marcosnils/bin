@@ -21,7 +21,7 @@ to be doing way more than what I'm actually needing. So, I've decided to continu
 that could result useful to someone else.
 
 If you find `bin` helpful and you have any ideas or suggestions, please create an issue here or send a PR and I'll
-be more than happy to brainstrom about possibilities.
+be more than happy to brainstorm about possibilities.
 
 ## Installing
 
