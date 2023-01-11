@@ -182,8 +182,10 @@ func GetOS() []string {
 //   - if "XDG_CONFIG_HOME" is set, return "$XDG_CONFIG_HOME/bin"
 //   - if "$HOME/.config" exists, return "$home/.config/bin"
 //   - default to "$HOME/.bin/"
+//
 // ToDo: move the function to config_unix.go and add a similar function for windows,
-//       %APPDATA% might be the right place on windows
+//
+//	%APPDATA% might be the right place on windows
 func getConfigPath() (string, error) {
 	home, homeErr := os.UserHomeDir()
 	if homeErr == nil {
