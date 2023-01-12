@@ -14,11 +14,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-//getDefaultPath reads the user's PATH variable
-//and returns the first directory that's writable by the current
-//user in the system
-//TODO add feature to prompt the user which to select
-//if many paths are found
+// getDefaultPath reads the user's PATH variable
+// and returns the first directory that's writable by the current
+// user in the system
+// TODO add feature to prompt the user which to select
+// if many paths are found
 func getDefaultPath() (string, error) {
 	penv := os.Getenv("PATH")
 	log.Debugf("User PATH is [%s]", penv)

@@ -12,9 +12,9 @@ func (l LiteralStringer) String() string {
 	return string(l)
 }
 
-//Select prompts the user which
-//of the available options is the desired
-//through STDIN and returns the selected one
+// Select prompts the user which
+// of the available options is the desired
+// through STDIN and returns the selected one
 func Select(msg string, opts []fmt.Stringer) (interface{}, error) {
 	if len(opts) == 1 {
 		return opts[0], nil
@@ -45,9 +45,9 @@ func Select(msg string, opts []fmt.Stringer) (interface{}, error) {
 	return opts[opt-1], nil
 }
 
-//SelectCustom prompts the user which
-//of the available options is the desired
-//through STDIN and returns the selected or a custom one
+// SelectCustom prompts the user which
+// of the available options is the desired
+// through STDIN and returns the selected or a custom one
 func SelectCustom(msg string, opts []fmt.Stringer) (interface{}, error) {
 	if len(opts) == 1 {
 		return opts[0], nil
