@@ -1,3 +1,6 @@
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/marcosnils/bin/issues)
+[![Go code tests](https://github.com/marcosnils/bin/actions/workflows/test.yaml/badge.svg)](https://github.com/marcosnils/bin/actions/workflows/test.yaml)
+
 # bin
 
 Manages binary files downloaded from different sources
