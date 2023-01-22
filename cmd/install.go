@@ -54,14 +54,16 @@ func newInstallCmd() *installCmd {
 				}
 			}
 
-			binName := checkBinExistsInConfig(u, config.Get().Bins)
-			if binName != "" {
-				log.Info("Binary already installed. Updating...")
-				err := newUpdateCmd().cmd.RunE(cmd, []string{binName})
-				if err != nil {
-					return err
+			if !root.opts.force {
+				binName := checkBinExistsInConfig(u, config.Get().Bins)
+				if binName != "" {
+					log.Info("Binary already installed. Updating...")
+					err := newUpdateCmd().cmd.RunE(cmd, []string{binName})
+					if err != nil {
+						return err
+					}
+					return nil
 				}
-				return nil
 			}
 
 			p, err := providers.New(u, root.opts.provider)
