@@ -54,8 +54,15 @@ func newInstallCmd() *installCmd {
 				}
 			}
 
-			// TODO check if binary already exists in config
-			// and triger the update process if that's the case
+			binName := checkBinExistsInConfig(u, config.Get().Bins)
+			if binName != "" {
+				log.Info("Binary already installed. Updating...")
+				err := newUpdateCmd().cmd.RunE(cmd, []string{binName})
+				if err != nil {
+					return err
+				}
+				return nil
+			}
 
 			p, err := providers.New(u, root.opts.provider)
 			if err != nil {
