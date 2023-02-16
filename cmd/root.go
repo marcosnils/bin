@@ -85,8 +85,6 @@ func newRootCmd(version string, exit func(int)) *rootCmd {
 		newListCmd().cmd,
 		newPruneCmd().cmd,
 	)
-	// the main commands need to be added first for the completion to work
-	cmd.AddCommand(newCompletionCmd(cmd).cmd)
 
 	root.cmd = cmd
 	return root
