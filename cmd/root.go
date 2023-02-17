@@ -98,6 +98,11 @@ func defaultCommand(cmd *cobra.Command, args []string) bool {
 		return false
 	}
 
+	// special case for cobra's default completion command
+	if args[0] == "completion" {
+		return false
+	}
+
 	// if we have != 1 args, assume its a ls
 	if len(args) != 1 {
 		return true
