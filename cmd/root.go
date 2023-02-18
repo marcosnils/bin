@@ -99,7 +99,10 @@ func defaultCommand(cmd *cobra.Command, args []string) bool {
 	}
 
 	// special case for cobra's default completion command
-	if args[0] == "completion" {
+	// ref: https://github.com/kubernetes/kubectl/blob/04af20f5a9d2b56d910a36fec84f21164df65d32/pkg/cmd/cmd.go#L132
+	if arg0 := args[0]; arg0 == "completion" ||
+		arg0 == cobra.ShellCompRequestCmd ||
+		arg0 == cobra.ShellCompNoDescRequestCmd {
 		return false
 	}
 
