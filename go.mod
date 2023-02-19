@@ -13,7 +13,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/hashicorp/go-version v1.2.1
 	github.com/krolaw/zipstream v0.0.0-20180621105154-0a2661891f94
-	github.com/spf13/cobra v1.0.0
+	github.com/spf13/cobra v1.6.1
 	github.com/xanzy/go-gitlab v0.44.0
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	github.com/yuin/goldmark v1.2.1
@@ -34,7 +34,7 @@ require (
 	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.4 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
