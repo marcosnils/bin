@@ -2,6 +2,8 @@ before:
   hooks:
     - go mod download
 build:
+  env:
+    - CGO_ENABLED=0
   goos:
     - darwin
     - linux
