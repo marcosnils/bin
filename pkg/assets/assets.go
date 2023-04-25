@@ -7,7 +7,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -367,7 +366,7 @@ func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
 			// isn't there a way just to store the reference
 			// where this data is so we don't have to do this or
 			// re-scan the archive twice afterwards?
-			bs, err := ioutil.ReadAll(tr)
+			bs, err := io.ReadAll(tr)
 			if err != nil {
 				return nil, err
 			}
@@ -433,7 +432,7 @@ func (f *Filter) processZip(name string, r io.Reader) (*finalFile, error) {
 		// isn't there a way just to store the reference
 		// where this data is so we don't have to do this or
 		// re-scan the archive twice afterwards?
-		bs, err := ioutil.ReadAll(zr)
+		bs, err := io.ReadAll(zr)
 		if err != nil {
 			return nil, err
 		}
