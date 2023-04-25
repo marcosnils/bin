@@ -107,14 +107,14 @@ func defaultCommand(cmd *cobra.Command, args []string) bool {
 		return false
 	}
 
-	// if we have != 1 args, assume its a ls
-	if len(args) != 1 {
+	// if we have == 0 args, assume its a ls
+	if len(args) == 0 {
 		return true
 	}
 
 	// given that its 1, check if its one of the valid standalone flags
 	// for the root cmd
-	for _, s := range []string{"-h", "--help", "-v", "--version"} {
+	for _, s := range []string{"-h", "--help", "-v", "--version", "help"} {
 		if s == args[0] {
 			// if it is, we should run the root cmd
 			return false
