@@ -19,15 +19,27 @@ func newEnsureCmd() *ensureCmd {
 	root := &ensureCmd{}
 	// nolint: dupl
 	cmd := &cobra.Command{
-		Use:           "ensure",
+		Use:           "ensure [binary_path]...",
 		Aliases:       []string{"e"},
 		Short:         "Ensures that all binaries listed in the configuration are present",
 		SilenceUsage:  true,
-		Args:          cobra.MaximumNArgs(0),
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.Get()
-			binsToProcess := cfg.Bins
+			binsToProcess := map[string]*config.Binary{}
+
+			// Update specific binaries
+			if len(args) > 0 {
+				for _, a := range args {
+					bin, err := getBinPath(a)
+					if err != nil {
+						return err
+					}
+					binsToProcess[bin] = cfg.Bins[bin]
+				}
+			} else {
+				binsToProcess = cfg.Bins
+			}
 
 			// TODO: code smell here, this pretty much does
 			// the same thing as install logic. Refactor to
