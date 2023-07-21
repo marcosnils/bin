@@ -1,6 +1,6 @@
 module github.com/marcosnils/bin
 
-go 1.19
+go 1.20
 
 require (
 	github.com/WeiZhang555/tabwriter v0.0.0-20200115015932-e5c45f4da38d
