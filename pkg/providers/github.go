@@ -114,6 +114,9 @@ func newGitHub(u *url.URL) (Provider, error) {
 	}
 
 	token := os.Getenv("GITHUB_AUTH_TOKEN")
+	if len(token) == 0 {
+		token = os.Getenv("GITHUB_TOKEN")
+	}
 
 	// GHES client
 	gbu := os.Getenv("GHES_BASE_URL")
