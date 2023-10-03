@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/apex/log"
 	"github.com/marcosnils/bin/pkg/config"
@@ -35,6 +36,14 @@ func newInstallCmd() *installCmd {
 		Args:          cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			u := args[0]
+
+			if !strings.Contains(u, "github.com") {
+				if strings.Contains(u, "/") {
+					u = fmt.Sprintf("github.com/%s", u)
+				} else {
+					u = DEFAULT_SHORTHANDS[u]
+				}
+			}
 
 			var path, argpath string
 			if len(args) > 1 {
