@@ -8,6 +8,8 @@ build:
     - darwin
     - linux
     - windows
+archives:
+  - format: binary
 checksum:
   name_template: 'checksums.txt'
 snapshot:
