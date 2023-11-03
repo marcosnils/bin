@@ -70,5 +70,9 @@ func New(u, provider string) (Provider, error) {
 		return newHashiCorp(purl)
 	}
 
+	if strings.Contains(purl.Host, "get.helm.sh") || provider == "helm" {
+		return newHelm(purl)
+	}
+
 	return nil, fmt.Errorf("Can't find provider for url %s", u)
 }
