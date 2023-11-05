@@ -31,6 +31,7 @@ type Binary struct {
 	Hash       string `json:"hash"`
 	URL        string `json:"url"`
 	Provider   string `json:"provider"`
+	LatestURL  string `json:"latest_url"` // for generic provider
 	// if file is installed from a package format (zip, tar, etc) store
 	// the package path in config so we don't ask the user to select
 	// the path again when upgrading
