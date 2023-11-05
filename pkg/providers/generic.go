@@ -47,8 +47,7 @@ func (g *generic) GetLatestVersion() (string, string, error) {
 	}
 
 	version := strings.TrimSuffix(string(body), "\n")
-	fname := fmt.Sprintf("%s-%s-%s-%s.%s", g.name, version, g.os, g.arch, g.ext)
-	link := fmt.Sprintf("%s/%s", g.baseURL, fname)
+	_, link := g.fmtNameLink(version)
 
 	return version, link, nil
 }
@@ -66,15 +65,8 @@ func (g *generic) Fetch(opts *FetchOpts) (*File, error) {
 		version = latest
 	}
 
-	fname := fmt.Sprintf("%s-%s-%s-%s.%s", g.name, version, g.os, g.arch, g.ext)
-	link := fmt.Sprintf("%s/%s", g.baseURL, fname)
-
-	candidates := []*assets.Asset{
-		{
-			Name: fname,
-			URL:  link,
-		},
-	}
+	name, link := g.fmtNameLink(version)
+	candidates := []*assets.Asset{{Name: name, URL: link}}
 
 	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck})
 	gf, err := f.FilterAssets(g.name, candidates)
@@ -88,6 +80,11 @@ func (g *generic) Fetch(opts *FetchOpts) (*File, error) {
 	}
 
 	return &File{Data: outFile.Source, Name: assets.SanitizeName(outFile.Name, version), Hash: sha256.New(), Version: version}, nil
+}
+
+func (g *generic) fmtNameLink(version string) (string, string) {
+	fname := fmt.Sprintf("%s-%s-%s-%s.%s", g.name, version, g.os, g.arch, g.ext)
+	return fname, fmt.Sprintf("%s/%s", g.baseURL, fname)
 }
 
 func newGeneric(u *url.URL, latestURL string) (Provider, error) {
