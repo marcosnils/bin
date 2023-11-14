@@ -59,6 +59,9 @@ func newUpdateCmd() *updateCmd {
 					if err != nil {
 						return err
 					}
+					if cfg.Bins[bin].Pin {
+						return fmt.Errorf("Cannot update a pinned binary")
+					}
 					binsToProcess[bin] = cfg.Bins[bin]
 				}
 			} else {
