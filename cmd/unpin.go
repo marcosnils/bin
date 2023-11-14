@@ -1,6 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/apex/log"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -21,26 +25,26 @@ func newUnpinCmd() *unpinCmd {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.Get()
 
+			binaryList := make(map[string]*config.Binary)
 			for _, b := range cfg.Bins {
-				for _, p := range args {
-					if b.RemoteName == p {
-						bin, err := getBinPath(p)
-						if err != nil {
-							return err
-						}
-						updatedCfg := cfg.Bins[bin]
-						updatedCfg.Pin = false
-
-						err = config.UpsertBinary(updatedCfg)
-						if err != nil {
-							return err
-						}
-					}
-
-					// TODO return error for unmatched ones
-				}
+				binaryList[b.RemoteName] = b
 			}
 
+			for _, p := range args {
+				bin, found := binaryList[p]
+				if found {
+					bin.Pin = false
+					err := config.UpsertBinary(bin)
+					if err != nil {
+						return err
+					}
+					continue
+				}
+
+				return fmt.Errorf("Binary \"%s\" not found", p)
+			}
+
+			log.Infof("Unpinned " + strings.Join(args, ", "))
 			return nil
 		},
 	}
