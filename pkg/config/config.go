@@ -35,6 +35,7 @@ type Binary struct {
 	// the package path in config so we don't ask the user to select
 	// the path again when upgrading
 	PackagePath string `json:"package_path"`
+	Pin         bool   `json:"pin"`
 }
 
 func CheckAndLoad() error {

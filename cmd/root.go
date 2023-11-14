@@ -81,6 +81,8 @@ func newRootCmd(version string, exit func(int)) *rootCmd {
 		newInstallCmd().cmd,
 		newEnsureCmd().cmd,
 		newUpdateCmd().cmd,
+		newPinCmd().cmd,
+		newUnpinCmd().cmd,
 		newRemoveCmd().cmd,
 		newListCmd().cmd,
 		newPruneCmd().cmd,

@@ -50,6 +50,11 @@ func newListCmd() *listCmd {
 					status = color.RedString("missing file")
 				}
 
+				if b.Pin {
+					fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", os.ExpandEnv(b.Path), "*"+b.Version, b.URL, status)
+					continue
+				}
+
 				fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", os.ExpandEnv(b.Path), b.Version, b.URL, status)
 			}
 			fmt.Fprintf(w, "\n\n")
