@@ -36,14 +36,14 @@ func newInstallCmd() *installCmd {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			u := args[0]
 
-			var path, argpath string
+			var path string
 			if len(args) > 1 {
-				argpath = args[1]
 				var err error
 				// Resolve to absolute path
 				if path, err = filepath.Abs(os.ExpandEnv(args[1])); err != nil {
 					return err
 				}
+
 			} else if len(config.Get().DefaultPath) > 0 {
 				path = config.Get().DefaultPath
 			} else {
@@ -72,24 +72,19 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
-			if len(argpath) == 0 {
-				argpath = path
-			}
-
 			if err = saveToDisk(pResult, path, root.opts.force); err != nil {
 				return fmt.Errorf("error installing binary: %w", err)
 			}
 
 			err = config.UpsertBinary(&config.Binary{
 				RemoteName:  pResult.Name,
-				Path:        argpath,
+				Path:        path,
 				Version:     pResult.Version,
 				Hash:        fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
 				URL:         u,
 				Provider:    p.GetID(),
 				PackagePath: pResult.PackagePath,
 			})
-
 			if err != nil {
 				return err
 			}
