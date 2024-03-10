@@ -175,7 +175,7 @@ func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 	// TODO calculate file hash. Not sure if we can / should do it here
 	// since we don't want to read the file unnecesarily. Additionally, sometimes
 	// releases have .sha256 files, so it'd be nice to check for those also
-	file := &File{Data: outFile.Source, Name: assets.SanitizeName(outFile.Name, version), Hash: sha256.New(), Version: version}
+	file := &File{Data: outFile.Source, Name: outFile.Name, Hash: sha256.New(), Version: version}
 
 	return file, nil
 }

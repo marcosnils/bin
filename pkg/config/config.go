@@ -142,7 +142,6 @@ func write() error {
 	decoder := json.NewEncoder(f)
 	decoder.SetIndent("", "    ")
 	err = decoder.Encode(cfg)
-
 	if err != nil {
 		return err
 	}
