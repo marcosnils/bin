@@ -49,7 +49,7 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 	for _, a := range release.Assets {
 		candidates = append(candidates, &assets.Asset{Name: a.GetName(), URL: a.GetURL()})
 	}
-	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck})
+	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName})
 
 	gf, err := f.FilterAssets(g.repo, candidates)
 	if err != nil {
@@ -71,7 +71,7 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 	// TODO calculate file hash. Not sure if we can / should do it here
 	// since we don't want to read the file unnecesarily. Additionally, sometimes
 	// releases have .sha256 files, so it'd be nice to check for those also
-	file := &File{Data: outFile.Source, Name: assets.SanitizeName(outFile.Name, version), Hash: sha256.New(), Version: version, PackagePath: outFile.PackagePath}
+	file := &File{Data: outFile.Source, Name: outFile.Name, Hash: sha256.New(), Version: version, PackagePath: outFile.PackagePath}
 
 	return file, nil
 }

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/apex/log"
@@ -126,15 +127,19 @@ func defaultCommand(cmd *cobra.Command, args []string) bool {
 }
 
 func getBinPath(name string) (string, error) {
-	f, err := filepath.Abs(os.ExpandEnv(name))
+	var f string
+	f, err := exec.LookPath(name)
 	if err != nil {
-		return "", err
+		f, err = filepath.Abs(os.ExpandEnv(name))
+		if err != nil {
+			return "", err
+		}
 	}
 
 	cfg := config.Get()
 
 	for _, bin := range cfg.Bins {
-		if bin.Path == f {
+		if os.ExpandEnv(bin.Path) == f {
 			return bin.Path, nil
 		}
 	}

@@ -23,6 +23,7 @@ type File struct {
 
 type FetchOpts struct {
 	All            bool
+	PackageName    string
 	PackagePath    string
 	SkipPatchCheck bool
 }
@@ -53,7 +54,6 @@ func New(u, provider string) (Provider, error) {
 	}
 
 	purl, err := url.Parse(u)
-
 	if err != nil {
 		return nil, err
 	}

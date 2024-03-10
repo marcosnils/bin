@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/apex/log"
+	"github.com/marcosnils/bin/pkg/assets"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
@@ -36,19 +37,14 @@ func newInstallCmd() *installCmd {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			u := args[0]
 
-			var path string
+			var resolvedPath string
 			if len(args) > 1 {
-				var err error
-				// Resolve to absolute path
-				if path, err = filepath.Abs(os.ExpandEnv(args[1])); err != nil {
-					return err
-				}
-
+				resolvedPath = args[1]
 			} else if len(config.Get().DefaultPath) > 0 {
-				path = config.Get().DefaultPath
+				resolvedPath = config.Get().DefaultPath
 			} else {
 				var err error
-				path, err = os.Getwd()
+				resolvedPath, err = os.Getwd()
 				if err != nil {
 					return err
 				}
@@ -67,18 +63,18 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
-			path, err = checkFinalPath(path, pResult.Name)
+			resolvedPath, err = checkFinalPath(resolvedPath, assets.SanitizeName(pResult.Name, pResult.Version))
 			if err != nil {
 				return err
 			}
 
-			if err = saveToDisk(pResult, path, root.opts.force); err != nil {
+			if err = saveToDisk(pResult, resolvedPath, root.opts.force); err != nil {
 				return fmt.Errorf("error installing binary: %w", err)
 			}
 
 			err = config.UpsertBinary(&config.Binary{
 				RemoteName:  pResult.Name,
-				Path:        path,
+				Path:        resolvedPath,
 				Version:     pResult.Version,
 				Hash:        fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
 				URL:         u,

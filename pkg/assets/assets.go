@@ -77,6 +77,10 @@ type FilterOpts struct {
 	SkipScoring   bool
 	SkipPathCheck bool
 
+	// In case of updates, we're sending the previous version package path
+	// so in case it's the same one, we can re-use it.
+	PackageName string
+
 	// If target file is in a package format (tar, zip,etc) use this
 	// variable to filter the resulting outputs. This is very useful
 	// so we don't prompt the user to pick the file again on updates
