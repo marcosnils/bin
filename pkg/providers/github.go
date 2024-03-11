@@ -29,16 +29,12 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 
 	// If we have a tag, let's fetch from there
 	var err error
-	var resp *github.Response
 	if len(g.tag) > 0 {
 		log.Infof("Getting %s release for %s/%s", g.tag, g.owner, g.repo)
 		release, _, err = g.client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repo, g.tag)
 	} else {
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
-		release, resp, err = g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
-		if resp.StatusCode == http.StatusNotFound {
-			err = fmt.Errorf("repository %s/%s does not have releases", g.owner, g.repo)
-		}
+		release, err = g.getAnyLatestRelease(context.TODO())
 	}
 
 	if err != nil {
@@ -80,12 +76,33 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 // returns the corresponding name and url to fetch the version
 func (g *gitHub) GetLatestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
-	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
+	release, err := g.getAnyLatestRelease(context.TODO())
 	if err != nil {
 		return "", "", err
 	}
 
 	return release.GetTagName(), release.GetHTMLURL(), nil
+}
+
+func (g *gitHub) getAnyLatestRelease(ctx context.Context) (*github.RepositoryRelease, error) {
+	release, _, err := g.client.Repositories.GetLatestRelease(ctx, g.owner, g.repo)
+	if err != nil {
+		// If the error is that no latest release was found, it could be that there are only pre-releases
+		if ghErrResp, ok := err.(*github.ErrorResponse); ok && ghErrResp.Response.StatusCode == http.StatusNotFound {
+			// Get the first release returned by ListReleases
+			releases, _, listErr := g.client.Repositories.ListReleases(ctx, g.owner, g.repo, &github.ListOptions{PerPage: 1})
+			if listErr != nil {
+				return nil, listErr
+			}
+			if len(releases) > 0 {
+				return releases[0], nil
+			}
+		}
+
+		// Return original 404/StatusNotFound error from GetLatestRelease
+		return nil, err
+	}
+	return release, err
 }
 
 func (g *gitHub) GetID() string {
