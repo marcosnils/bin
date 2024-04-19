@@ -113,7 +113,7 @@ func newUpdateCmd() *updateCmd {
 					return err
 				}
 
-				pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all, PackagePath: b.PackagePath, SkipPatchCheck: root.opts.skipPathCheck})
+				pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all, PackagePath: b.PackagePath, SkipPatchCheck: root.opts.skipPathCheck, PackageName: b.RemoteName})
 				if err != nil {
 					if root.opts.continueOnError {
 						updateFailures[b] = fmt.Errorf("Error while fetching %v: %w", ui.url, err)

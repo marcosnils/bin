@@ -23,6 +23,7 @@ type File struct {
 
 type FetchOpts struct {
 	All            bool
+	PackageName    string
 	PackagePath    string
 	SkipPatchCheck bool
 }
