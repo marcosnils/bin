@@ -3,7 +3,6 @@ module github.com/marcosnils/bin
 go 1.20
 
 require (
-	github.com/WeiZhang555/tabwriter v0.0.0-20200115015932-e5c45f4da38d
 	github.com/apex/log v1.1.4
 	github.com/cheggaaa/pb v2.0.7+incompatible
 	github.com/coreos/go-semver v0.3.0
@@ -37,7 +36,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
-	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
