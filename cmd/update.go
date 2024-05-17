@@ -164,6 +164,9 @@ func getLatestVersion(b *config.Binary, p providers.Provider) (*updateInfo, erro
 	if err != nil {
 		return nil, fmt.Errorf("Error checking updates for %s, %w", b.Path, err)
 	}
+	if v == "" && u == "" {
+		return nil, nil
+	}
 
 	if b.Version == v {
 		return nil, nil
