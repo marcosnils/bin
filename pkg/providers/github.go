@@ -50,8 +50,9 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 		candidates = append(candidates, &assets.Asset{Name: a.GetName(), URL: a.GetURL()})
 	}
 	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName})
+	autoSelect := f.GetAutoSelection(opts.AutoSelect)
 
-	gf, err := f.FilterAssets(g.repo, candidates)
+	gf, err := f.FilterAssets(g.repo, candidates, autoSelect)
 	if err != nil {
 		return nil, err
 	}

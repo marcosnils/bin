@@ -37,6 +37,19 @@ type Binary struct {
 	PackagePath string `json:"package_path"`
 }
 
+func ForceInstallationDir() string {
+	exeDir := os.Getenv("BIN_EXE_DIR")
+	if len(exeDir) == 0 {
+		return ""
+	}
+
+	if os.MkdirAll(exeDir, 0755); checkDirExistsAndWritable(exeDir) != nil {
+		return ""
+	}
+
+	return exeDir
+}
+
 func CheckAndLoad() error {
 	configDir, err := getConfigPath()
 	if err != nil {
@@ -44,7 +57,7 @@ func CheckAndLoad() error {
 	}
 
 	if err := os.Mkdir(configDir, 0755); err != nil && !os.IsExist(err) {
-		return fmt.Errorf("Error creating config directory [%v]", err)
+		return fmt.Errorf("error creating config directory [%v]", err)
 	}
 
 	log.Debugf("Config directory is: %s", configDir)
@@ -65,30 +78,33 @@ func CheckAndLoad() error {
 	}
 
 	if len(cfg.DefaultPath) == 0 {
-		cfg.DefaultPath, err = getDefaultPath()
-		if err != nil {
-			for {
-				log.Info("Could not find a PATH directory automatically, falling back to manual selection")
-				reader := bufio.NewReader(os.Stdin)
-				var response string
-				fmt.Printf("\nPlease specify a download directory: ")
-				response, err := reader.ReadString('\n')
-				if err != nil {
-					return fmt.Errorf("Invalid input")
-				}
-				response = strings.TrimSpace(response)
+		if exeDir := ForceInstallationDir(); len(exeDir) > 0 {
+			cfg.DefaultPath = exeDir
+		} else {
+			cfg.DefaultPath, err = getDefaultPath()
+			if err != nil {
+				for {
+					log.Info("Could not find a PATH directory automatically, falling back to manual selection")
+					reader := bufio.NewReader(os.Stdin)
+					var response string
+					fmt.Printf("\nPlease specify a download directory: ")
+					response, err := reader.ReadString('\n')
+					if err != nil {
+						return fmt.Errorf("invalid input")
+					}
+					response = strings.TrimSpace(response)
 
-				if err = checkDirExistsAndWritable(response); err != nil {
-					log.Debugf("Could not set download directory [%s]: [%v]", response, err)
-					// Keep looping until writable and existing dir is selected
-					continue
-				}
+					if err = checkDirExistsAndWritable(response); err != nil {
+						log.Debugf("Could not set download directory [%s]: [%v]", response, err)
+						// Keep looping until writable and existing dir is selected
+						continue
+					}
 
-				cfg.DefaultPath = response
-				break
+					cfg.DefaultPath = response
+					break
+				}
 			}
 		}
-
 		if err := write(); err != nil {
 			return err
 		}

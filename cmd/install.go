@@ -19,9 +19,10 @@ type installCmd struct {
 }
 
 type installOpts struct {
-	force    bool
-	provider string
-	all      bool
+	force      bool
+	provider   string
+	all        bool
+	autoSelect string
 }
 
 func newInstallCmd() *installCmd {
@@ -58,7 +59,7 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
-			pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all})
+			pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all, AutoSelect: root.opts.autoSelect})
 			if err != nil {
 				return err
 			}
@@ -95,6 +96,7 @@ func newInstallCmd() *installCmd {
 	root.cmd.Flags().BoolVarP(&root.opts.force, "force", "f", false, "Force the installation even if the file already exists")
 	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
 	root.cmd.Flags().StringVarP(&root.opts.provider, "provider", "p", "", "Forces to use a specific provider")
+	root.cmd.Flags().StringVarP(&root.opts.autoSelect, "select", "s", "", "auto select installation file")
 	return root
 }
 
