@@ -1,7 +1,16 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/go
+
+//  A go development container with a few addtional tools 
+//  - diffstatic for better diffing 
+//  - just    - a Makefile replacement
+//  - exa     - contempory ls
+//  - bat     - nicer cat
+//  - yq      - json,yaml,csv processor 
+//  - direnv  - automatic local variable loader
+//  - ripgrep - grep for developers
 {
-	"name": "Go",
+	"name": "Go devcontainer ++",
 	"build": {	
 		"context": "..", // Sets the run context to one level up instead of the .devcontainer folder.
 		"dockerfile": "Dockerfile"
@@ -12,21 +21,4 @@
 		"source=./.devcontainer,target=/cmdhistory,type=bind"
 	]
 
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	//"image": "mcr.microsoft.com/devcontainers/go:1-1.22-bookworm"
-
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "go version",
-
-	// Configure tool-specific properties.
-	// "customizations": {},
-
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
 }
