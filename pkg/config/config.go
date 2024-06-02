@@ -56,7 +56,7 @@ func CheckAndLoad() error {
 		return err
 	}
 
-	if err := os.Mkdir(configDir, 0755); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(configDir, 0755); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("error creating config directory [%v]", err)
 	}
 
