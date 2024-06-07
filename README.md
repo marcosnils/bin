@@ -1,113 +1,85 @@
-
 # bin
 
 Manages binary files downloaded from different sources
 
 ![bin](https://user-images.githubusercontent.com/1578458/87901619-ee629a80-ca2d-11ea-8609-8a8eb39801d2.gif)
 
-The original utility is introduced by [Marcos Nils](https://github.com/marcosnils/bin)
-You are invited to visit his [GitHub page](https://github.com/marcosnils/bin) to read the full documentation.
+## Rationale
 
-The repository enables the bin utility to be script-able and avoid requiring TTY user feedback.
+`bin` started as an idea given the popularity of single binary releases due to the surge of  languages like
+Go, Rust, Deno, etc which can easily produce dynamically and statically compiled binarines.
 
-There are 2 minor updates:
-1. Introduction of **BIN_EXE_DIR**
+I found myself downloading binaries (or tarballs) directly from VCS (Github mostly) and then it was hard
+to keep control and update such dependencies whenever a new version was released. So, with the objective
+to solve that problem and also looking for something that will allow me to get the latest releases, I created `bin`.
+In addition to that, I was also looking for something that doesn't require `sudo` or `root` privileges to install
+these binaries as downloading, making them executable and storing it somewhere in your PATH would be sufficient.
 
-Previously, the installation/download directory is derived from the `PATH`, when it's unable to do so, the `bin` utility 
-demands user feedback. In some cases it's useful to be able to shortcut this process and directly provide it with the installation directory using
-the `BIN_EXE_DIR`
+After I finished the first MVP, a friend pointed out that [brew](https://brew.sh) was now supported in linux which almost
+made me abandon the project. After checking out brew (never been an osx user), I found it a bit bloated and seems
+to be doing way more than what I'm actually needing. So, I've decided to continue `bin` and hopefully add more features
+that could result useful to someone else.
+
+If you find `bin` helpful and you have any ideas or suggestions, please create an issue here or send a PR and I'll
+be more than happy to brainstorm about possibilities.
+
+## Installing
+
+1. Download `bin` from the [releases](https://github.com/marcosnils/bin/releases)
+2. Run `./bin install github.com/marcosnils/bin` so `bin` is managed by `bin` itself
+3. Run `bin ls` to make sure bin has been installed correctly. You can now remove the first file you downloaded.
+4. Enjoy!
+
+## Usage
+
+Install a release from github with the following command:
 
 ```shell
-# install `navi` in a specific designated directory, update the bin configuration in the same directory
-$ BIN_EXE_DIR=~/.local/bin bin install github.com/denisidoro/navi
+bin install github.com/kubernetes-sigs/kind # installs latest Kind release
+
+bin install github.com/kubernetes-sigs/kind/releases/tag/v0.8.0 # installs a specific release
+
+bin install github.com/kubernetes-sigs/kind ~/bin/kind # installs latest on a specific path
 ```
 
-**Note:** while the original `bin` utility allows for installation at a specific directory
+You can install Docker images and use them as regular CLIs:
 
 ```shell
-# Explicit install @ ~/.local/bin
-$ bin install github.com/denisidoro/navi  ~/.local/bin
-```
+bin install docker://hashicorp/terraform:light # install the `light` tag for terraform
 
-The behavior differs. Without `BIN_EXE_DIR` when the initial config is missing, the user will be requested to provide the installation directory.
-
-2. Introduction of a command line file option selection (**--select** | **-s** ) 
-
-In some cases the release may contain multiple files and user intervention is required to choose which one to install. The **select** option was introduced to allow 
-the user to specify the exact file to install even when it's inside an archive (tar, xz, etc).
-
-```shell
-SYNTAX:
-   bin install <URL> [ --select | -s  FileName[:ContainedFile] ]
+bin install docker://quay.io/calico/node # install the latest version of calico/node
 ```
 
 ```shell
-# Install the file yq_linux_amd64
-$ bin install github.com/mikefarah/yq --select yq_linux_amd64
-
-# Install broot selecting for the file x86_64-linux that is in the only tar ball existing in the release
-$ bin install github.com/Canop/broot --select :x86_64-linux/broot
-
-# Install the file age/age (age inside a directory with the same name) from the only tarball in the release
-$ bin install github.com/filosottile/age -s :age/age
-
-# Install btm file from the tarball bottom_x86_64-unknown-linux-gnu.tar.gz (select both the tarball and a file)
-$ bin install github.com/ClementTsang/bottom -s bottom_x86_64-unknown-linux-gnu.tar.gz:btm
-
+bin ensure # Ensures that all binaries listed in the configuration are present
+bin help # Help about any command
+bin install <repo> [path] # Downloads the latest binary and makes it executable
+bin list # List current binaries and it's versions
+bin prune # Removes from the DB missing binaries
+bin remove <bin>... # Deletes one or more binaries
+bin update [bin]... # Scans binaries and prompts for update
 ```
 
-While it is possible to select partially, IMHO it defaults my original purpose of avoiding any TTY interaction, but why not?!
+## FAQ
 
-```shell
-# No Selection output 
-$ bin install github.com/ClementTsang/bottom  
-   • Getting latest release for ClementTsang/bottom
+### Can you give some example tools
 
-Multiple matches found, please select one:
+Yes. Following [list](https://github.com/marcosnils/bin/wiki/Tools-list)
 
- [1] bottom_x86_64-unknown-linux-gnu.tar.gz
- [2] bottom_x86_64-unknown-linux-gnu2-17.tar.gz
- [3] bottom_x86_64-unknown-linux-musl.tar.gz
- Select an option: 1
-   • Starting download of https://api.github.com/repos/ClementTsang/bottom/releases/assets/123278270
-1.85 MiB / 1.85 MiB [------------------------------------------------------------------------------------------------------------------------------------------------------------------------------] 100.00% 19.58 MiB p/s 0s
+### There are some bugs and the code is not tested
 
-Multiple matches found, please select one:
+I know... and that's not planning to change any time soon unless I start getting some contributions. I did this as a personal tool and I'll probably be fixing stuff and adding features as I personally need them. Contributions are welcome though and I'll be happy to discuss and review them.
 
- [1] btm
- [2] completion/_btm
- [3] completion/_btm.ps1
- [4] completion/btm.bash
- [5] completion/btm.elv
- [6] completion/btm.fish
- Select an option: 
-```
+### I see releases on Github, but `bin` does not pick them up
 
+At the moment, `bin` does only consider the [latest release from Github](https://docs.github.com/en/rest/reference/repos#get-the-latest-release) according to the following definition:
 
-```shell
-# Partial selection output
-$ bin install github.com/ClementTsang/bottom  -s bottom_x86_64-unknown-linux-gnu.tar.gz
-   • Getting latest release for ClementTsang/bottom
-   • Starting download of https://api.github.com/repos/ClementTsang/bottom/releases/assets/123278270
-1.85 MiB / 1.85 MiB [------------------------------------------------------------------------------------------------------------------------------------------------------------------------------] 100.00% 22.72 MiB p/s 0s
+> The latest release is the most recent non-prerelease, non-draft release, sorted by the `created_at` attribute. The `created_at` attribute is the date of the commit used for the release, and not the date when the release was drafted or published.
 
-Multiple matches found, please select one:
+You _can_ however install a specific pre-release by specifying the URL for the pre-release, e.g. `bin install https://github.com/bufbuild/buf/releases/tag/v0.40.0`.
 
- [1] btm
- [2] completion/_btm
- [3] completion/_btm.ps1
- [4] completion/btm.bash
- [5] completion/btm.elv
- [6] completion/btm.fish
- Select an option: 
- ```
+### I used `bin` and I got rate limited by Github or want to access private repos, what can I do?
 
-```shell
-# Full selection output
-$ bin install github.com/ClementTsang/bottom  -s bottom_x86_64-unknown-linux-gnu.tar.gz:btm
-   • Getting latest release for ClementTsang/bottom
-   • Starting download of https://api.github.com/repos/ClementTsang/bottom/releases/assets/123278270
-1.85 MiB / 1.85 MiB [------------------------------------------------------------------------------------------------------------------------------------------------------------------------------] 100.00% 20.29 MiB p/s 0s
-   • Copying for btm@0.9.6 into /home/vscode/.local/bin/btm
-   • Done installing btm 0.9.6
-```
+Create a Github personal access token by following the steps in this guide: [Creating a personal access token](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token). The access token used with `bin` does not need any scopes.
+
+Create an environment variable named `GITHUB_AUTH_TOKEN` with the value of your newly created access token. For example in bash: `export GITHUB_AUTH_TOKEN=<your_token_value>`.
