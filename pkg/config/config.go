@@ -94,6 +94,11 @@ func CheckAndLoad() error {
 		}
 
 	}
+
+	if cfg.Bins == nil {
+		cfg.Bins = map[string]*Binary{}
+	}
+
 	log.Debugf("Download path set to %s", cfg.DefaultPath)
 	return nil
 }
