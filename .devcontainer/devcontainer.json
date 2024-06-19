@@ -1,0 +1,24 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/go
+
+//  A go development container with a few addtional tools 
+//  - diffstatic for better diffing 
+//  - just    - a Makefile replacement
+//  - exa     - contempory ls
+//  - bat     - nicer cat
+//  - yq      - json,yaml,csv processor 
+//  - direnv  - automatic local variable loader
+//  - ripgrep - grep for developers
+{
+	"name": "Go devcontainer ++",
+	"build": {	
+		"context": "..", // Sets the run context to one level up instead of the .devcontainer folder.
+		"dockerfile": "Dockerfile"
+	},
+
+	"mounts": [
+		// command history is kept in .devcontainer/.bashrc file
+		"source=./.devcontainer,target=/cmdhistory,type=bind"
+	]
+
+}

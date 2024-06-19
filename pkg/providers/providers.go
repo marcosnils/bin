@@ -26,6 +26,7 @@ type FetchOpts struct {
 	PackageName    string
 	PackagePath    string
 	SkipPatchCheck bool
+	AutoSelect     string
 }
 
 type Provider interface {
@@ -36,7 +37,7 @@ type Provider interface {
 	// latest version for this binary
 	GetLatestVersion() (string, string, error)
 
-	// GetID returns the unique identiifer of this provider
+	// GetID returns the unique identifier of this provider
 	GetID() string
 }
 
@@ -70,5 +71,5 @@ func New(u, provider string) (Provider, error) {
 		return newHashiCorp(purl)
 	}
 
-	return nil, fmt.Errorf("Can't find provider for url %s", u)
+	return nil, fmt.Errorf("can't find provider for url %s", u)
 }

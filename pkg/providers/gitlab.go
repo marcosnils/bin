@@ -152,8 +152,8 @@ func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 	}
 
 	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck})
-
-	gf, err := f.FilterAssets(g.repo, candidates)
+	autoSelect := f.GetAutoSelection(opts.AutoSelect)
+	gf, err := f.FilterAssets(g.repo, candidates, autoSelect)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 	version := release.TagName
 
 	// TODO calculate file hash. Not sure if we can / should do it here
-	// since we don't want to read the file unnecesarily. Additionally, sometimes
+	// since we don't want to read the file unnecessarily. Additionally, sometimes
 	// releases have .sha256 files, so it'd be nice to check for those also
 	file := &File{Data: outFile.Source, Name: outFile.Name, Hash: sha256.New(), Version: version}
 
