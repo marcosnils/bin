@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -29,16 +30,17 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 
 	// If we have a tag, let's fetch from there
 	var err error
-	var resp *github.Response
 	if len(g.tag) > 0 {
 		log.Infof("Getting %s release for %s/%s", g.tag, g.owner, g.repo)
 		release, _, err = g.client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repo, g.tag)
 	} else {
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
-		release, resp, err = g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
-		if resp.StatusCode == http.StatusNotFound {
-			err = fmt.Errorf("repository %s/%s does not have releases", g.owner, g.repo)
+		var tag string
+		tag, _, err = g.GetLatestVersion()
+		if err != nil {
+			return nil, fmt.Errorf("repository %s/%s does not have releases", g.owner, g.repo)
 		}
+		release, _, err = g.client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repo, tag)
 	}
 
 	if err != nil {
@@ -80,11 +82,33 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 // returns the corresponding name and url to fetch the version
 func (g *gitHub) GetLatestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
-	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
-	if err != nil {
-		return "", "", err
-	}
 
+	release, resp, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
+	if err == nil && resp.StatusCode == http.StatusOK {
+		return release.GetTagName(), release.GetHTMLURL(), nil
+	}
+	latestResp, latestErr := resp, err
+
+	// repo does not have a "latest" release, fallback to first release on the list
+	var releases []*github.RepositoryRelease
+	releases, resp, err = g.client.Repositories.ListReleases(context.TODO(), g.owner, g.repo, &github.ListOptions{
+		Page:    1,
+		PerPage: 1,
+	})
+	if err != nil || len(releases) == 0 {
+		if latestErr != nil {
+			latestErr = fmt.Errorf("error getting latest release: %w", latestErr)
+		} else {
+			latestErr = fmt.Errorf("error getting latest release. http status: %v", latestResp.StatusCode)
+		}
+		if err != nil {
+			err = fmt.Errorf("error listing releases: %w", err)
+		} else {
+			err = fmt.Errorf("error listing releases. http status: %v", resp.StatusCode)
+		}
+		return "", "", errors.Join(latestErr, err)
+	}
+	release = releases[0]
 	return release.GetTagName(), release.GetHTMLURL(), nil
 }
 
