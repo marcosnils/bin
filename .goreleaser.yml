@@ -1,13 +1,15 @@
+version: 2
+
 before:
   hooks:
     - go mod download
-build:
-  env:
+builds:
+  - env:
     - CGO_ENABLED=0
-  goos:
-    - darwin
-    - linux
-    - windows
+    goos:
+      - darwin
+      - linux
+      - windows
 archives:
   - format: binary
 checksum:
