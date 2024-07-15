@@ -76,7 +76,7 @@ func newEnsureCmd() *ensureCmd {
 					return err
 				}
 
-				pResult, err := p.Fetch(&providers.FetchOpts{Version: binCfg.Version})
+				pResult, err := p.Fetch(&providers.FetchOpts{Version: binCfg.Version, LocalPath: binCfg.Path})
 				if err != nil {
 					return err
 				}

@@ -52,7 +52,7 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 	for _, a := range release.Assets {
 		candidates = append(candidates, &assets.Asset{Name: a.GetName(), URL: a.GetURL()})
 	}
-	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName})
+	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName, LocalPath: opts.LocalPath})
 
 	gf, err := f.FilterAssets(g.repo, candidates)
 	if err != nil {

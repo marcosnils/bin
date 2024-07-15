@@ -85,6 +85,7 @@ type FilterOpts struct {
 	// variable to filter the resulting outputs. This is very useful
 	// so we don't prompt the user to pick the file again on updates
 	PackagePath string
+	LocalPath   string
 }
 
 type runtimeResolver struct{}
@@ -201,7 +202,7 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 			return generic[i].String() < generic[j].String()
 		})
 
-		choice, err := options.Select("Multiple matches found, please select one:", generic)
+		choice, err := options.Select(fmt.Sprintf("Multiple matches found, please select one for %s:", f.opts.LocalPath), generic)
 		if err != nil {
 			return nil, err
 		}
