@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/apex/log"
@@ -47,7 +49,25 @@ func newEnsureCmd() *ensureCmd {
 			for _, binCfg := range binsToProcess {
 				ep := os.ExpandEnv(binCfg.Path)
 				_, err := os.Stat(ep)
-				if !os.IsNotExist(err) {
+
+				if err == nil {
+					f, err := os.Open(ep)
+					if err != nil {
+						return err
+					}
+
+					h := sha256.New()
+					if _, err := io.Copy(h, f); err != nil {
+						return err
+					}
+
+					if fmt.Sprintf("%x", h.Sum(nil)) == binCfg.Hash {
+						continue
+					}
+
+					log.Infof("%s hash does not match with config's, re-installing", ep)
+
+				} else if !os.IsNotExist(err) {
 					continue
 				}
 
@@ -56,20 +76,21 @@ func newEnsureCmd() *ensureCmd {
 					return err
 				}
 
-				pResult, err := p.Fetch(&providers.FetchOpts{})
+				pResult, err := p.Fetch(&providers.FetchOpts{Version: binCfg.Version})
 				if err != nil {
 					return err
 				}
 
-				if err = saveToDisk(pResult, ep, true); err != nil {
-					return fmt.Errorf("Error installing binary %w", err)
+				hash, err := saveToDisk(pResult, ep, true)
+				if err != nil {
+					return fmt.Errorf("error installing binary: %w", err)
 				}
 
 				err = config.UpsertBinary(&config.Binary{
 					RemoteName: pResult.Name,
 					Path:       binCfg.Path,
 					Version:    pResult.Version,
-					Hash:       fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
+					Hash:       fmt.Sprintf("%x", hash),
 					URL:        binCfg.URL,
 				})
 				if err != nil {

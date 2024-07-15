@@ -1,9 +1,9 @@
 package providers
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"net/url"
 	"regexp"
@@ -15,10 +15,17 @@ var ErrInvalidProvider = errors.New("invalid provider")
 type File struct {
 	Data        io.Reader
 	Name        string
-	Hash        hash.Hash
 	Version     string
 	Length      int64
 	PackagePath string
+}
+
+func (f *File) Hash() ([]byte, error) {
+	h := sha256.New()
+	if _, err := io.Copy(h, f.Data); err != nil {
+		return nil, err
+	}
+	return h.Sum(nil), nil
 }
 
 type FetchOpts struct {
@@ -26,6 +33,7 @@ type FetchOpts struct {
 	PackageName    string
 	PackagePath    string
 	SkipPatchCheck bool
+	Version        string
 }
 
 type Provider interface {

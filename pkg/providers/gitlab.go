@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -34,7 +33,11 @@ func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 	// If we have a tag, let's fetch from there
 	var err error
 	projectPath := fmt.Sprintf("%s/%s", g.owner, g.repo)
-	if len(g.tag) > 0 {
+	if len(g.tag) > 0 || len(opts.Version) > 0 {
+		if len(opts.Version) > 0 {
+			// this is used by for the `ensure` command
+			g.tag = opts.Version
+		}
 		log.Infof("Getting %s release for %s/%s", g.tag, g.owner, g.repo)
 		release, _, err = g.client.Releases.GetRelease(projectPath, g.tag)
 	} else {
@@ -175,7 +178,7 @@ func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 	// TODO calculate file hash. Not sure if we can / should do it here
 	// since we don't want to read the file unnecesarily. Additionally, sometimes
 	// releases have .sha256 files, so it'd be nice to check for those also
-	file := &File{Data: outFile.Source, Name: outFile.Name, Hash: sha256.New(), Version: version}
+	file := &File{Data: outFile.Source, Name: outFile.Name, Version: version}
 
 	return file, nil
 }

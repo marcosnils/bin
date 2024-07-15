@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"os"
@@ -68,7 +69,8 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 
-			if err = saveToDisk(pResult, resolvedPath, root.opts.force); err != nil {
+			hash, err := saveToDisk(pResult, resolvedPath, root.opts.force)
+			if err != nil {
 				return fmt.Errorf("error installing binary: %w", err)
 			}
 
@@ -76,7 +78,7 @@ func newInstallCmd() *installCmd {
 				RemoteName:  pResult.Name,
 				Path:        resolvedPath,
 				Version:     pResult.Version,
-				Hash:        fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
+				Hash:        fmt.Sprintf("%x", hash),
 				URL:         u,
 				Provider:    p.GetID(),
 				PackagePath: pResult.PackagePath,
@@ -123,7 +125,7 @@ func checkFinalPath(path, fileName string) (string, error) {
 
 // TODO check if other binary has the same hash and warn about it.
 // TODO if the file is zipped, tared, whatever then extract it
-func saveToDisk(f *providers.File, path string, overwrite bool) error {
+func saveToDisk(f *providers.File, path string, overwrite bool) ([]byte, error) {
 	epath := os.ExpandEnv((path))
 
 	var extraFlags int = os.O_EXCL
@@ -133,22 +135,26 @@ func saveToDisk(f *providers.File, path string, overwrite bool) error {
 		err := os.Remove(epath)
 		log.Debugf("Overwrite flag set, removing file %s\n", epath)
 		if err != nil && !os.IsNotExist(err) {
-			return err
+			return nil, err
 		}
 	}
 
 	file, err := os.OpenFile(epath, os.O_RDWR|os.O_CREATE|extraFlags, 0o766)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer file.Close()
 
+	h := sha256.New()
+
+	tr := io.TeeReader(f.Data, h)
+
 	log.Infof("Copying for %s@%s into %s", f.Name, f.Version, epath)
-	_, err = io.Copy(file, f.Data)
+	_, err = io.Copy(file, tr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return h.Sum(nil), nil
 }
