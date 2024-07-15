@@ -123,15 +123,16 @@ func newUpdateCmd() *updateCmd {
 					return err
 				}
 
-				if err = saveToDisk(pResult, b.Path, true); err != nil {
-					return fmt.Errorf("Error installing binary %w", err)
+				hash, err := saveToDisk(pResult, b.Path, true)
+				if err != nil {
+					return fmt.Errorf("error installing binary: %w", err)
 				}
 
 				err = config.UpsertBinary(&config.Binary{
 					RemoteName:  pResult.Name,
 					Path:        b.Path,
 					Version:     pResult.Version,
-					Hash:        fmt.Sprintf("%x", pResult.Hash.Sum(nil)),
+					Hash:        fmt.Sprintf("%x", hash),
 					URL:         ui.url,
 					PackagePath: pResult.PackagePath,
 				})
