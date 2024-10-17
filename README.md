@@ -58,6 +58,7 @@ bin list # List current binaries and it's versions
 bin prune # Removes from the DB missing binaries
 bin remove <bin>... # Deletes one or more binaries
 bin update [bin]... # Scans binaries and prompts for update
+bin --debug # show config directory, download path
 ```
 
 ## FAQ
