@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/apex/log"
@@ -25,26 +24,36 @@ func newPinCmd() *pinCmd {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.Get()
 
-			binaryList := make(map[string]*config.Binary)
-			for _, b := range cfg.Bins {
-				binaryList[b.RemoteName] = b
-			}
+			binsToPin := map[string]*config.Binary{}
 
-			for _, p := range args {
-				bin, found := binaryList[p]
-				if found {
-					bin.Pinned = true
-					err := config.UpsertBinary(bin)
+			// To pin
+			if len(args) > 0 {
+				for _, a := range args {
+					bin, err := getBinPath(a)
 					if err != nil {
 						return err
 					}
-					continue
+					binsToPin[a] = cfg.Bins[bin]
 				}
-
-				return fmt.Errorf("Binary \"%s\" not found", p)
+			} else {
+				return nil
 			}
 
-			log.Infof("Pinned " + strings.Join(args, ", "))
+			pinned := []string{}
+
+			// Pinning
+			for name, bin := range binsToPin {
+				bin.Pinned = true
+				err := config.UpsertBinary(bin)
+				if err != nil {
+					return err
+				}
+				pinned = append(pinned, name)
+				continue
+			}
+
+			log.Infof("Pinned " + strings.Join(pinned, " "))
+
 			return nil
 		},
 	}

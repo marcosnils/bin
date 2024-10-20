@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/apex/log"
@@ -25,26 +24,36 @@ func newUnpinCmd() *unpinCmd {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.Get()
 
-			binaryList := make(map[string]*config.Binary)
-			for _, b := range cfg.Bins {
-				binaryList[b.RemoteName] = b
-			}
+			binsToUnpin := map[string]*config.Binary{}
 
-			for _, p := range args {
-				bin, found := binaryList[p]
-				if found {
-					bin.Pinned = false
-					err := config.UpsertBinary(bin)
+			// To unpin
+			if len(args) > 0 {
+				for _, a := range args {
+					bin, err := getBinPath(a)
 					if err != nil {
 						return err
 					}
-					continue
+					binsToUnpin[a] = cfg.Bins[bin]
 				}
-
-				return fmt.Errorf("Binary \"%s\" not found", p)
+			} else {
+				return nil
 			}
 
-			log.Infof("Unpinned " + strings.Join(args, ", "))
+			unpinned := []string{}
+
+			// Unpinning
+			for name, bin := range binsToUnpin {
+				bin.Pinned = false
+				err := config.UpsertBinary(bin)
+				if err != nil {
+					return err
+				}
+				unpinned = append(unpinned, name)
+				continue
+			}
+
+			log.Infof("Unpinned " + strings.Join(unpinned, " "))
+
 			return nil
 		},
 	}
