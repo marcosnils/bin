@@ -78,6 +78,11 @@ func newListCmd() *listCmd {
 					status = color.RedString("missing file")
 				}
 
+				if b.Pinned {
+					fmt.Printf("\n%s  %s  %s  %s", _rPad(p, pL), "*"+_rPad(b.Version, vL), _rPad(b.URL, uL), status)
+					continue
+				}
+
 				fmt.Printf("\n%s  %s  %s  %s", _rPad(p, pL), _rPad(b.Version, vL), _rPad(b.URL, uL), status)
 			}
 			fmt.Print("\n\n")
