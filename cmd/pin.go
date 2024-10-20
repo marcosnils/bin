@@ -33,7 +33,7 @@ func newPinCmd() *pinCmd {
 			for _, p := range args {
 				bin, found := binaryList[p]
 				if found {
-					bin.Pin = true
+					bin.Pinned = true
 					err := config.UpsertBinary(bin)
 					if err != nil {
 						return err
