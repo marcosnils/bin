@@ -60,7 +60,8 @@ func newUpdateCmd() *updateCmd {
 						return err
 					}
 					if cfg.Bins[bin].Pinned {
-						return fmt.Errorf("Cannot update a pinned binary")
+						log.Infof("%s is a pinned binary", a)
+						continue
 					}
 					binsToProcess[bin] = cfg.Bins[bin]
 				}
