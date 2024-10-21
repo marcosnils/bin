@@ -72,7 +72,7 @@ func newUpdateCmd() *updateCmd {
 			updateFailures := map[*config.Binary]error{}
 
 			for _, b := range binsToProcess {
-				p, err := providers.New(b.URL, b.Provider)
+				p, err := providers.New(b.URL, b.Provider, b.LatestURL)
 				if err != nil {
 					return err
 				}
@@ -112,8 +112,7 @@ func newUpdateCmd() *updateCmd {
 			// the same thing as install logic. Refactor to
 			// use the same code in both places
 			for ui, b := range toUpdate {
-
-				p, err := providers.New(ui.url, b.Provider)
+				p, err := providers.New(ui.url, b.Provider, b.LatestURL)
 				if err != nil {
 					return err
 				}
@@ -138,6 +137,7 @@ func newUpdateCmd() *updateCmd {
 					Version:     pResult.Version,
 					Hash:        fmt.Sprintf("%x", hash),
 					URL:         ui.url,
+					LatestURL:   b.LatestURL,
 					PackagePath: pResult.PackagePath,
 				})
 				if err != nil {
