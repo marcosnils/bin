@@ -59,6 +59,8 @@ bin prune # Removes from the DB missing binaries
 bin remove <bin>... # Deletes one or more binaries
 bin update [bin]... # Scans binaries and prompts for update
 bin --debug # show config directory, download path
+bin pin <bin>... # Pins current version of one or more binaries
+bin unpin <bin>... # Unpins one or more binaries
 ```
 
 ## FAQ

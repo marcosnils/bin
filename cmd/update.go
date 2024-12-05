@@ -59,6 +59,10 @@ func newUpdateCmd() *updateCmd {
 					if err != nil {
 						return err
 					}
+					if cfg.Bins[bin].Pinned {
+						log.Infof("%s is a pinned binary", a)
+						continue
+					}
 					binsToProcess[bin] = cfg.Bins[bin]
 				}
 			} else {
