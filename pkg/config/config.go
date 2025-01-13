@@ -22,6 +22,41 @@ type config struct {
 	// if necessary
 	DefaultPath string             `json:"default_path"`
 	Bins        map[string]*Binary `json:"bins"`
+	Hooks       []RunHook          `json:"hooks"`
+}
+
+// HookType defines a type alias for string, representing various lifecycle hooks in bin
+type HookType = string
+
+const (
+	// PreInstall represents a lifecycle hook type triggered before the installation process begins.
+	PreInstall HookType = "pre-install"
+
+	// PostInstall represents a lifecycle hook type triggered after the installation process is completed.
+	PostInstall HookType = "post-install"
+
+	// PreUpgrade represents a lifecycle hook type triggered before the upgrade process begins.
+	PreUpgrade HookType = "pre-upgrade"
+
+	// PostUpgrade represents a lifecycle hook type triggered after the upgrade process is completed.
+	PostUpgrade HookType = "post-upgrade"
+
+	// PreUninstall represents a lifecycle hook type triggered before the uninstallation process begins.
+	PreUninstall HookType = "pre-uninstall"
+
+	// PostUninstall represents a lifecycle hook type triggered after the uninstallation process is completed.
+	PostUninstall HookType = "post-uninstall"
+)
+
+type RunHook struct {
+	// Type specifies the type of hook being executed, represented as a string alias through the HookType type.
+	Type HookType `json:"type"`
+
+	// Command specifies the executable command for the hook, represented as a string.
+	Command string `json:"command"`
+
+	// Args represents a list of arguments passed to the executable command for the hook.
+	Args []string
 }
 
 type Binary struct {
