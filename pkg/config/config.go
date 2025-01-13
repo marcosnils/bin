@@ -41,11 +41,11 @@ const (
 	// PostUpdate represents a lifecycle hook type triggered after the upgrade process is completed.
 	PostUpdate HookType = "post-update"
 
-	// PreUninstall represents a lifecycle hook type triggered before the uninstallation process begins.
-	PreUninstall HookType = "pre-uninstall"
+	// PreRemove represents a lifecycle hook type triggered before the uninstallation process begins.
+	PreRemove HookType = "pre-remove"
 
-	// PostUninstall represents a lifecycle hook type triggered after the uninstallation process is completed.
-	PostUninstall HookType = "post-uninstall"
+	// PostRemove represents a lifecycle hook type triggered after the uninstallation process is completed.
+	PostRemove HookType = "post-remove"
 )
 
 type RunHook struct {

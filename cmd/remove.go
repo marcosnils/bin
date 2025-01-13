@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/apex/log"
 	"os"
+	"os/exec"
 
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
@@ -47,8 +49,35 @@ func newRemoveCmd() *removeCmd {
 					}
 				}
 			}
+			hooks := config.GetHooks(config.PreRemove)
+			for _, hook := range hooks {
+				if hook.Command != "" {
+					log.Infof("Executing pre-remove hook: %s %v", hook.Command, hook.Args)
+					output, err := exec.Command(hook.Command, hook.Args...).CombinedOutput()
+					if err != nil {
+						log.Errorf("Error executing hook: %s, output: %s, error: %v", hook.Command, string(output), err)
+						return err
+					}
+					log.Infof("Hook executed successfully: %s", string(output))
+				}
+			}
 			err := config.RemoveBinaries(existingToRemove)
-			return err
+			if err != nil {
+				return err
+			}
+			hooks = config.GetHooks(config.PostRemove)
+			for _, hook := range hooks {
+				if hook.Command != "" {
+					log.Infof("Executing psot-remove hook: %s %v", hook.Command, hook.Args)
+					output, err := exec.Command(hook.Command, hook.Args...).CombinedOutput()
+					if err != nil {
+						log.Errorf("Error executing hook: %s, output: %s, error: %v", hook.Command, string(output), err)
+						return err
+					}
+					log.Infof("Hook executed successfully: %s", string(output))
+				}
+			}
+			return nil
 		},
 	}
 
