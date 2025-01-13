@@ -73,6 +73,20 @@ type Binary struct {
 	Pinned      bool   `json:"pinned"`
 }
 
+// GetHooks returns a slice of RunHook objects filtered by the specified HookType. It returns an empty slice if no hooks match.
+func GetHooks(t HookType) []RunHook {
+	hooks := make([]RunHook, 0)
+	if len(cfg.Hooks) == 0 {
+		return hooks
+	}
+	for _, hook := range cfg.Hooks {
+		if hook.Type == t {
+			hooks = append(hooks, hook)
+		}
+	}
+	return hooks
+}
+
 func CheckAndLoad() error {
 	configDir, err := getConfigPath()
 	if err != nil {
