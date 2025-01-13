@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -85,6 +86,20 @@ func GetHooks(t HookType) []RunHook {
 		}
 	}
 	return hooks
+}
+
+// ExecuteHooks runs a series of hooks by executing their specified commands with arguments and logs the process and results.
+func ExecuteHooks(hooks []RunHook) {
+	for _, hook := range hooks {
+		if hook.Command != "" {
+			log.Infof("Executing %s hook: %s %v", hook.Type, hook.Command, hook.Args)
+			output, err := exec.Command(hook.Command, hook.Args...).CombinedOutput()
+			if err != nil {
+				log.Errorf("Error executing hook: %s, output: %s, error: %v", hook.Command, string(output), err)
+			}
+			log.Infof("Hook executed successfully: %s", string(output))
+		}
+	}
 }
 
 func CheckAndLoad() error {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/apex/log"
@@ -60,17 +59,7 @@ func newInstallCmd() *installCmd {
 				return err
 			}
 			hooks := config.GetHooks(config.PreInstall)
-			for _, hook := range hooks {
-				if hook.Command != "" {
-					log.Infof("Executing pre-install hook: %s %v", hook.Command, hook.Args)
-					output, err := exec.Command(hook.Command, hook.Args...).CombinedOutput()
-					if err != nil {
-						log.Errorf("Error executing hook: %s, output: %s, error: %v", hook.Command, string(output), err)
-						return err
-					}
-					log.Infof("Hook executed successfully: %s", string(output))
-				}
-			}
+			config.ExecuteHooks(hooks)
 			pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all})
 			if err != nil {
 				return err
@@ -100,17 +89,7 @@ func newInstallCmd() *installCmd {
 			}
 
 			hooks = config.GetHooks(config.PostInstall)
-			for _, hook := range hooks {
-				if hook.Command != "" {
-					log.Infof("Executing post-install hook: %s %v", hook.Command, hook.Args)
-					output, err := exec.Command(hook.Command, hook.Args...).CombinedOutput()
-					if err != nil {
-						log.Errorf("Error executing hook: %s, output: %s, error: %v", hook.Command, string(output), err)
-						return err
-					}
-					log.Infof("Hook executed successfully: %s", string(output))
-				}
-			}
+			config.ExecuteHooks(hooks)
 
 			log.Infof("Done installing %s %s", pResult.Name, pResult.Version)
 
