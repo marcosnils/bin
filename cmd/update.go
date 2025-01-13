@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/apex/log"
 	"github.com/fatih/color"
@@ -96,6 +97,19 @@ func newUpdateCmd() *updateCmd {
 				return wrapErrorWithCode(fmt.Errorf("Updates found, exit (dry-run mode)."), 3, "")
 			}
 
+			hooks := config.GetHooks(config.PreUpdate)
+			for _, hook := range hooks {
+				if hook.Command != "" {
+					log.Infof("Executing pre-update hook: %s %v", hook.Command, hook.Args)
+					output, err := exec.Command(hook.Command, hook.Args...).CombinedOutput()
+					if err != nil {
+						log.Errorf("Error executing hook: %s, output: %s, error: %v", hook.Command, string(output), err)
+						return err
+					}
+					log.Infof("Hook executed successfully: %s", string(output))
+				}
+			}
+
 			if len(toUpdate) > 0 && !root.opts.yesToUpdate {
 				for _, err := range updateFailures {
 					log.Warnf("%v", err)
@@ -149,6 +163,20 @@ func newUpdateCmd() *updateCmd {
 			for _, err := range updateFailures {
 				log.Warnf("%v", err)
 			}
+
+			hooks = config.GetHooks(config.PostUpdate)
+			for _, hook := range hooks {
+				if hook.Command != "" {
+					log.Infof("Executing post-update hook: %s %v", hook.Command, hook.Args)
+					output, err := exec.Command(hook.Command, hook.Args...).CombinedOutput()
+					if err != nil {
+						log.Errorf("Error executing hook: %s, output: %s, error: %v", hook.Command, string(output), err)
+						return err
+					}
+					log.Infof("Hook executed successfully: %s", string(output))
+				}
+			}
+
 			// TODO: Return wrapping error with specific exit code if len(updateFailures) > 0?
 			return nil
 		},

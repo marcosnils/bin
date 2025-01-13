@@ -35,11 +35,11 @@ const (
 	// PostInstall represents a lifecycle hook type triggered after the installation process is completed.
 	PostInstall HookType = "post-install"
 
-	// PreUpgrade represents a lifecycle hook type triggered before the upgrade process begins.
-	PreUpgrade HookType = "pre-upgrade"
+	// PreUpdate represents a lifecycle hook type triggered before the upgrade process begins.
+	PreUpdate HookType = "pre-update"
 
-	// PostUpgrade represents a lifecycle hook type triggered after the upgrade process is completed.
-	PostUpgrade HookType = "post-upgrade"
+	// PostUpdate represents a lifecycle hook type triggered after the upgrade process is completed.
+	PostUpdate HookType = "post-update"
 
 	// PreUninstall represents a lifecycle hook type triggered before the uninstallation process begins.
 	PreUninstall HookType = "pre-uninstall"
