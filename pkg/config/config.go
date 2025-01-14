@@ -97,7 +97,7 @@ func ExecuteHooks(hooks []RunHook) {
 			if err != nil {
 				log.Errorf("Error executing hook: %s, output: %s, error: %v", hook.Command, string(output), err)
 			}
-			log.Infof("Hook executed successfully: %s", string(output))
+			log.Infof("Hook executed successfully: %s", hook.Command)
 		}
 	}
 }
