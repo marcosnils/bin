@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/apex/log"
 	"github.com/marcosnils/bin/pkg/assets"
@@ -29,26 +30,25 @@ func newInstallCmd() *installCmd {
 	root := &installCmd{}
 	// nolint: dupl
 	cmd := &cobra.Command{
-		Use:           "install <url>",
+		Use:           "install <url> [name | path]",
 		Aliases:       []string{"i"},
-		Short:         "Installs the specified project from a url",
+		Short:         "Installs the specified binary from a url",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args:          cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			u := args[0]
+			defaultPath := config.Get().DefaultPath
 
 			var resolvedPath string
 			if len(args) > 1 {
 				resolvedPath = args[1]
-			} else if len(config.Get().DefaultPath) > 0 {
-				resolvedPath = config.Get().DefaultPath
-			} else {
-				var err error
-				resolvedPath, err = os.Getwd()
-				if err != nil {
-					return err
+				if !strings.Contains(resolvedPath, "/") {
+					resolvedPath = filepath.Join(defaultPath, resolvedPath)
 				}
+
+			} else {
+				resolvedPath = defaultPath
 			}
 
 			// TODO check if binary already exists in config
@@ -74,9 +74,15 @@ func newInstallCmd() *installCmd {
 				return fmt.Errorf("error installing binary: %w", err)
 			}
 
+			// Convert to absolute path before storing in config
+			absPath, err := filepath.Abs(resolvedPath)
+			if err != nil {
+				return fmt.Errorf("error converting to absolute path: %w", err)
+			}
+
 			err = config.UpsertBinary(&config.Binary{
 				RemoteName:  pResult.Name,
-				Path:        resolvedPath,
+				Path:        absPath,
 				Version:     pResult.Version,
 				Hash:        fmt.Sprintf("%x", hash),
 				URL:         u,
