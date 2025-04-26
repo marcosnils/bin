@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/apex/log"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-version"
@@ -11,6 +9,7 @@ import (
 	"github.com/marcosnils/bin/pkg/prompt"
 	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 type updateCmd struct {
@@ -96,6 +95,9 @@ func newUpdateCmd() *updateCmd {
 				return wrapErrorWithCode(fmt.Errorf("Updates found, exit (dry-run mode)."), 3, "")
 			}
 
+			hooks := config.GetHooks(config.PreUpdate)
+			config.ExecuteHooks(hooks)
+
 			if len(toUpdate) > 0 && !root.opts.yesToUpdate {
 				for _, err := range updateFailures {
 					log.Warnf("%v", err)
@@ -149,6 +151,10 @@ func newUpdateCmd() *updateCmd {
 			for _, err := range updateFailures {
 				log.Warnf("%v", err)
 			}
+
+			hooks = config.GetHooks(config.PostUpdate)
+			config.ExecuteHooks(hooks)
+
 			// TODO: Return wrapping error with specific exit code if len(updateFailures) > 0?
 			return nil
 		},

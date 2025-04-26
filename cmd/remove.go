@@ -2,10 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 type removeCmd struct {
@@ -47,8 +46,15 @@ func newRemoveCmd() *removeCmd {
 					}
 				}
 			}
+			hooks := config.GetHooks(config.PreRemove)
+			config.ExecuteHooks(hooks)
 			err := config.RemoveBinaries(existingToRemove)
-			return err
+			if err != nil {
+				return err
+			}
+			hooks = config.GetHooks(config.PostRemove)
+			config.ExecuteHooks(hooks)
+			return nil
 		},
 	}
 
