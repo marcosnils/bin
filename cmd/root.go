@@ -78,7 +78,7 @@ func newRootCmd(version string, exit func(int)) *rootCmd {
 		},
 	}
 
-	cmd.PersistentFlags().BoolVar(&root.debug, "debug", false, "Enable debug mode")
+	cmd.PersistentFlags().BoolVar(&root.debug, "debug", false, "Enable debug mode, show configuration")
 	cmd.AddCommand(
 		newInstallCmd().cmd,
 		newEnsureCmd().cmd,
