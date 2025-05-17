@@ -150,6 +150,7 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 						isSupportedExt(candidate) {
 						for toMatch, score := range scores {
 							if strings.Contains(strings.ToLower(candidate), strings.ToLower(toMatch)) {
+								log.Debugf("Candidate %s contains %s. Adding score %d", candidate, toMatch, score)
 								candidateScore += score
 							}
 						}

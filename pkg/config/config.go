@@ -166,7 +166,6 @@ func GetArch() []string {
 		// is not implemented in all systems
 		res = append(res, "x86_64")
 		res = append(res, "x64")
-		res = append(res, "64")
 	}
 	return res
 }
