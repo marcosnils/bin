@@ -75,7 +75,7 @@ func newListCmd() *listCmd {
 
 				status := color.GreenString("OK")
 				if err != nil {
-					status = color.RedString("missing file")
+					status = color.RedString("missing %s", p)
 				}
 
 				if b.Pinned {
