@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/apex/log"
 )
 
 var ErrInvalidProvider = errors.New("invalid provider")
@@ -49,13 +51,19 @@ type Provider interface {
 }
 
 var (
-	httpUrlPrefix   = regexp.MustCompile("^https?://")
-	dockerUrlPrefix = regexp.MustCompile("^docker://")
+	httpUrlPrefix      = regexp.MustCompile("^https?://")
+	dockerUrlPrefix    = regexp.MustCompile("^docker://")
+	goinstallUrlPrefix = regexp.MustCompile("^goinstall://")
 )
 
 func New(u, provider string) (Provider, error) {
 	if dockerUrlPrefix.MatchString(u) {
+		log.Debugf("Using provider 'docker' for '%s'", u)
 		return newDocker(u)
+	}
+	if goinstallUrlPrefix.MatchString(u) || provider == "goinstall" {
+		log.Debugf("Using provider 'goinstall' for '%s'", u)
+		return newGoInstall(u)
 	}
 	if !httpUrlPrefix.MatchString(u) {
 		u = fmt.Sprintf("https://%s", u)
@@ -67,14 +75,17 @@ func New(u, provider string) (Provider, error) {
 	}
 
 	if strings.Contains(purl.Host, "github") || provider == "github" {
+		log.Debugf("Using provider 'github' for '%s'", u)
 		return newGitHub(purl)
 	}
 
 	if strings.Contains(purl.Host, "gitlab") || provider == "gitlab" {
+		log.Debugf("Using provider 'gitlab' for '%s'", u)
 		return newGitLab(purl)
 	}
 
 	if strings.Contains(purl.Host, "releases.hashicorp.com") || provider == "hashicorp" {
+		log.Debugf("Using provider 'hashicorp' for '%s'", u)
 		return newHashiCorp(purl)
 	}
 
