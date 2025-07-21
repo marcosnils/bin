@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/apex/log"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 )
@@ -23,7 +23,7 @@ func (d *docker) Fetch(opts *FetchOpts) (*File, error) {
 		d.tag = opts.Version
 	}
 	log.Infof("Pulling docker image %s:%s", d.repo, d.tag)
-	out, err := d.client.ImageCreate(context.Background(), fmt.Sprintf("%s:%s", d.repo, d.tag), types.ImageCreateOptions{})
+	out, err := d.client.ImageCreate(context.Background(), fmt.Sprintf("%s:%s", d.repo, d.tag), image.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}

@@ -194,7 +194,7 @@ func (g *gitLab) GetLatestVersion() (string, string, error) {
 	projectPath := fmt.Sprintf("%s/%s", g.owner, g.repo)
 
 	releases, _, err := g.client.Releases.ListReleases(projectPath, &gitlab.ListReleasesOptions{
-		PerPage: 100,
+		ListOptions: gitlab.ListOptions{PerPage: 100},
 	})
 	if err != nil {
 		return "", "", err
