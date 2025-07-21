@@ -60,12 +60,12 @@ func newDocker(imageURL string) (Provider, error) {
 
 	repo, tag := parseImage(imageURL)
 
-	client, err := client.NewClientWithOpts()
+	c, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
 
-	return &docker{repo: repo, tag: tag, client: client}, nil
+	return &docker{repo: repo, tag: tag, client: c}, nil
 }
 
 // parseImage parses the image returning the repository and tag.
