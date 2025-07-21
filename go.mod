@@ -13,9 +13,9 @@ require (
 	github.com/hashicorp/go-version v1.7.0
 	github.com/krolaw/zipstream v0.0.0-20241109034754-4a67be70fe31
 	github.com/spf13/cobra v1.9.1
-	github.com/xanzy/go-gitlab v0.115.0
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	github.com/yuin/goldmark v1.7.12
+	gitlab.com/gitlab-org/api/client-go v0.137.0
 	golang.org/x/oauth2 v0.30.0
 	golang.org/x/sys v0.34.0
 )
@@ -58,7 +58,6 @@ require (
 	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250721164621-a45f3dfb1074 // indirect
 	google.golang.org/grpc v1.73.0 // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
 	gopkg.in/cheggaaa/pb.v2 v2.0.7 // indirect
 	gopkg.in/fatih/color.v1 v1.7.0 // indirect

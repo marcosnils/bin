@@ -12,10 +12,10 @@ import (
 	"github.com/apex/log"
 	"github.com/coreos/go-semver/semver"
 	"github.com/marcosnils/bin/pkg/assets"
-	"github.com/xanzy/go-gitlab"
 	"github.com/yuin/goldmark"
 	goldast "github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 type gitLab struct {
@@ -67,8 +67,8 @@ func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 	tryPackages := projectIsPublic || project.PackagesEnabled
 	if tryPackages {
 		packages, resp, err := g.client.Packages.ListProjectPackages(projectPath, &gitlab.ListProjectPackagesOptions{
-			OrderBy: gitlab.String("version"),
-			Sort:    gitlab.String("desc"),
+			OrderBy: gitlab.Ptr("version"),
+			Sort:    gitlab.Ptr("desc"),
 		})
 		if err != nil && (resp == nil || resp.StatusCode != http.StatusForbidden) {
 			return nil, err
