@@ -23,6 +23,12 @@ that could result useful to someone else.
 If you find `bin` helpful and you have any ideas or suggestions, please create an issue here or send a PR and I'll
 be more than happy to brainstorm about possibilities.
 
+Supported providers
+* [Github](#Github)
+* [Gitlab](#Gitlab)
+* [Hashicorp](#Hashicorp)
+* [Docker](#Docker)
+
 ## Installing
 
 1. Download `bin` from the [releases](https://github.com/marcosnils/bin/releases)
@@ -31,24 +37,6 @@ be more than happy to brainstorm about possibilities.
 4. Enjoy!
 
 ## Usage
-
-Install a release from github with the following command:
-
-```shell
-bin install github.com/kubernetes-sigs/kind # installs latest Kind release
-
-bin install github.com/kubernetes-sigs/kind/releases/tag/v0.8.0 # installs a specific release
-
-bin install github.com/kubernetes-sigs/kind ~/bin/kind # installs latest on a specific path
-```
-
-You can install Docker images and use them as regular CLIs:
-
-```shell
-bin install docker://hashicorp/terraform:light # install the `light` tag for terraform
-
-bin install docker://quay.io/calico/node # install the latest version of calico/node
-```
 
 ```shell
 bin ensure # Ensures that all binaries listed in the configuration are present
@@ -60,6 +48,89 @@ bin remove <bin>... # Deletes one or more binaries
 bin update [bin]... # Scans binaries and prompts for update
 bin pin <bin>... # Pins current version of one or more binaries
 bin unpin <bin>... # Unpins one or more binaries
+```
+
+## Supported providers
+
+By default `bin` understand when you use github, gitlab or docker. But in some conditions you could specify the provider to use.
+
+### Github
+
+Github provider will use Github API to found releases matching your workstation specs.
+
+**Supported optional environment variables**:
+
+* `GITHUB_AUTH_TOKEN` set a token to avoid rate limit or if you need to download from private repo, see [FAQ](#FAQ)
+* `GITHUB_TOKEN` deprecated variable, fallback if `GITHUB_AUTH_TOKEN` empty.
+* `GHES_BASE_URL` [github enterprise](https://github.com/github/gh-es) base URL (often is your GitHub Enterprise hostname).
+* `GHES_UPLOAD_URL` [github enterprise](https://github.com/github/gh-es) upload URL (often is your GitHub Enterprise hostname).
+* `GHES_AUTH_TOKEN` [github enterprise](https://github.com/github/gh-es) auth token similar to `GITHUB_AUTH_TOKEN`
+
+```bash
+bin install github.com/kubernetes-sigs/kind # installs latest Kind release
+
+bin install github.com/kubernetes-sigs/kind/releases/tag/v0.8.0 # installs a specific release
+
+bin install github.com/kubernetes-sigs/kind ~/bin/kind # installs latest on a specific path
+```
+
+or explicit
+
+```bash
+bin install --provider github github.companyname.com/custom/repo
+```
+
+### Gitlab
+
+Gitlab provider will use Gitlab API to found releases matching your workstation specs
+
+**Mandatory environment variables**
+* `GITLAB_TOKEN` now gitlab enforce token usage and don't have public api, you could setup a [personal access token](https://docs.gitlab.com/user/profile/personal_access_tokens/), a [GAT](https://docs.gitlab.com/user/group/settings/group_access_tokens/) or a [PAT](https://docs.gitlab.com/user/project/settings/project_access_tokens/)
+
+```bash
+bin install gitlab.com/gitlab-org/cli
+```
+
+or explicit
+
+```bash
+bin install --provider gitlab gitlab.companyname.com/custom/repo
+```
+
+### Hashicorp
+
+Hashicorp have a [dedicated releases](https://releases.hashicorp.com) page and don't use github/lab releases, `bin` support it.
+
+```bash
+bin install --provider hashicorp https://releases.hashicorp.com/terraform/1.12.1
+```
+
+If you need multiple versions, specify a destination
+
+```bash
+bin install --provider hashicorp https://releases.hashicorp.com/terraform/1.5.7 ~/bin/terraform-1.5.7
+bin install --provider hashicorp https://releases.hashicorp.com/terraform/1.12.1 ~/bin/terraform-1.12.1
+```
+
+### Docker
+
+Docker is also supported or any Docker client compatible runtime.
+
+You can install Docker images and use them as regular CLIs:
+
+```shell
+bin install docker://hashicorp/terraform:light # install the `light` tag for terraform
+
+bin install docker://quay.io/calico/node # install the latest version of calico/node
+```
+
+**Supported optional environment variables**: any variable supported by Docker, see [https://docs.docker.com/reference/cli/docker/](https://docs.docker.com/reference/cli/docker/)
+
+For other runtime (like Podman) or for remote docker engine, simply export `DOCKER_HOST` envvar:
+
+```bash
+export DOCKER_HOST="unix:///path/to/unix/socket" 
+bin install docker://quay.io/calico/node
 ```
 
 ## FAQ
