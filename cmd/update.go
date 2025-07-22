@@ -76,6 +76,8 @@ func newUpdateCmd() *updateCmd {
 				if err != nil {
 					return err
 				}
+				log.Debugf("Using provider '%s' for '%s'", p.GetID(), b.URL)
+
 				if ui, err := getLatestVersion(b, p); err != nil {
 					if root.opts.continueOnError {
 						updateFailures[b] = fmt.Errorf("Error while getting latest version of %v: %v", b.Path, err)
@@ -117,6 +119,7 @@ func newUpdateCmd() *updateCmd {
 				if err != nil {
 					return err
 				}
+				log.Debugf("Using provider '%s' for '%s'", p.GetID(), ui.url)
 
 				pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all, PackagePath: b.PackagePath, SkipPatchCheck: root.opts.skipPathCheck, PackageName: b.RemoteName})
 				if err != nil {

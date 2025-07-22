@@ -75,6 +75,7 @@ func newEnsureCmd() *ensureCmd {
 				if err != nil {
 					return err
 				}
+				log.Debugf("Using provider '%s' for '%s'", p.GetID(), binCfg.URL)
 
 				pResult, err := p.Fetch(&providers.FetchOpts{Version: binCfg.Version})
 				if err != nil {
