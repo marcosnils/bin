@@ -58,6 +58,7 @@ func newInstallCmd() *installCmd {
 			if err != nil {
 				return err
 			}
+			log.Debugf("Using provider '%s' for '%s'", p.GetID(), u)
 
 			pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all})
 			if err != nil {
