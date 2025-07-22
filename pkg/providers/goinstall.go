@@ -42,10 +42,19 @@ func newGoInstall(repo string) (Provider, error) {
 	return &goinstall{repo: repo, tag: tag, name: name, latestURL: latestURL}, nil
 }
 
+func getGoPath() (string, error) {
+	cmd := exec.Command("go", "env", "path")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("command %v failed: %w, output: %s", cmd, err, string(output))
+	}
+	return string(output), nil
+}
+
 func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
-	goPath, ok := os.LookupEnv("GOPATH")
-	if !ok {
-		return nil, fmt.Errorf("GOPATH environment variable is mandatory")
+	goPath, err := getGoPath()
+	if err != nil {
+		return nil, err
 	}
 
 	if (len(g.tag) > 0 && g.tag != "latest") || len(opts.Version) > 0 {
