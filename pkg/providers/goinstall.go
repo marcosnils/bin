@@ -107,8 +107,8 @@ func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
 	}, nil
 }
 
-func (d *goinstall) GetLatestVersion() (string, string, error) {
-	resp, err := http.Get(d.latestURL)
+func (g *goinstall) GetLatestVersion() (string, string, error) {
+	resp, err := http.Get(g.latestURL)
 	if err != nil {
 		return "", "", err
 	}
@@ -129,9 +129,9 @@ func (d *goinstall) GetLatestVersion() (string, string, error) {
 		return "", "", fmt.Errorf("version not found in response")
 	}
 
-	return version, d.repo, nil
+	return version, g.repo, nil
 }
 
-func (d *goinstall) GetID() string {
+func (g *goinstall) GetID() string {
 	return "goinstall"
 }

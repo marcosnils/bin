@@ -135,7 +135,7 @@ func checkFinalPath(path, fileName string) (string, error) {
 func saveToDisk(f *providers.File, path string, overwrite bool) ([]byte, error) {
 	epath := os.ExpandEnv((path))
 
-	var extraFlags int = os.O_EXCL
+	extraFlags := os.O_EXCL
 
 	if overwrite {
 		extraFlags = 0
