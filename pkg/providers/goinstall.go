@@ -42,12 +42,12 @@ func newGoInstall(repo string) (Provider, error) {
 }
 
 func getGoPath() (string, error) {
-	cmd := exec.Command("go", "env", "path")
+	cmd := exec.Command("go", "env", "GOPATH")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("command %v failed: %w, output: %s", cmd, err, string(output))
 	}
-	return string(output), nil
+	return strings.TrimSpace(string(output)), nil
 }
 
 func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
@@ -84,7 +84,7 @@ func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
 
 	file, err := os.Open(os.ExpandEnv(goBinPath))
 	if err != nil {
-		return nil, fmt.Errorf("failed to open path: %w", err)
+		return nil, fmt.Errorf("failed to open path '%s': %w", goBinPath, err)
 	}
 	// don't close and keep it for Data, bin is short lived CLI tool
 	// defer file.Close()
