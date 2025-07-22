@@ -171,13 +171,11 @@ bin install --provider hashicorp https://releases.hashicorp.com/terraform/1.12.1
 
 #### Configuration
 
-| Environment Variable | Mandatory | Description |
-|---------|-------------|---------|
-| `GOPATH` | yes | gopath must be set in order to retrieve produced binary. |
+Ensure `go` is present in your `PATH`.
 
 #### Usage
 
-Hashicorp have a [dedicated releases](https://releases.hashicorp.com) page and don't use github/lab releases, `bin` support it.
+`bin` will run go install, and copy the file from `GOPATH` to your dest.
 
 ```shell
 bin install goinstall://github.com/jrhouston/tfk8s@v0.1.8
