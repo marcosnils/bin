@@ -40,6 +40,7 @@ type Provider interface {
 	// Fetch returns the file metadata to retrieve a specific binary given
 	// for a provider
 	Fetch(*FetchOpts) (*File, error)
+
 	// GetLatestVersion returns the version and the URL of the
 	// latest version for this binary
 	GetLatestVersion() (string, string, error)
@@ -53,10 +54,11 @@ var (
 	dockerUrlPrefix = regexp.MustCompile("^docker://")
 )
 
-func New(u, provider string) (Provider, error) {
+func New(u, provider, latestURL string) (Provider, error) {
 	if dockerUrlPrefix.MatchString(u) {
 		return newDocker(u)
 	}
+
 	if !httpUrlPrefix.MatchString(u) {
 		u = fmt.Sprintf("https://%s", u)
 	}
@@ -76,6 +78,10 @@ func New(u, provider string) (Provider, error) {
 
 	if strings.Contains(purl.Host, "releases.hashicorp.com") || provider == "hashicorp" {
 		return newHashiCorp(purl)
+	}
+
+	if len(latestURL) != 0 && (provider == "generic" || len(provider) == 0) {
+		return newGeneric(purl, latestURL)
 	}
 
 	return nil, fmt.Errorf("Can't find provider for url %s", u)

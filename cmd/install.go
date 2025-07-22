@@ -21,9 +21,10 @@ type installCmd struct {
 }
 
 type installOpts struct {
-	force    bool
-	provider string
-	all      bool
+	all       bool
+	force     bool
+	provider  string
+	latestURL string
 }
 
 func newInstallCmd() *installCmd {
@@ -54,7 +55,7 @@ func newInstallCmd() *installCmd {
 			// TODO check if binary already exists in config
 			// and triger the update process if that's the case
 
-			p, err := providers.New(u, root.opts.provider)
+			p, err := providers.New(u, root.opts.provider, root.opts.latestURL)
 			if err != nil {
 				return err
 			}
@@ -87,6 +88,7 @@ func newInstallCmd() *installCmd {
 				Hash:        fmt.Sprintf("%x", hash),
 				URL:         u,
 				Provider:    p.GetID(),
+				LatestURL:   root.opts.latestURL,
 				PackagePath: pResult.PackagePath,
 			})
 			if err != nil {
@@ -100,9 +102,10 @@ func newInstallCmd() *installCmd {
 	}
 
 	root.cmd = cmd
-	root.cmd.Flags().BoolVarP(&root.opts.force, "force", "f", false, "Force the installation even if the file already exists")
 	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
+	root.cmd.Flags().BoolVarP(&root.opts.force, "force", "f", false, "Force the installation even if the file already exists")
 	root.cmd.Flags().StringVarP(&root.opts.provider, "provider", "p", "", "Forces to use a specific provider")
+	root.cmd.Flags().StringVarP(&root.opts.latestURL, "latest-url", "u", "", "Specify a latest version URL for generic provider")
 	return root
 }
 
