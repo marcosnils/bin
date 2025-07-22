@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -87,21 +86,11 @@ func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open path: %w", err)
 	}
-	defer file.Close()
-
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, file)
-	if err != nil {
-		return nil, err
-	}
-
-	// Clean go file added in gopath file
-	if err := os.Remove(os.ExpandEnv(goBinPath)); err != nil && !os.IsNotExist(err) {
-		return nil, fmt.Errorf("Error removing path %s: %v", os.ExpandEnv(goBinPath), err)
-	}
+	// don't close and keep it for Data, bin is short lived CLI tool
+	// defer file.Close()
 
 	return &File{
-		Data:    &buf,
+		Data:    file,
 		Name:    g.name,
 		Version: g.tag,
 	}, nil
