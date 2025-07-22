@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -44,6 +43,10 @@ func newGoInstall(repo string) (Provider, error) {
 }
 
 func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
+	goPath, ok := os.LookupEnv("GOPATH")
+	if !ok {
+		return nil, fmt.Errorf("GOPATH environment variable is mandatory")
+	}
 
 	if (len(g.tag) > 0 && g.tag != "latest") || len(opts.Version) > 0 {
 		if len(opts.Version) > 0 {
@@ -69,11 +72,11 @@ func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
 		return nil, fmt.Errorf("failed to install package: %w", err)
 	}
 
-	goBinPath := fmt.Sprintf("%s/bin/%s", os.Getenv("GOPATH"), g.name)
+	goBinPath := filepath.Join(goPath, "bin", g.name)
 
 	file, err := os.Open(os.ExpandEnv(goBinPath))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open path: %w", err)
 	}
 	defer file.Close()
 
@@ -83,7 +86,6 @@ func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
 		return nil, err
 	}
 
-	// fixme use tmpdir
 	// Clean go file added in gopath file
 	if err := os.Remove(os.ExpandEnv(goBinPath)); err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("Error removing path %s: %v", os.ExpandEnv(goBinPath), err)
@@ -103,7 +105,7 @@ func (d *goinstall) GetLatestVersion() (string, string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", "", err
 	}
