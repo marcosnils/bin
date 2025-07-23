@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/apex/log"
-	"github.com/google/go-github/v31/github"
+	"github.com/google/go-github/v73/github"
 	"github.com/marcosnils/bin/pkg/assets"
 	"golang.org/x/oauth2"
 )
@@ -142,7 +142,7 @@ func newGitHub(u *url.URL) (Provider, error) {
 	var err error
 
 	if len(gbu) > 0 && len(guu) > 0 && len(gau) > 0 {
-		if client, err = github.NewEnterpriseClient(gbu, guu, tc); err != nil {
+		if client, err = github.NewClient(tc).WithEnterpriseURLs(gbu, guu); err != nil {
 			return nil, fmt.Errorf("error initializing GHES client %v", err)
 		}
 	} else {
