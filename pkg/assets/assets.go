@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 	"github.com/cheggaaa/pb"
 	"github.com/h2non/filetype"
 	"github.com/h2non/filetype/matchers"
