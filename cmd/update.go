@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-version"
 	"github.com/marcosnils/bin/pkg/config"

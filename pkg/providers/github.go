@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 	"github.com/google/go-github/v31/github"
 	"github.com/marcosnils/bin/pkg/assets"
 	"golang.org/x/oauth2"

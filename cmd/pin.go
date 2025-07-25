@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
 )

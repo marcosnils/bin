@@ -7,8 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/apex/log"
-	"github.com/apex/log/handlers/cli"
+	"github.com/caarlos0/log"
 	"github.com/fatih/color"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
@@ -19,8 +18,6 @@ func Execute(version string, exit func(int), args []string) {
 	if os.Getenv("CI") != "" {
 		color.NoColor = false
 	}
-
-	log.SetHandler(cli.Default)
 
 	// fmt.Println()
 	// defer fmt.Println()

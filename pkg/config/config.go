@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 )
 
 var cfg config

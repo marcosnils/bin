@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 )
 
 type goinstall struct {

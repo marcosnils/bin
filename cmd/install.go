@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 	"github.com/marcosnils/bin/pkg/assets"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/providers"
