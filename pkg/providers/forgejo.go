@@ -50,83 +50,10 @@ func (f *forgejo) Fetch(opts *FetchOpts) (*File, error) {
 	}
 
 	candidates := []*assets.Asset{}
-	// candidateURLs := map[string]struct{}{}
 
-	// repo, _, err := client.GetRepo(f.owner, f.repo)
 	if err != nil {
 		return nil, err
 	}
-
-	// repoIsPublic := f.token == "" || !repo.Private
-
-	/* TODO: packages are different in forgejo, so for now ignore them
-	log.Debugf("Project is public: %v", repoIsPublic)
-	tryPackages := repoIsPublic || repo.HasPackages
-	if tryPackages {
-		packages, resp, err := client.ListPackages(owner, &forgejoSdk.ListPackagesOptions{
-			Page: 1,
-			PageSize: min(100, f.client.GetGlobalAPISettings.MaxResponseItems),
-		})
-		if err != nil && (resp == nil || resp.StatusCode != http.StatusForbidden) {
-			return nil, err
-		}
-		tagVersion := strings.TrimPrefix(release.TagName, "v")
-		for _, v := range packages {
-			if strings.TrimPrefix(v.Version, "v") == tagVersion {
-				totalPages := -1
-				for page := 0; page != totalPages; page++ {
-					packageFiles, resp, err := g.client.Packages.ListPackageFiles(projectPath, v.ID, &gitlab.ListPackageFilesOptions{
-						Page: page + 1,
-					})
-					if err != nil {
-						return nil, err
-					}
-					totalPages = resp.TotalPages
-					for _, f := range packageFiles {
-						assetURL := fmt.Sprintf("%sprojects/%s/packages/%s/%s/%s/%s",
-							g.client.BaseURL().String(),
-							url.PathEscape(projectPath),
-							v.PackageType,
-							v.Name,
-							v.Version,
-							f.FileName,
-						)
-						if _, exists := candidateURLs[assetURL]; !exists {
-							asset := &assets.Asset{
-								Name:        f.FileName,
-								DisplayName: fmt.Sprintf("%s (%s package)", f.FileName, v.PackageType),
-								URL:         assetURL,
-							}
-							candidates = append(candidates, asset)
-							log.Debugf("Adding %s with URL %s", asset, asset.URL)
-						}
-						candidateURLs[assetURL] = struct{}{}
-					}
-				}
-			}
-		}
-	}
-	*/
-
-	/* Gitlab's project uploads might be forgejo's packages
-	projectUploadsURL := fmt.Sprintf("%s/uploads/", project.WebURL)
-	for _, link := range release.Assets.Links {
-		if repoIsPublic || !strings.HasPrefix(link.URL, projectUploadsURL) {
-			if _, exists := candidateURLs[link.URL]; !exists {
-				asset := &assets.Asset{
-					Name:        link.Name,
-					DisplayName: fmt.Sprintf("%s (asset link)", link.Name),
-					URL:         link.URL,
-				}
-				candidates = append(candidates, asset)
-				log.Debugf("Adding %s with URL %s", asset, asset.URL)
-			}
-			candidateURLs[link.URL] = struct{}{}
-		}
-	}
-	*/
-
-	// TODO: It fails somewhere around here
 
 	for _, attachment := range release.Attachments {
 		asset := &assets.Asset{
@@ -180,59 +107,6 @@ func (f *forgejo) GetLatestVersion() (string, string, error) {
 		return "", "", err
 	}
 
-	/*
-		var globalApiSettings, _, err = f.client.GetGlobalAPISettings()
-		if err != nil {
-			return "", "", err
-		}
-		var maxResponseItems = globalApiSettings.MaxResponseItems
-
-		var false1, false2 = false, false
-
-		releases, _, err := f.client.ListReleases(f.owner, f.repo, forgejoSdk.ListReleasesOptions{
-			ListOptions:  forgejoSdk.ListOptions{Page: 1, PageSize: min(100, maxResponseItems)},
-			IsDraft:      &false1,
-			IsPreRelease: &false2,
-		})
-
-		if err != nil {
-			return "", "", err
-		}
-		if len(releases) == 0 {
-			return "", "", fmt.Errorf("no releases found for %s/%s", f.owner, f.repo)
-		}
-
-		highestTagName := releases[0].TagName
-
-		var svs semver.Versions
-		svToTagName := map[string]string{}
-		tagNameToRelease := map[string]*forgejoSdk.Release{}
-		for _, release := range releases {
-			tagName := strings.TrimPrefix(release.TagName, "v")
-			sv, err := semver.NewVersion(tagName)
-			if err != nil {
-				fmt.Print(err, "\n")
-				continue
-			}
-			if sv.PreRelease == "" && sv.Metadata == "" {
-				svs = append(svs, sv)
-				svToTagName[sv.String()] = release.TagName
-				tagNameToRelease[release.TagName] = release
-			}
-		}
-
-		if len(svs) > 0 {
-			sort.Sort(svs)
-			highestTagName = svToTagName[svs[len(svs)-1].String()]
-		} else {
-			// TODO: Semver didn't work, try a different method
-			// Ideally, we'd ask the user to pick one (maybe bin can already do this?)
-			// Failing that, just go with the latest non-pre release
-			// (doesn't look like bin supports pre-releases, maybe TODO those too?)
-			return "", "", fmt.Errorf("Could not determine latest release (try specifying one manually)")
-		}
-	*/
-
 	return latestRelease.TagName, latestRelease.URL, nil
 }
 
@@ -253,7 +127,6 @@ func newForgejo(u *url.URL) (Provider, error) {
 				tag = strings.Join(ps[i+1:], "/")
 			}
 		}
-
 	}
 
 	// Not familiar enough with forgejo (or bin) to know if this makes sense w/ forgejo
