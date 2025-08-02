@@ -78,6 +78,12 @@ func New(u, provider string) (Provider, error) {
 		return newGitLab(purl)
 	}
 
+	// codeberg uses (a fork of) forejo, so let that be the "flagship"
+	// instance
+	if strings.Contains(purl.Host, "codeberg") || provider == "forgejo" {
+		return newForgejo(purl)
+	}
+
 	if strings.Contains(purl.Host, "releases.hashicorp.com") || provider == "hashicorp" {
 		return newHashiCorp(purl)
 	}
