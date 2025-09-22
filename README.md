@@ -31,7 +31,16 @@ For a comprehensive list, see the [Tools Wiki](https://github.com/marcosnils/bin
 
 ## 📦 Installation
 
-### Quick Install
+### Quick install from Scoop
+
+Run these commands to install `bin` from `scoop`.
+
+```bash
+scoop bucket add extras
+scoop install extras/bin
+```
+
+### Quick install from Github Releases
 
 1. Download `bin` from the [releases](https://github.com/marcosnils/bin/releases)
 2. Run `./bin install github.com/marcosnils/bin` so `bin` is managed by `bin` itself
