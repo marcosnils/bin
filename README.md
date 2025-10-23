@@ -22,6 +22,7 @@ While this makes distribution easier, it creates challenges for updates and trac
 - **Multiple Sources**:
   - [GitHub Releases](#github-releases)
   - [Gitlab Releases](#gitlab-releases)
+  - [Codeberg Releases](#codeberg-releases)
   - [Docker Images](#docker-images)
   - [Hashicorp Releases](#hashicorp-releases)
   - [Go Install](#go-install)
@@ -125,6 +126,35 @@ or explicit
 
 ```shell
 bin install --provider gitlab gitlab.companyname.com/custom/repo
+```
+
+### Codeberg Releases
+
+Codeberg provider uses the Gitea/Forgejo API (GitHub-compatible) to find releases matching your workstation specs. Codeberg is a free and open-source alternative to GitHub, hosted at [codeberg.org](https://codeberg.org).
+
+#### Configuration
+
+| Environment Variable | Mandatory | Description                                                                                                               |
+| -------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `CODEBERG_TOKEN`     | no        | set a [token](https://docs.codeberg.org/advanced/access-token/) for authentication. Useful for rate limiting or private repos |
+
+#### Usage
+
+```shell
+# installs latest mergiraf release
+bin install codeberg.org/mergiraf/mergiraf
+
+# installs a specific release
+bin install codeberg.org/mergiraf/mergiraf/releases/tag/v1.0.0
+
+# installs latest on a specific path
+bin install codeberg.org/mergiraf/mergiraf ~/bin/mergiraf
+```
+
+or explicit
+
+```shell
+bin install --provider codeberg codeberg.org/custom/repo
 ```
 
 ### Docker Images
