@@ -3,6 +3,7 @@ module github.com/marcosnils/bin
 go 1.24.4
 
 require (
+	code.gitea.io/sdk/gitea v0.22.0
 	github.com/caarlos0/log v0.5.1
 	github.com/cheggaaa/pb v2.0.7+incompatible
 	github.com/coreos/go-semver v0.3.1
@@ -21,6 +22,7 @@ require (
 )
 
 require (
+	github.com/42wim/httpsig v1.2.3 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/charmbracelet/colorprofile v0.3.1 // indirect
@@ -31,10 +33,12 @@ require (
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
+	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

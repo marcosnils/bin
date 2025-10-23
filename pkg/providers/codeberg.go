@@ -1,22 +1,20 @@
 package providers
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
+	"code.gitea.io/sdk/gitea"
 	"github.com/caarlos0/log"
-	"github.com/google/go-github/v31/github"
 	"github.com/marcosnils/bin/pkg/assets"
-	"golang.org/x/oauth2"
 )
 
 type codeberg struct {
 	url    *url.URL
-	client *github.Client
+	client *gitea.Client
 	owner  string
 	repo   string
 	tag    string
@@ -24,21 +22,21 @@ type codeberg struct {
 }
 
 func (c *codeberg) Fetch(opts *FetchOpts) (*File, error) {
-	var release *github.RepositoryRelease
+	var release *gitea.Release
 
 	// If we have a tag, let's fetch from there
 	var err error
-	var resp *github.Response
+	var resp *gitea.Response
 	if len(c.tag) > 0 || len(opts.Version) > 0 {
 		if len(opts.Version) > 0 {
 			// this is used by for the `ensure` command
 			c.tag = opts.Version
 		}
 		log.Infof("Getting %s release for %s/%s", c.tag, c.owner, c.repo)
-		release, _, err = c.client.Repositories.GetReleaseByTag(context.TODO(), c.owner, c.repo, c.tag)
+		release, _, err = c.client.GetReleaseByTag(c.owner, c.repo, c.tag)
 	} else {
 		log.Infof("Getting latest release for %s/%s", c.owner, c.repo)
-		release, resp, err = c.client.Repositories.GetLatestRelease(context.TODO(), c.owner, c.repo)
+		release, resp, err = c.client.GetLatestRelease(c.owner, c.repo)
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			err = fmt.Errorf("repository %s/%s does not have releases", c.owner, c.repo)
 		}
@@ -49,8 +47,8 @@ func (c *codeberg) Fetch(opts *FetchOpts) (*File, error) {
 	}
 
 	candidates := []*assets.Asset{}
-	for _, a := range release.Assets {
-		candidates = append(candidates, &assets.Asset{Name: a.GetName(), URL: a.GetURL()})
+	for _, a := range release.Attachments {
+		candidates = append(candidates, &assets.Asset{Name: a.Name, URL: a.DownloadURL})
 	}
 	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName})
 
@@ -69,7 +67,7 @@ func (c *codeberg) Fetch(opts *FetchOpts) (*File, error) {
 		return nil, err
 	}
 
-	version := release.GetTagName()
+	version := release.TagName
 
 	// TODO calculate file hash. Not sure if we can / should do it here
 	// since we don't want to read the file unnecesarily. Additionally, sometimes
@@ -83,12 +81,12 @@ func (c *codeberg) Fetch(opts *FetchOpts) (*File, error) {
 // returns the corresponding name and url to fetch the version
 func (c *codeberg) GetLatestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for %s/%s", c.owner, c.repo)
-	release, _, err := c.client.Repositories.GetLatestRelease(context.TODO(), c.owner, c.repo)
+	release, _, err := c.client.GetLatestRelease(c.owner, c.repo)
 	if err != nil {
 		return "", "", err
 	}
 
-	return release.GetTagName(), release.GetHTMLURL(), nil
+	return release.TagName, release.HTMLURL, nil
 }
 
 func (c *codeberg) GetID() string {
@@ -118,20 +116,18 @@ func newCodeberg(u *url.URL) (Provider, error) {
 
 	token := os.Getenv("CODEBERG_TOKEN")
 
-	var tc *http.Client
+	// Codeberg uses Gitea/Forgejo, use the Gitea SDK
+	baseURL := fmt.Sprintf("https://%s/", u.Hostname())
+
+	var client *gitea.Client
+	var err error
 
 	if token != "" {
-		tc = oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: token},
-		))
+		client, err = gitea.NewClient(baseURL, gitea.SetToken(token))
+	} else {
+		client, err = gitea.NewClient(baseURL)
 	}
 
-	// Codeberg uses Gitea/Forgejo which has a GitHub-compatible API
-	// We can use the GitHub client with a custom base URL
-	baseURL := fmt.Sprintf("https://%s/api/v1/", u.Hostname())
-	uploadURL := baseURL // Gitea uses the same URL for uploads
-
-	client, err := github.NewEnterpriseClient(baseURL, uploadURL, tc)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing Codeberg client %v", err)
 	}
