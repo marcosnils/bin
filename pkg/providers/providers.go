@@ -78,6 +78,10 @@ func New(u, provider string) (Provider, error) {
 		return newGitLab(purl)
 	}
 
+	if strings.Contains(purl.Host, "codeberg") || provider == "codeberg" {
+		return newCodeberg(purl)
+	}
+
 	if strings.Contains(purl.Host, "releases.hashicorp.com") || provider == "hashicorp" {
 		return newHashiCorp(purl)
 	}
