@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
@@ -28,21 +29,23 @@ func newRemoveCmd() *removeCmd {
 
 			for _, b := range cfg.Bins {
 				for _, p := range args {
+					// TODO: avoid calling getBinPath each time and make it
+					// once at the beginning for each arg
 					bp, err := getBinPath(p)
-					if err != nil {
+
+					if err != nil && !errors.Is(err, os.ErrNotExist) {
 						return err
 					}
-					if os.ExpandEnv(b.Path) == os.ExpandEnv(bp) {
-						err := os.Remove(os.ExpandEnv(bp))
+					if os.ExpandEnv(b.Path) == os.ExpandEnv(bp) || p == b.Path {
 						existingToRemove = append(existingToRemove, b.Path)
+
 						// TODO some providers (like docker) might download
 						// additional things somewhere else, maybe we should
 						// call the provider to do a cleanup here.
-						if err != nil {
+						if err := os.Remove(os.ExpandEnv(bp)); err != nil && !os.IsNotExist(err) {
 							return fmt.Errorf("Error removing path %s: %v", os.ExpandEnv(bp), err)
 						}
 						continue
-
 					}
 				}
 			}

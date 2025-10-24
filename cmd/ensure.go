@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 	"github.com/fatih/color"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/marcosnils/bin/pkg/providers"
@@ -75,6 +75,7 @@ func newEnsureCmd() *ensureCmd {
 				if err != nil {
 					return err
 				}
+				log.Debugf("Using provider '%s' for '%s'", p.GetID(), binCfg.URL)
 
 				pResult, err := p.Fetch(&providers.FetchOpts{Version: binCfg.Version})
 				if err != nil {

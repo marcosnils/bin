@@ -5,9 +5,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
-	"github.com/apex/log"
-	"github.com/apex/log/handlers/cli"
+	"github.com/caarlos0/log"
 	"github.com/fatih/color"
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
@@ -18,8 +18,6 @@ func Execute(version string, exit func(int), args []string) {
 	if os.Getenv("CI") != "" {
 		color.NoColor = false
 	}
-
-	log.SetHandler(cli.Default)
 
 	// fmt.Println()
 	// defer fmt.Println()
@@ -131,14 +129,18 @@ func defaultCommand(cmd *cobra.Command, args []string) bool {
 func getBinPath(name string) (string, error) {
 	var f string
 	f, err := exec.LookPath(name)
-	if err != nil {
-		f, err = filepath.Abs(os.ExpandEnv(name))
-		if err != nil {
-			return "", err
-		}
-	}
-
 	cfg := config.Get()
+	if err != nil {
+		log.Log.Debugf("binary %s not found in PATH %v", name, err)
+		if !strings.Contains(name, "/") {
+			for _, b := range cfg.Bins {
+				if filepath.Base(b.Path) == name {
+					return b.Path, nil
+				}
+			}
+		}
+		return "", err
+	}
 
 	for _, bin := range cfg.Bins {
 		if os.ExpandEnv(bin.Path) == f {

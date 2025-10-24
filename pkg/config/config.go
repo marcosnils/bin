@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 )
 
 var cfg config
@@ -103,17 +103,19 @@ func ExecuteHooks(hooks []RunHook) {
 }
 
 func CheckAndLoad() error {
-	configDir, err := getConfigPath()
+	configPath, err := getConfigPath()
 	if err != nil {
 		return err
 	}
 
-	if err := os.Mkdir(configDir, 0755); err != nil && !os.IsExist(err) {
+	confDir := filepath.Dir(configPath)
+
+	if err := os.Mkdir(confDir, 0755); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("Error creating config directory [%v]", err)
 	}
 
-	log.Debugf("Config directory is: %s", configDir)
-	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE, 0664)
+	log.Debugf("Config directory is: %s", confDir)
+	f, err := os.OpenFile(configPath, os.O_RDWR|os.O_CREATE, 0664)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -197,12 +199,12 @@ func RemoveBinaries(paths []string) error {
 }
 
 func write() error {
-	configDir, err := getConfigPath()
+	configPath, err := getConfigPath()
 	if err != nil {
 		return err
 	}
 
-	f, err := os.OpenFile(filepath.Join(configDir, "config.json"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0664)
+	f, err := os.OpenFile(configPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0664)
 	if err != nil {
 		return err
 	}
@@ -228,7 +230,6 @@ func GetArch() []string {
 		// is not implemented in all systems
 		res = append(res, "x86_64")
 		res = append(res, "x64")
-		res = append(res, "64")
 	}
 	return res
 }
@@ -246,6 +247,7 @@ func GetOS() []string {
 
 // getConfigPath returns the path to the configuration directory respecting
 // the `XDG Base Directory specification` using the following strategy:
+//   - honor BIN_CONFIG is set
 //   - to prevent breaking of existing configurations, check if "$HOME/.bin/config.json"
 //     exists and return "$HOME/.bin"
 //   - if "XDG_CONFIG_HOME" is set, return "$XDG_CONFIG_HOME/bin"
@@ -256,16 +258,26 @@ func GetOS() []string {
 //
 //	%APPDATA% might be the right place on windows
 func getConfigPath() (string, error) {
-	home, homeErr := os.UserHomeDir()
-	if homeErr == nil {
-		if _, err := os.Stat(filepath.Join(home, ".bin", "config.json")); !os.IsNotExist(err) {
-			return filepath.Join(path.Join(home, ".bin")), nil
+
+	c := os.Getenv("BIN_CONFIG")
+	if len(c) > 0 {
+		if _, err := os.Stat(c); !os.IsNotExist(err) {
+			return c, nil
+		} else {
+			return "", err
 		}
 	}
 
-	c := os.Getenv("XDG_CONFIG_HOME")
+	home, homeErr := os.UserHomeDir()
+	if homeErr == nil {
+		if _, err := os.Stat(filepath.Join(home, ".bin", "config.json")); !os.IsNotExist(err) {
+			return filepath.Join(path.Join(home, ".bin", "config.json")), nil
+		}
+	}
+
+	c = os.Getenv("XDG_CONFIG_HOME")
 	if _, err := os.Stat(c); !os.IsNotExist(err) {
-		return filepath.Join(c, "bin"), nil
+		return filepath.Join(c, "bin", "config.json"), nil
 	}
 
 	if homeErr != nil {
@@ -273,10 +285,10 @@ func getConfigPath() (string, error) {
 	}
 	c = filepath.Join(home, ".config")
 	if _, err := os.Stat(c); !os.IsNotExist(err) {
-		return filepath.Join(c, "bin"), nil
+		return filepath.Join(c, "bin", "config.json"), nil
 	}
 
-	return filepath.Join(home, ".bin"), nil
+	return filepath.Join(home, ".bin", "config.json"), nil
 }
 
 func GetOSSpecificExtensions() []string {

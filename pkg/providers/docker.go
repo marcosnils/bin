@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/apex/log"
-	"github.com/docker/docker/api/types"
+	"github.com/caarlos0/log"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 )
@@ -23,7 +23,7 @@ func (d *docker) Fetch(opts *FetchOpts) (*File, error) {
 		d.tag = opts.Version
 	}
 	log.Infof("Pulling docker image %s:%s", d.repo, d.tag)
-	out, err := d.client.ImageCreate(context.Background(), fmt.Sprintf("%s:%s", d.repo, d.tag), types.ImageCreateOptions{})
+	out, err := d.client.ImageCreate(context.Background(), fmt.Sprintf("%s:%s", d.repo, d.tag), image.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +60,12 @@ func newDocker(imageURL string) (Provider, error) {
 
 	repo, tag := parseImage(imageURL)
 
-	client, err := client.NewClientWithOpts()
+	c, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
 
-	return &docker{repo: repo, tag: tag, client: client}, nil
+	return &docker{repo: repo, tag: tag, client: c}, nil
 }
 
 // parseImage parses the image returning the repository and tag.

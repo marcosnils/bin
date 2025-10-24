@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 	"github.com/coreos/go-semver/semver"
 	"github.com/marcosnils/bin/pkg/assets"
 	"github.com/marcosnils/bin/pkg/options"

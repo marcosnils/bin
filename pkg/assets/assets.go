@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/apex/log"
+	"github.com/caarlos0/log"
 	"github.com/cheggaaa/pb"
 	"github.com/h2non/filetype"
 	"github.com/h2non/filetype/matchers"
@@ -144,20 +144,20 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 			for _, a := range as {
 				highestScoreForAsset := 0
 				gf := &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL, score: 0}
-				for _, candidate := range []string{a.Name} {
-					candidateScore := 0
-					if bstrings.ContainsAny(strings.ToLower(candidate), scoreKeys) &&
-						isSupportedExt(candidate) {
-						for toMatch, score := range scores {
-							if strings.Contains(strings.ToLower(candidate), strings.ToLower(toMatch)) {
-								candidateScore += score
-							}
+				candidate := a.Name
+				candidateScore := 0
+				if bstrings.ContainsAny(strings.ToLower(candidate), scoreKeys) &&
+					isSupportedExt(candidate) {
+					for toMatch, score := range scores {
+						if strings.Contains(strings.ToLower(candidate), strings.ToLower(toMatch)) {
+							log.Debugf("Candidate %s contains %s. Adding score %d", candidate, toMatch, score)
+							candidateScore += score
 						}
-						if candidateScore > highestScoreForAsset {
-							highestScoreForAsset = candidateScore
-							gf.Name = candidate
-							gf.score = candidateScore
-						}
+					}
+					if candidateScore > highestScoreForAsset {
+						highestScoreForAsset = candidateScore
+						gf.Name = candidate
+						gf.score = candidateScore
 					}
 				}
 

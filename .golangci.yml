@@ -1,1 +1,29 @@
----
+version: "2"
+linters:
+  settings:
+    errcheck:
+      exclude-functions:
+        - (*os.File).Close  # bin is shortlived cli and will release files on exit
+    staticcheck:
+      checks:
+        - all
+        - -ST1005  # ignore Capitalized errors
+        - -ST1003  # ignore name like Url instread of URL
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

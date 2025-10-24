@@ -49,13 +49,17 @@ type Provider interface {
 }
 
 var (
-	httpUrlPrefix   = regexp.MustCompile("^https?://")
-	dockerUrlPrefix = regexp.MustCompile("^docker://")
+	httpUrlPrefix      = regexp.MustCompile("^https?://")
+	dockerUrlPrefix    = regexp.MustCompile("^docker://")
+	goinstallUrlPrefix = regexp.MustCompile("^goinstall://")
 )
 
 func New(u, provider string) (Provider, error) {
 	if dockerUrlPrefix.MatchString(u) {
 		return newDocker(u)
+	}
+	if goinstallUrlPrefix.MatchString(u) || provider == "goinstall" {
+		return newGoInstall(u)
 	}
 	if !httpUrlPrefix.MatchString(u) {
 		u = fmt.Sprintf("https://%s", u)
@@ -72,6 +76,10 @@ func New(u, provider string) (Provider, error) {
 
 	if strings.Contains(purl.Host, "gitlab") || provider == "gitlab" {
 		return newGitLab(purl)
+	}
+
+	if strings.Contains(purl.Host, "codeberg") || provider == "codeberg" {
+		return newCodeberg(purl)
 	}
 
 	if strings.Contains(purl.Host, "releases.hashicorp.com") || provider == "hashicorp" {
