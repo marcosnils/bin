@@ -58,8 +58,9 @@ func newInstallCmd() *installCmd {
 			if err != nil {
 				return err
 			}
+			hooks := config.GetHooks(config.PreInstall)
+			config.ExecuteHooks(hooks)
 			log.Debugf("Using provider '%s' for '%s'", p.GetID(), u)
-
 			pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all})
 			if err != nil {
 				return err
@@ -93,6 +94,9 @@ func newInstallCmd() *installCmd {
 			if err != nil {
 				return err
 			}
+
+			hooks = config.GetHooks(config.PostInstall)
+			config.ExecuteHooks(hooks)
 
 			log.Infof("Done installing %s %s", pResult.Name, pResult.Version)
 
