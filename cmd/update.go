@@ -59,10 +59,6 @@ func newUpdateCmd() *updateCmd {
 					if err != nil {
 						return err
 					}
-					if cfg.Bins[bin].Pinned {
-						log.Infof("%s is a pinned binary", a)
-						continue
-					}
 					binsToProcess[bin] = cfg.Bins[bin]
 				}
 			} else {
@@ -71,7 +67,11 @@ func newUpdateCmd() *updateCmd {
 
 			updateFailures := map[*config.Binary]error{}
 
-			for _, b := range binsToProcess {
+			for p, b := range binsToProcess {
+				if cfg.Bins[p].Pinned {
+					log.Infof("%s is a pinned binary", p)
+					continue
+				}
 				p, err := providers.New(b.URL, b.Provider)
 				if err != nil {
 					return err
