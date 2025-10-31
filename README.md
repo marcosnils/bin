@@ -97,7 +97,7 @@ bin install github.com/kubernetes-sigs/kind/releases/tag/v0.8.0
 bin install github.com/kubernetes-sigs/kind ~/bin/kind
 
 # installs latest on a specific path and show all possible download options (skip scoring & filtering)
-bin install -a github.com/yt-dlp/yt-dlp ~/bin/kind
+bin install -a github.com/yt-dlp/yt-dlp
 ```
 
 or explicit
