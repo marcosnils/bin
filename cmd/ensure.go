@@ -88,11 +88,13 @@ func newEnsureCmd() *ensureCmd {
 				}
 
 				err = config.UpsertBinary(&config.Binary{
-					RemoteName: pResult.Name,
-					Path:       binCfg.Path,
-					Version:    pResult.Version,
-					Hash:       fmt.Sprintf("%x", hash),
-					URL:        binCfg.URL,
+					RemoteName:  pResult.Name,
+					Path:        binCfg.Path,
+					Version:     pResult.Version,
+					Hash:        fmt.Sprintf("%x", hash),
+					URL:         binCfg.URL,
+					Provider:    p.GetID(),
+					PackagePath: binCfg.PackagePath,
 				})
 				if err != nil {
 					return err
