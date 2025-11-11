@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/caarlos0/log"
+  "github.com/apex/log"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-version"
 	"github.com/marcosnils/bin/pkg/config"
@@ -98,6 +98,9 @@ func newUpdateCmd() *updateCmd {
 				return wrapErrorWithCode(fmt.Errorf("Updates found, exit (dry-run mode)."), 3, "")
 			}
 
+			hooks := config.GetHooks(config.PreUpdate)
+			config.ExecuteHooks(hooks)
+
 			if len(toUpdate) > 0 && !root.opts.yesToUpdate {
 				for _, err := range updateFailures {
 					log.Warnf("%v", err)
@@ -153,6 +156,10 @@ func newUpdateCmd() *updateCmd {
 			for _, err := range updateFailures {
 				log.Warnf("%v", err)
 			}
+
+			hooks = config.GetHooks(config.PostUpdate)
+			config.ExecuteHooks(hooks)
+
 			// TODO: Return wrapping error with specific exit code if len(updateFailures) > 0?
 			return nil
 		},
