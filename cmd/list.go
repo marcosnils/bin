@@ -51,8 +51,12 @@ func newListCmd() *listCmd {
 					maxLengths[0] = len(p)
 				}
 
-				if len(b.Version) > maxLengths[1] {
-					maxLengths[1] = len(b.Version)
+				versionLength := len(b.Version)
+				if b.Pinned {
+					versionLength++ // for the '*' char
+				}
+				if versionLength > maxLengths[1] {
+					maxLengths[1] = versionLength
 				}
 
 				if len(b.URL) > maxLengths[2] {
@@ -79,7 +83,7 @@ func newListCmd() *listCmd {
 				}
 
 				if b.Pinned {
-					fmt.Printf("\n%s  %s  %s  %s", _rPad(p, pL), "*"+_rPad(b.Version, vL), _rPad(b.URL, uL), status)
+					fmt.Printf("\n%s  %s  %s  %s", _rPad(p, pL), _rPad("*"+b.Version, vL), _rPad(b.URL, uL), status)
 					continue
 				}
 
