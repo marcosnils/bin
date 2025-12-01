@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -36,6 +37,8 @@ type Binary struct {
 	// the path again when upgrading
 	PackagePath string `json:"package_path"`
 	Pinned      bool   `json:"pinned"`
+	// StateURL holds a release- or version-specific URL, persisted only in state
+	StateURL string `json:"-"`
 }
 
 // stateEntry contains per-machine mutable data
@@ -45,6 +48,7 @@ type stateEntry struct {
 	Hash        string `json:"hash"`
 	PackagePath string `json:"package_path"`
 	Pinned      bool   `json:"pinned"`
+	URL         string `json:"url"`
 }
 
 type state struct {
@@ -149,8 +153,69 @@ func CheckAndLoad() error {
 		}
 	}
 
+	// Normalize URLs in manifest to base repository links when possible
+	if normalizeManifestURLs() {
+		if err := writeAll(); err != nil {
+			return err
+		}
+	}
+
 	log.Debugf("Download path set to %s", cfg.DefaultPath)
 	return nil
+}
+
+// normalizeManifestURLs rewrites manifest URLs to stable base links
+// (e.g. https://github.com/owner/repo) when they currently point
+// at release/tag or download URLs. Returns true if it modified cfg.
+func normalizeManifestURLs() bool {
+	changed := false
+	for _, b := range cfg.Bins {
+		if b == nil || b.URL == "" {
+			continue
+		}
+		base := normalizeBaseURL(b.URL, b.Provider)
+		if base != "" && base != b.URL {
+			// Preserve the original, potentially version-specific URL in state
+			if b.StateURL == "" {
+				b.StateURL = b.URL
+			}
+			log.Debugf("Normalizing manifest URL from %s to %s", b.URL, base)
+			b.URL = base
+			changed = true
+		}
+	}
+	return changed
+}
+
+// normalizeBaseURL attempts to derive a stable repository/home URL from
+// a potentially versioned or release-specific URL.
+func normalizeBaseURL(raw, provider string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+
+	// If provider isn't set in the manifest (older entries), infer it from host
+	inferredProvider := provider
+	if inferredProvider == "" {
+		host := u.Host
+		if strings.Contains(host, "github") {
+			inferredProvider = "github"
+		} else if strings.Contains(host, "codeberg") {
+			inferredProvider = "codeberg"
+		} else if strings.Contains(host, "gitlab") {
+			inferredProvider = "gitlab"
+		}
+	}
+
+	switch inferredProvider {
+	case "github", "codeberg", "gitlab":
+		parts := strings.Split(u.Path, "/")
+		if len(parts) >= 3 {
+			return fmt.Sprintf("%s://%s/%s/%s", u.Scheme, u.Host, parts[1], parts[2])
+		}
+	}
+	return ""
 }
 
 func Get() *config {
@@ -161,6 +226,10 @@ func Get() *config {
 // binary resource in the config
 func UpsertBinary(c *Binary) error {
 	if c != nil {
+		// Preserve existing state URL unless the caller overrides it
+		if existing, ok := cfg.Bins[c.Path]; ok && c.StateURL == "" {
+			c.StateURL = existing.StateURL
+		}
 		cfg.Bins[c.Path] = c
 		if err := writeAll(); err != nil {
 			return err
@@ -254,7 +323,7 @@ func writeState(statePath string) error {
 		if b == nil {
 			continue
 		}
-		st.Bins[k] = &stateEntry{Version: b.Version, Hash: b.Hash, PackagePath: b.PackagePath, Pinned: b.Pinned}
+		st.Bins[k] = &stateEntry{Version: b.Version, Hash: b.Hash, PackagePath: b.PackagePath, Pinned: b.Pinned, URL: b.StateURL}
 	}
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "    ")

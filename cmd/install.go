@@ -89,7 +89,9 @@ func newInstallCmd() *installCmd {
 				URL:         u,
 				Provider:    p.GetID(),
 				PackagePath: pResult.PackagePath,
+				StateURL:    u,
 			})
+
 			if err != nil {
 				return err
 			}
