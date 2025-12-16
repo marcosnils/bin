@@ -248,7 +248,7 @@ Ensure this directory is in your `$PATH`.
 
 ## 🤝 Contributing
 
-There are some bugs and the code is not tested by lake of time but contributions are welcome though and I'll be happy to discuss and review them.
+There are some bugs, and the code has not been tested due to a lack of time, but contributions are welcome, and I’ll be happy to discuss and review them.
 
 - Report bugs or request features via [GitHub Issues](https://github.com/marcosnils/bin/issues)
 - Submit pull requests for improvements
