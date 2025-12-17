@@ -140,10 +140,12 @@ func newUpdateCmd() *updateCmd {
 					Path:        b.Path,
 					Version:     pResult.Version,
 					Hash:        fmt.Sprintf("%x", hash),
-					URL:         ui.url,
+					URL:         b.URL,
 					Provider:    p.GetID(),
 					PackagePath: pResult.PackagePath,
+					StateURL:    ui.url,
 				})
+
 				if err != nil {
 					return err
 				}
