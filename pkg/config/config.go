@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -22,6 +23,41 @@ type config struct {
 	// if necessary
 	DefaultPath string             `json:"default_path"`
 	Bins        map[string]*Binary `json:"bins"`
+	Hooks       []RunHook          `json:"hooks"`
+}
+
+// HookType defines a type alias for string, representing various lifecycle hooks in bin
+type HookType = string
+
+const (
+	// PreInstall represents a lifecycle hook type triggered before the installation process begins.
+	PreInstall HookType = "pre-install"
+
+	// PostInstall represents a lifecycle hook type triggered after the installation process is completed.
+	PostInstall HookType = "post-install"
+
+	// PreUpdate represents a lifecycle hook type triggered before the upgrade process begins.
+	PreUpdate HookType = "pre-update"
+
+	// PostUpdate represents a lifecycle hook type triggered after the upgrade process is completed.
+	PostUpdate HookType = "post-update"
+
+	// PreRemove represents a lifecycle hook type triggered before the uninstallation process begins.
+	PreRemove HookType = "pre-remove"
+
+	// PostRemove represents a lifecycle hook type triggered after the uninstallation process is completed.
+	PostRemove HookType = "post-remove"
+)
+
+type RunHook struct {
+	// Type specifies the type of hook being executed, represented as a string alias through the HookType type.
+	Type HookType `json:"type"`
+
+	// Command specifies the executable command for the hook, represented as a string.
+	Command string `json:"command"`
+
+	// Args represents a list of arguments passed to the executable command for the hook.
+	Args []string
 }
 
 type Binary struct {
@@ -36,6 +72,34 @@ type Binary struct {
 	// the path again when upgrading
 	PackagePath string `json:"package_path"`
 	Pinned      bool   `json:"pinned"`
+}
+
+// GetHooks returns a slice of RunHook objects filtered by the specified HookType. It returns an empty slice if no hooks match.
+func GetHooks(t HookType) []RunHook {
+	hooks := make([]RunHook, 0)
+	if len(cfg.Hooks) == 0 {
+		return hooks
+	}
+	for _, hook := range cfg.Hooks {
+		if hook.Type == t {
+			hooks = append(hooks, hook)
+		}
+	}
+	return hooks
+}
+
+// ExecuteHooks runs a series of hooks by executing their specified commands with arguments and logs the process and results.
+func ExecuteHooks(hooks []RunHook) {
+	for _, hook := range hooks {
+		if hook.Command != "" {
+			log.Infof("Executing %s hook: %s %v", hook.Type, hook.Command, hook.Args)
+			output, err := exec.Command(hook.Command, hook.Args...).CombinedOutput()
+			if err != nil {
+				log.Errorf("Error executing hook: %s, output: %s, error: %v", hook.Command, string(output), err)
+			}
+			log.Infof("Hook executed successfully: %s", hook.Command)
+		}
+	}
 }
 
 func CheckAndLoad() error {
