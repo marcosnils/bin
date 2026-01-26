@@ -35,8 +35,14 @@ func parseRepo(path string) (string, string, string, string) {
 	return repo, tag, name, latestURL
 }
 
-func baseModulePath(arg string) (string, bool) {
-	noVer := strings.SplitN(arg, "@", 2)[0]
+func moduleRemoveVersion(mod string) string {
+	if i := strings.LastIndex(mod, "@"); i > -1 {
+		return mod[:i]
+	}
+	return mod
+}
+
+func baseModulePath(noVer string) (string, bool) {
 	parts := strings.Split(noVer, "/")
 	for len(parts) > 0 {
 		mod := strings.Join(parts, "/")
@@ -52,8 +58,9 @@ func baseModulePath(arg string) (string, bool) {
 func newGoInstall(repo string) (Provider, error) {
 	repoUrl := strings.TrimPrefix(repo, "goinstall://")
 	subPath := ""
-	baseRepoUrl, found := baseModulePath(repoUrl)
-	subPath = strings.TrimPrefix(repoUrl, baseRepoUrl)
+	repoUrlNoVer := moduleRemoveVersion(repoUrl)
+	baseRepoUrl, found := baseModulePath(repoUrlNoVer)
+	subPath = strings.TrimPrefix(repoUrlNoVer, baseRepoUrl)
 	if found && subPath != "" {
 		repoUrl = baseRepoUrl
 		log.Debugf("Using base module %s with sub path \"%s\"", repoUrl, subPath)
