@@ -163,5 +163,20 @@ func saveToDisk(f *providers.File, path string, overwrite bool) ([]byte, error) 
 		return nil, err
 	}
 
+	// chmod the file to be executable using config DefaultChmod if set
+	defaultChmod := config.Get().DefaultChmod
+	if len(defaultChmod) > 0 {
+		var chmodVal int64
+		_, err := fmt.Sscanf(defaultChmod, "%o", &chmodVal)
+		if err != nil {
+			log.Warnf("Could not parse DefaultChmod value '%s', using 0766", defaultChmod)
+			chmodVal = 0o766
+		}
+		err = file.Chmod(os.FileMode(chmodVal))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return h.Sum(nil), nil
 }
