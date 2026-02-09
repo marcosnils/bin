@@ -48,10 +48,20 @@ type Provider interface {
 	GetID() string
 }
 
+// Cleaner is an optional interface that providers can implement to perform
+// cleanup when a binary is removed. This allows providers that install
+// supporting files (libraries, completers, etc.) to clean up after themselves.
+type Cleaner interface {
+	// Cleanup removes any supporting files or directories installed by the provider.
+	// It should log warnings for non-critical failures rather than returning errors.
+	Cleanup() error
+}
+
 var (
 	httpUrlPrefix      = regexp.MustCompile("^https?://")
 	dockerUrlPrefix    = regexp.MustCompile("^docker://")
 	goinstallUrlPrefix = regexp.MustCompile("^goinstall://")
+	awscliUrlPrefix    = regexp.MustCompile("^awscli://")
 )
 
 func New(u, provider string) (Provider, error) {
@@ -60,6 +70,9 @@ func New(u, provider string) (Provider, error) {
 	}
 	if goinstallUrlPrefix.MatchString(u) || provider == "goinstall" {
 		return newGoInstall(u)
+	}
+	if awscliUrlPrefix.MatchString(u) || provider == "awscli" {
+		return newAWSCLI(u)
 	}
 	if !httpUrlPrefix.MatchString(u) {
 		u = fmt.Sprintf("https://%s", u)

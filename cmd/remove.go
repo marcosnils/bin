@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/caarlos0/log"
 	"github.com/marcosnils/bin/pkg/config"
+	"github.com/marcosnils/bin/pkg/providers"
 	"github.com/spf13/cobra"
 )
 
@@ -40,9 +42,16 @@ func newRemoveCmd() *removeCmd {
 					if os.ExpandEnv(b.Path) == os.ExpandEnv(bp) || p == b.Path {
 						existingToRemove = append(existingToRemove, b.Path)
 
-						// TODO some providers (like docker) might download
-						// additional things somewhere else, maybe we should
-						// call the provider to do a cleanup here.
+						// If the provider supports cleanup, call it to remove
+						// supporting files (libraries, completers, etc.)
+						if prov, err := providers.New(b.URL, b.Provider); err == nil {
+							if cleaner, ok := prov.(providers.Cleaner); ok {
+								if err := cleaner.Cleanup(); err != nil {
+									log.Warnf("Provider cleanup failed: %v", err)
+								}
+							}
+						}
+
 						if err := os.Remove(os.ExpandEnv(bp)); err != nil && !os.IsNotExist(err) {
 							return fmt.Errorf("Error removing path %s: %v", os.ExpandEnv(bp), err)
 						}
