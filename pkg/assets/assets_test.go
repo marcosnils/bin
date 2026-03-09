@@ -27,6 +27,7 @@ func (m *mockOSResolver) GetOSSpecificExtensions() []string {
 var (
 	testLinuxAMDResolver   = &mockOSResolver{OS: []string{"linux"}, Arch: []string{"amd64", "x86_64", "x64", "64"}, OSSpecificExtensions: []string{"AppImage"}}
 	testWindowsAMDResolver = &mockOSResolver{OS: []string{"windows", "win"}, Arch: []string{"amd64", "x86_64", "x64", "64"}, OSSpecificExtensions: []string{"exe"}}
+	testDarwinARMResolver  = &mockOSResolver{OS: []string{"darwin", "macos", "osx"}, Arch: []string{"arm64", "aarch64"}}
 )
 
 func TestSanitizeName(t *testing.T) {
@@ -147,6 +148,17 @@ func TestFilterAssets(t *testing.T) {
 		{args{"cli", []*Asset{
 			{Name: "dapr", URL: ""},
 		}}, "dapr", testLinuxAMDResolver},
+		{args{"mytool", []*Asset{
+			{Name: "mytool-v1.0.0-aarch64-apple-darwin.tar.gz", URL: "https://example.com/mytool-v1.0.0-aarch64-apple-darwin.tar.gz"},
+			{Name: "mytool-v1.0.0-aarch64-apple-darwin.tar.gz.sha256", URL: "https://example.com/mytool-v1.0.0-aarch64-apple-darwin.tar.gz.sha256"},
+			{Name: "mytool-v1.0.0-x86_64-apple-darwin.tar.gz", URL: "https://example.com/mytool-v1.0.0-x86_64-apple-darwin.tar.gz"},
+			{Name: "mytool-v1.0.0-x86_64-apple-darwin.tar.gz.sha256", URL: "https://example.com/mytool-v1.0.0-x86_64-apple-darwin.tar.gz.sha256"},
+		}}, "mytool-v1.0.0-aarch64-apple-darwin.tar.gz", testDarwinARMResolver},
+		{args{"mytool", []*Asset{
+			{Name: "mytool-linux-aarch64-musl.zip", URL: "https://example.com/mytool-linux-aarch64-musl.zip"},
+			{Name: "mytool-linux-aarch64.zip", URL: "https://example.com/mytool-linux-aarch64.zip"},
+			{Name: "mytool-macos-aarch64.zip", URL: "https://example.com/mytool-macos-aarch64.zip"},
+		}}, "mytool-macos-aarch64.zip", testDarwinARMResolver},
 	}
 
 	f := NewFilter(&FilterOpts{SkipScoring: false})
@@ -162,6 +174,174 @@ func TestFilterAssets(t *testing.T) {
 		}
 	}
 
+}
+
+func TestLooksLikeMetadataAsset(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		out  bool
+	}{
+		{
+			name: "sha256 suffix",
+			in:   "tool-darwin-aarch64.tar.gz.sha256",
+			out:  true,
+		},
+		{
+			name: "checksums token",
+			in:   "checksums.txt",
+			out:  true,
+		},
+		{
+			name: "binary archive",
+			in:   "tool-darwin-aarch64.tar.gz",
+			out:  false,
+		},
+	}
+
+	for _, c := range cases {
+		result := looksLikeMetadataAsset(c.in)
+		if result != c.out {
+			t.Fatalf("%s: expected %v, got %v", c.name, c.out, result)
+		}
+	}
+}
+
+func TestLooksLikeArchiveJunk(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		out  bool
+	}{
+		{
+			name: "readme markdown",
+			in:   "mytool-1.0.0-darwin-arm64/README.md",
+			out:  true,
+		},
+		{
+			name: "license with no extension",
+			in:   "mytool-1.0.0-darwin-arm64/LICENSE",
+			out:  true,
+		},
+		{
+			name: "license with suffix",
+			in:   "mytool-v1.0.0-aarch64-apple-darwin/LICENSE-MIT",
+			out:  true,
+		},
+		{
+			name: "autocomplete file",
+			in:   "mytool-v1.0.0-aarch64-apple-darwin/autocomplete/_mytool",
+			out:  true,
+		},
+		{
+			name: "man page",
+			in:   "mytool-v1.0.0-aarch64-apple-darwin/mytool.1",
+			out:  true,
+		},
+		{
+			name: "binary without extension",
+			in:   "mytool-1.0.0-darwin-arm64/mytool",
+			out:  false,
+		},
+		{
+			name: "windows binary",
+			in:   "tool/windows/tool.exe",
+			out:  false,
+		},
+		{
+			name: "backslash path license",
+			in:   "tool-1.0\\LICENSE",
+			out:  true,
+		},
+		{
+			name: "backslash path binary",
+			in:   "tool-1.0\\tool",
+			out:  false,
+		},
+		{
+			name: "completions directory",
+			in:   "tool-1.0/completions/tool.bash",
+			out:  true,
+		},
+	}
+
+	for _, c := range cases {
+		result := looksLikeArchiveJunk(c.in)
+		if result != c.out {
+			t.Fatalf("%s: expected %v, got %v", c.name, c.out, result)
+		}
+	}
+}
+
+func TestFilterArchiveAssets(t *testing.T) {
+	as := []*Asset{
+		{Name: "mytool-1.0.0-darwin-arm64/LICENSE"},
+		{Name: "mytool-1.0.0-darwin-arm64/README.md"},
+		{Name: "mytool-1.0.0-darwin-arm64/mytool"},
+	}
+
+	filtered := filterArchiveAssets(as)
+	if len(filtered) != 1 {
+		t.Fatalf("expected 1 archive candidate, got %d (%v)", len(filtered), filtered)
+	}
+	if filtered[0].Name != "mytool-1.0.0-darwin-arm64/mytool" {
+		t.Fatalf("unexpected selected archive candidate %s", filtered[0].Name)
+	}
+}
+
+func TestFilterArchiveAssetsComplexLayout(t *testing.T) {
+	as := []*Asset{
+		{Name: "mytool-v1.0.0-aarch64-apple-darwin/CHANGELOG.md"},
+		{Name: "mytool-v1.0.0-aarch64-apple-darwin/LICENSE-APACHE"},
+		{Name: "mytool-v1.0.0-aarch64-apple-darwin/LICENSE-MIT"},
+		{Name: "mytool-v1.0.0-aarch64-apple-darwin/README.md"},
+		{Name: "mytool-v1.0.0-aarch64-apple-darwin/autocomplete/_mytool"},
+		{Name: "mytool-v1.0.0-aarch64-apple-darwin/autocomplete/_mytool.ps1"},
+		{Name: "mytool-v1.0.0-aarch64-apple-darwin/autocomplete/mytool.bash"},
+		{Name: "mytool-v1.0.0-aarch64-apple-darwin/autocomplete/mytool.fish"},
+		{Name: "mytool-v1.0.0-aarch64-apple-darwin/mytool"},
+		{Name: "mytool-v1.0.0-aarch64-apple-darwin/mytool.1"},
+	}
+
+	filtered := filterArchiveAssets(as)
+	if len(filtered) != 1 {
+		t.Fatalf("expected 1 archive candidate, got %d (%v)", len(filtered), filtered)
+	}
+	if filtered[0].Name != "mytool-v1.0.0-aarch64-apple-darwin/mytool" {
+		t.Fatalf("unexpected selected archive candidate %s", filtered[0].Name)
+	}
+}
+
+func TestFilterArchiveAssetsAllFiltered(t *testing.T) {
+	as := []*Asset{
+		{Name: "pkg/README.md"},
+		{Name: "pkg/LICENSE"},
+	}
+
+	filtered := filterArchiveAssets(as)
+	if len(filtered) != len(as) {
+		t.Fatalf("expected fallback to original list (%d items), got %d", len(as), len(filtered))
+	}
+}
+
+func TestLooksLikeManPageExt(t *testing.T) {
+	cases := []struct {
+		in  string
+		out bool
+	}{
+		{in: ".1", out: true},
+		{in: ".8", out: true},
+		{in: ".0", out: false},
+		{in: ".md", out: false},
+		{in: ".10", out: false},
+	}
+
+	for _, c := range cases {
+		result := looksLikeManPageExt(c.in)
+		if result != c.out {
+			t.Fatalf("ext %s: expected %v, got %v", c.in, c.out, result)
+		}
+	}
 }
 
 func TestIsSupportedExt(t *testing.T) {

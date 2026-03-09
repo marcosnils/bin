@@ -10,3 +10,12 @@ func ContainsAny(s string, v []string) bool {
 	}
 	return false
 }
+
+func HasAnySuffix(s string, suffixes []string) bool {
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(s, suffix) {
+			return true
+		}
+	}
+	return false
+}
