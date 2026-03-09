@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -27,6 +28,35 @@ import (
 var (
 	msiType = filetype.AddType("msi", "application/octet-stream")
 	ascType = filetype.AddType("asc", "text/plain")
+
+	metadataSuffixes = []string{
+		".sha256", ".sha512", ".sha1", ".md5",
+		".sha256sum", ".sha512sum",
+		".sig", ".minisig", ".pem", ".crt", ".cer", ".asc",
+	}
+
+	metadataTokens = []string{
+		"checksum", "sha256sum", "sha512sum",
+	}
+
+	archiveJunkSuffixes = []string{
+		".md", ".markdown", ".rst", ".adoc", ".txt", ".rtf",
+		".html", ".htm", ".pdf",
+		".png", ".jpg", ".jpeg", ".gif", ".svg",
+		".yml", ".yaml", ".json", ".toml", ".ini",
+		".example", ".sample",
+	}
+
+	archiveJunkBaseNames = []string{
+		"license", "copying", "notice",
+		"readme", "changelog", "changes", "news",
+		"authors", "contributors", "contributing",
+		"installation",
+	}
+
+	archiveJunkDirs = []string{
+		"/autocomplete/", "/completions/",
+	}
 )
 
 type Asset struct {
@@ -118,6 +148,8 @@ func NewFilter(opts *FilterOpts) *Filter {
 // select the proper one and ask the user to manually select one
 // in case it can't determine it
 func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, error) {
+	as = filterInstallableAssets(as)
+
 	matches := []*FilteredAsset{}
 	if len(as) == 1 {
 		a := as[0]
@@ -219,37 +251,79 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 func SanitizeName(name, version string) string {
 	name = strings.ToLower(name)
 	replacements := []string{}
+	separators := []string{"_", "-", "."}
+	innerSeparators := []string{"_", "-", "."}
+
+	osNames := appendUnique(
+		resolver.GetOS(),
+		"darwin", "macos", "osx", "apple",
+		"linux",
+		"windows", "win",
+		"freebsd", "openbsd", "netbsd", "dragonfly",
+		"android",
+	)
+	archNames := appendUnique(
+		resolver.GetArch(),
+		"amd64", "x86_64", "x64",
+		"arm64", "aarch64", "armv7", "armv6", "arm",
+		"386", "i386", "x86",
+	)
 
 	// TODO maybe instead of doing this put everything in a map (set) and then
 	// generate the replacements? IDK.
-	firstPass := true
-	for _, osName := range resolver.GetOS() {
-		for _, archName := range resolver.GetArch() {
-			replacements = append(replacements, "_"+osName+archName, "")
-			replacements = append(replacements, "-"+osName+archName, "")
-			replacements = append(replacements, "."+osName+archName, "")
-
-			if firstPass {
-				replacements = append(replacements, "_"+archName, "")
-				replacements = append(replacements, "-"+archName, "")
-				replacements = append(replacements, "."+archName, "")
+	for _, osName := range osNames {
+		for _, archName := range archNames {
+			for _, sep := range separators {
+				replacements = append(replacements, sep+osName+archName, "")
+				replacements = append(replacements, sep+archName+osName, "")
+				for _, innerSep := range innerSeparators {
+					replacements = append(replacements, sep+osName+innerSep+archName, "")
+					replacements = append(replacements, sep+archName+innerSep+osName, "")
+				}
 			}
 		}
 
-		replacements = append(replacements, "_"+osName, "")
-		replacements = append(replacements, "-"+osName, "")
-		replacements = append(replacements, "."+osName, "")
-
-		firstPass = false
-
+		for _, sep := range separators {
+			replacements = append(replacements, sep+osName, "")
+		}
 	}
 
-	replacements = append(replacements, "_"+version, "")
-	replacements = append(replacements, "_"+strings.TrimPrefix(version, "v"), "")
-	replacements = append(replacements, "-"+version, "")
-	replacements = append(replacements, "-"+strings.TrimPrefix(version, "v"), "")
+	for _, archName := range archNames {
+		for _, sep := range separators {
+			replacements = append(replacements, sep+archName, "")
+		}
+	}
+
+	trimmedVersion := strings.TrimPrefix(strings.ToLower(version), "v")
+	for _, sep := range separators {
+		replacements = append(replacements, sep+trimmedVersion, "")
+		replacements = append(replacements, sep+"v"+trimmedVersion, "")
+	}
+
 	r := strings.NewReplacer(replacements...)
-	return r.Replace(name)
+	name = r.Replace(name)
+	name = strings.Trim(name, "._-")
+	name = strings.ReplaceAll(name, "__", "_")
+	name = strings.ReplaceAll(name, "--", "-")
+	name = strings.ReplaceAll(name, "..", ".")
+	return strings.Trim(name, "._-")
+}
+
+func appendUnique(values []string, additions ...string) []string {
+	out := make([]string, 0, len(values)+len(additions))
+	seen := map[string]struct{}{}
+	for _, v := range append(values, additions...) {
+		v = strings.ToLower(v)
+		if v == "" {
+			continue
+		}
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	return out
 }
 
 // ProcessURL processes a FilteredAsset by uncompressing/unarchiving the URL of the asset.
@@ -385,6 +459,7 @@ func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
 	for f := range tarFiles {
 		as = append(as, &Asset{Name: f, URL: ""})
 	}
+	as = filterArchiveAssets(as)
 	choice, err := f.FilterAssets(name, as)
 	if err != nil {
 		return nil, err
@@ -451,6 +526,7 @@ func (f *Filter) processZip(name string, r io.Reader) (*finalFile, error) {
 	for f := range zipFiles {
 		as = append(as, &Asset{Name: f, URL: ""})
 	}
+	as = filterArchiveAssets(as)
 	choice, err := f.FilterAssets(name, as)
 	if err != nil {
 		return nil, err
@@ -481,4 +557,79 @@ func isSupportedExt(filename string) bool {
 	}
 
 	return true
+}
+
+// filterAssetsBy removes assets matching the skip predicate, falling back to
+// the original list if every asset would be removed.
+func filterAssetsBy(as []*Asset, skip func(name string) bool, label string) []*Asset {
+	filtered := make([]*Asset, 0, len(as))
+	for _, a := range as {
+		if skip(a.Name) {
+			log.Debugf("Skipping %s asset %s", label, a.Name)
+			continue
+		}
+		filtered = append(filtered, a)
+	}
+
+	if len(filtered) == 0 {
+		log.Debugf("All %d assets matched %s filter, keeping original list", len(as), label)
+		return as
+	}
+	return filtered
+}
+
+func filterInstallableAssets(as []*Asset) []*Asset {
+	return filterAssetsBy(as, looksLikeMetadataAsset, "metadata")
+}
+
+func filterArchiveAssets(as []*Asset) []*Asset {
+	return filterAssetsBy(as, func(name string) bool {
+		return looksLikeMetadataAsset(name) || looksLikeArchiveJunk(name)
+	}, "non-binary archive")
+}
+
+func looksLikeMetadataAsset(name string) bool {
+	lower := strings.ToLower(name)
+
+	if bstrings.HasAnySuffix(lower, metadataSuffixes) {
+		return true
+	}
+
+	return bstrings.ContainsAny(lower, metadataTokens)
+}
+
+func looksLikeArchiveJunk(name string) bool {
+	normalized := strings.ToLower(strings.ReplaceAll(name, "\\", "/"))
+	base := path.Base(normalized)
+
+	if bstrings.ContainsAny(normalized, archiveJunkDirs) {
+		return true
+	}
+
+	if bstrings.HasAnySuffix(base, archiveJunkSuffixes) {
+		return true
+	}
+
+	ext := path.Ext(base)
+	if looksLikeManPageExt(ext) {
+		return true
+	}
+
+	stem := strings.TrimSuffix(base, ext)
+	for _, junk := range archiveJunkBaseNames {
+		if stem == junk || strings.HasPrefix(stem, junk+"-") || strings.HasPrefix(stem, junk+"_") {
+			return true
+		}
+	}
+
+	return false
+}
+
+func looksLikeManPageExt(ext string) bool {
+	if len(ext) != 2 {
+		return false
+	}
+
+	ch := ext[1]
+	return ext[0] == '.' && ch >= '1' && ch <= '9'
 }

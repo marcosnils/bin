@@ -161,11 +161,15 @@ func write() error {
 // one of darwin, freebsd, linux, and so on.
 func GetArch() []string {
 	res := []string{runtime.GOARCH}
-	if runtime.GOARCH == "amd64" {
+	switch runtime.GOARCH {
+	case "amd64":
 		// Adding x86_64 manually since the uname syscall (man 2 uname)
 		// is not implemented in all systems
 		res = append(res, "x86_64")
 		res = append(res, "x64")
+	case "arm64":
+		// Many release assets (especially on macOS) use aarch64
+		res = append(res, "aarch64")
 	}
 	return res
 }
@@ -174,7 +178,11 @@ func GetArch() []string {
 // one of 386, amd64, arm, s390x, and so on.
 func GetOS() []string {
 	res := []string{runtime.GOOS}
-	if runtime.GOOS == "windows" {
+	switch runtime.GOOS {
+	case "darwin":
+		// Many release assets use macos or osx instead of darwin
+		res = append(res, "macos", "osx")
+	case "windows":
 		// Adding win since some repositories release with that as the indicator of a windows binary
 		res = append(res, "win")
 	}
