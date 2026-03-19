@@ -46,7 +46,7 @@ func newRemoveCmd() *removeCmd {
 						// additional things somewhere else, maybe we should
 						// call the provider to do a cleanup here.
 						if err := os.Remove(os.ExpandEnv(bp)); err != nil && !os.IsNotExist(err) {
-							return fmt.Errorf("Error removing path %s: %v", os.ExpandEnv(bp), err)
+							return fmt.Errorf("error removing path %s: %v", os.ExpandEnv(bp), err)
 						}
 						fmt.Fprintf(os.Stderr, "removed binary %s\n", os.ExpandEnv(bp))
 						continue
