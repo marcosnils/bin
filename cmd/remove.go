@@ -48,6 +48,7 @@ func newRemoveCmd() *removeCmd {
 						if err := os.Remove(os.ExpandEnv(bp)); err != nil && !os.IsNotExist(err) {
 							return fmt.Errorf("Error removing path %s: %v", os.ExpandEnv(bp), err)
 						}
+						fmt.Fprintf(os.Stderr, "removed binary %s\n", os.ExpandEnv(bp))
 						continue
 					}
 				}
