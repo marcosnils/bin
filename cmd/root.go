@@ -28,7 +28,12 @@ func (cmd *rootCmd) Execute(args []string) {
 	cmd.cmd.SetArgs(args)
 
 	if defaultCommand(cmd.cmd, args) {
-		cmd.cmd.SetArgs(append([]string{"list"}, args...))
+		if len(args) == 0 {
+			cmd.cmd.SetArgs(append([]string{"list"}, args...))
+		} else {
+			fmt.Fprintf(os.Stderr, "unknown command: bin %s\n", args[0])
+			os.Exit(1)
+		}
 	}
 
 	if err := cmd.cmd.Execute(); err != nil {
