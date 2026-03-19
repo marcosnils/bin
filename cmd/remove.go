@@ -27,6 +27,7 @@ func newRemoveCmd() *removeCmd {
 			cfg := config.Get()
 
 			existingToRemove := []string{}
+			matched := map[string]bool{}
 
 			for _, b := range cfg.Bins {
 				for _, p := range args {
@@ -39,6 +40,7 @@ func newRemoveCmd() *removeCmd {
 					}
 					if os.ExpandEnv(b.Path) == os.ExpandEnv(bp) || p == b.Path {
 						existingToRemove = append(existingToRemove, b.Path)
+						matched[p] = true
 
 						// TODO some providers (like docker) might download
 						// additional things somewhere else, maybe we should
@@ -50,6 +52,22 @@ func newRemoveCmd() *removeCmd {
 					}
 				}
 			}
+
+			notFound := []string{}
+			for _, p := range args {
+				if !matched[p] {
+					notFound = append(notFound, p)
+				}
+			}
+			if len(notFound) > 0 {
+				for _, p := range notFound {
+					fmt.Fprintf(os.Stderr, "binary %s not found\n", p)
+				}
+				if len(existingToRemove) == 0 {
+					return fmt.Errorf("no matching binaries found")
+				}
+			}
+
 			err := config.RemoveBinaries(existingToRemove)
 			return err
 		},
