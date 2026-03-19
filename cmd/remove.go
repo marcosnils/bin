@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/marcosnils/bin/pkg/config"
 	"github.com/spf13/cobra"
@@ -28,26 +29,29 @@ func newRemoveCmd() *removeCmd {
 
 			existingToRemove := []string{}
 
-			for _, b := range cfg.Bins {
-				for _, p := range args {
-					// TODO: avoid calling getBinPath each time and make it
-					// once at the beginning for each arg
-					bp, err := getBinPath(p)
+			bins := cfg.Bins
 
-					if err != nil && !errors.Is(err, os.ErrNotExist) {
-						return err
-					}
-					if os.ExpandEnv(b.Path) == os.ExpandEnv(bp) || p == b.Path {
-						existingToRemove = append(existingToRemove, b.Path)
+			for _, p := range args {
+				// TODO: avoid calling getBinPath each time and make it
+				// once at the beginning for each arg
+				bp, err := getBinPath(p)
 
-						// TODO some providers (like docker) might download
-						// additional things somewhere else, maybe we should
-						// call the provider to do a cleanup here.
-						if err := os.Remove(os.ExpandEnv(bp)); err != nil && !os.IsNotExist(err) {
-							return fmt.Errorf("Error removing path %s: %v", os.ExpandEnv(bp), err)
-						}
-						continue
+				if errors.Is(err, exec.ErrNotFound) || errors.Is(err, os.ErrNotExist) {
+					fmt.Fprintf(os.Stderr, "binary %s not found in PATH, skipping\n", p)
+				} else if err != nil {
+					return err
+				}
+				ebp := os.ExpandEnv(bp)
+				if _, ok := bins[ebp]; ok {
+					existingToRemove = append(existingToRemove, ebp)
+
+					// TODO some providers (like docker) might download
+					// additional things somewhere else, maybe we should
+					// call the provider to do a cleanup here.
+					if err := os.Remove(os.ExpandEnv(bp)); err != nil && !os.IsNotExist(err) {
+						return fmt.Errorf("error removing path %s: %v", os.ExpandEnv(bp), err)
 					}
+					continue
 				}
 			}
 			err := config.RemoveBinaries(existingToRemove)
