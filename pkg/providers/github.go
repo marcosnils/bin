@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/caarlos0/log"
@@ -21,6 +22,7 @@ type gitHub struct {
 	repo   string
 	tag    string
 	token  string
+	filter string
 }
 
 func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
@@ -36,6 +38,9 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 		}
 		log.Infof("Getting %s release for %s/%s", g.tag, g.owner, g.repo)
 		release, _, err = g.client.Repositories.GetReleaseByTag(context.TODO(), g.owner, g.repo, g.tag)
+	} else if g.filter != "" {
+		log.Infof("Getting latest release matching %q for %s/%s", g.filter, g.owner, g.repo)
+		release, err = g.findLatestMatchingRelease()
 	} else {
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
 		release, resp, err = g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
@@ -82,6 +87,15 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 // GetLatestVersion checks the latest repo release and
 // returns the corresponding name and url to fetch the version
 func (g *gitHub) GetLatestVersion() (string, string, error) {
+	if g.filter != "" {
+		log.Debugf("Getting latest release matching %q for %s/%s", g.filter, g.owner, g.repo)
+		release, err := g.findLatestMatchingRelease()
+		if err != nil {
+			return "", "", err
+		}
+		return release.GetTagName(), release.GetHTMLURL(), nil
+	}
+
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
 	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
 	if err != nil {
@@ -89,6 +103,33 @@ func (g *gitHub) GetLatestVersion() (string, string, error) {
 	}
 
 	return release.GetTagName(), release.GetHTMLURL(), nil
+}
+
+// findLatestMatchingRelease pages through releases and returns the first one
+// whose tag (as it appears in html_url) matches the glob filter pattern.
+func (g *gitHub) findLatestMatchingRelease() (*github.RepositoryRelease, error) {
+	opts := &github.ListOptions{PerPage: 30}
+	for {
+		releases, resp, err := g.client.Repositories.ListReleases(context.TODO(), g.owner, g.repo, opts)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range releases {
+			tagName := path.Base(r.GetHTMLURL())
+			matched, err := path.Match(g.filter, tagName)
+			if err != nil {
+				return nil, err
+			}
+			if matched {
+				return r, nil
+			}
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return nil, fmt.Errorf("no release matching %q found for %s/%s", g.filter, g.owner, g.repo)
 }
 
 func (g *gitHub) GetID() string {
@@ -114,6 +155,16 @@ func newGitHub(u *url.URL) (Provider, error) {
 			}
 		}
 
+	}
+
+	filter := u.Query().Get("filter")
+	if filter != "" {
+		if _, err := path.Match(filter, ""); err != nil {
+			return nil, fmt.Errorf("invalid filter pattern %q: %v", filter, err)
+		}
+		q := u.Query()
+		q.Del("filter")
+		u.RawQuery = q.Encode()
 	}
 
 	token := os.Getenv("GITHUB_AUTH_TOKEN")
@@ -149,5 +200,5 @@ func newGitHub(u *url.URL) (Provider, error) {
 		client = github.NewClient(tc)
 	}
 
-	return &gitHub{url: u, client: client, owner: s[1], repo: s[2], tag: tag, token: token}, nil
+	return &gitHub{url: u, client: client, owner: s[1], repo: s[2], tag: tag, token: token, filter: filter}, nil
 }
