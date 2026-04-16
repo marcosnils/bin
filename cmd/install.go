@@ -130,38 +130,62 @@ func checkFinalPath(path, fileName string) (string, error) {
 // and makes it executable. It also checks if any other binary
 // has the same hash and exists if so.
 
-// TODO check if other binary has the same hash and warn about it.
-// TODO if the file is zipped, tared, whatever then extract it
+// TODO: check if other binary has the same hash and warn about it.
+// TODO: if the file is zipped, tared, whatever then extract it
 func saveToDisk(f *providers.File, path string, overwrite bool) ([]byte, error) {
-	epath := os.ExpandEnv((path))
+	epath := os.ExpandEnv(path)
 
-	extraFlags := os.O_EXCL
+	dir := filepath.Dir(epath)
+	base := filepath.Base(epath)
 
-	if overwrite {
-		extraFlags = 0
-		err := os.Remove(epath)
-		log.Debugf("Overwrite flag set, removing file %s\n", epath)
-		if err != nil && !os.IsNotExist(err) {
-			return nil, err
-		}
-	}
+	// Write to a temp .new file first to allow atomic replacement.
+	// This is required on Windows where in-place writes to running binaries fail.
+	newPath := filepath.Join(dir, fmt.Sprintf(".%s.new", base))
 
-	file, err := os.OpenFile(epath, os.O_RDWR|os.O_CREATE|extraFlags, 0o766)
+	file, err := os.OpenFile(newPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o766)
 	if err != nil {
 		return nil, err
 	}
 
-	defer file.Close()
-
 	h := sha256.New()
-
 	tr := io.TeeReader(f.Data, h)
 
 	log.Infof("Copying for %s@%s into %s", f.Name, f.Version, epath)
 	_, err = io.Copy(file, tr)
+	file.Close()
 	if err != nil {
+		_ = os.Remove(newPath)
 		return nil, err
 	}
+
+	// If the target already exists, check overwrite flag and move it aside.
+	oldPath := filepath.Join(dir, fmt.Sprintf(".%s.old", base))
+	_ = os.Remove(oldPath)
+
+	_, statErr := os.Stat(epath)
+	if statErr == nil {
+		if !overwrite {
+			_ = os.Remove(newPath)
+			return nil, fmt.Errorf("%w", os.ErrExist)
+		}
+		log.Debugf("Overwrite flag set, moving %s to %s\n", epath, oldPath)
+		if err = os.Rename(epath, oldPath); err != nil {
+			_ = os.Remove(newPath)
+			return nil, err
+		}
+	}
+
+	// Atomically move the new file into place.
+	if err = os.Rename(newPath, epath); err != nil {
+		// Attempt rollback if we moved the old file aside.
+		if rerr := os.Rename(oldPath, epath); rerr != nil {
+			log.Debugf("Rollback failed, %s may be missing: %v\n", epath, rerr)
+		}
+		return nil, err
+	}
+
+	// Clean up the old file.
+	_ = os.Remove(oldPath)
 
 	return h.Sum(nil), nil
 }
