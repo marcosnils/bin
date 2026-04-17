@@ -466,8 +466,30 @@ func (f *Filter) processZip(name string, r io.Reader) (*finalFile, error) {
 
 // isSupportedExt checks if this provider supports
 // dealing with this specific file extension
+// nonBinaryExts lists extensions that are never installable binaries or archives.
+// These are excluded from scoring so they don't compete with real assets.
+var nonBinaryExts = map[string]bool{
+	"txt":    true,
+	"sha256": true,
+	"sha512": true,
+	"sha1":   true,
+	"md5":    true,
+	"b3":     true,
+	"sum":    true,
+	"sig":    true,
+	"pem":    true,
+	"json":   true,
+	"yaml":   true,
+	"yml":    true,
+	"sbom":   true,
+}
+
 func isSupportedExt(filename string) bool {
 	if ext := strings.TrimPrefix(filepath.Ext(filename), "."); len(ext) > 0 {
+		if nonBinaryExts[strings.ToLower(ext)] {
+			log.Debugf("Filename %s doesn't have a supported extension", filename)
+			return false
+		}
 		switch filetype.GetType(ext) {
 		case msiType, matchers.TypeDeb, matchers.TypeRpm, ascType:
 			log.Debugf("Filename %s doesn't have a supported extension", filename)
