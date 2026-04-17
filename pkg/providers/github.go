@@ -77,7 +77,7 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 	version := release.GetTagName()
 
 	// TODO calculate file hash. Not sure if we can / should do it here
-	// since we don't want to read the file unnecesarily. Additionally, sometimes
+	// since we don't want to read the file unnecessarily. Additionally, sometimes
 	// releases have .sha256 files, so it'd be nice to check for those also
 	file := &File{Data: outFile.Source, Name: outFile.Name, Version: version, PackagePath: outFile.PackagePath}
 
