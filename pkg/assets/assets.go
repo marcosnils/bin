@@ -351,6 +351,7 @@ func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
 	if len(f.opts.PackagePath) > 0 {
 		log.Debugf("Processing tag with PackagePath %s\n", f.opts.PackagePath)
 	}
+	execFiles := map[string][]byte{}
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -375,7 +376,16 @@ func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
 				return nil, err
 			}
 			tarFiles[header.Name] = bs
+			if header.FileInfo().Mode()&0111 != 0 {
+				execFiles[header.Name] = bs
+			}
 		}
+	}
+	if len(execFiles) > 0 {
+		log.Debugf("Filtering tar candidates to %d executable file(s)", len(execFiles))
+		tarFiles = execFiles
+	} else {
+		log.Debugf("No executable files found in tar archive, considering all files")
 	}
 	if len(tarFiles) == 0 {
 		return nil, fmt.Errorf("no files found in tar archive, use -p flag to manually select . PackagePath [%s]", f.opts.PackagePath)
@@ -415,6 +425,7 @@ func (f *Filter) processZip(name string, r io.Reader) (*finalFile, error) {
 	zr := zipstream.NewReader(r)
 
 	zipFiles := map[string][]byte{}
+	zipExecFiles := map[string][]byte{}
 	if len(f.opts.PackagePath) > 0 {
 		log.Debugf("Processing tag with PackagePath %s\n", f.opts.PackagePath)
 	}
@@ -442,6 +453,15 @@ func (f *Filter) processZip(name string, r io.Reader) (*finalFile, error) {
 		}
 
 		zipFiles[header.Name] = bs
+		if header.Mode()&0111 != 0 {
+			zipExecFiles[header.Name] = bs
+		}
+	}
+	if len(zipExecFiles) > 0 {
+		log.Debugf("Filtering zip candidates to %d executable file(s)", len(zipExecFiles))
+		zipFiles = zipExecFiles
+	} else {
+		log.Debugf("No executable files found in zip archive, considering all files")
 	}
 	if len(zipFiles) == 0 {
 		return nil, fmt.Errorf("No files found in zip archive. PackagePath [%s]", f.opts.PackagePath)
