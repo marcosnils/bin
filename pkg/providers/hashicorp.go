@@ -100,7 +100,7 @@ func (g *hashiCorp) Fetch(opts *FetchOpts) (*File, error) {
 		candidates = append(candidates, &assets.Asset{Name: link.Filename, URL: link.URL})
 	}
 
-	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck})
+	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, NamePattern: opts.NamePattern})
 	gf, err := f.FilterAssets(g.repo, candidates)
 	if err != nil {
 		return nil, err

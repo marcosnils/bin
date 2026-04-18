@@ -50,7 +50,7 @@ func (c *codeberg) Fetch(opts *FetchOpts) (*File, error) {
 	for _, a := range release.Attachments {
 		candidates = append(candidates, &assets.Asset{Name: a.Name, URL: a.DownloadURL})
 	}
-	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName})
+	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName, NamePattern: opts.NamePattern})
 
 	gf, err := f.FilterAssets(c.repo, candidates)
 	if err != nil {

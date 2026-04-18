@@ -24,6 +24,7 @@ type installOpts struct {
 	force    bool
 	provider string
 	all      bool
+	name     string
 }
 
 func newInstallCmd() *installCmd {
@@ -60,7 +61,7 @@ func newInstallCmd() *installCmd {
 			}
 			log.Debugf("Using provider '%s' for '%s'", p.GetID(), u)
 
-			pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all})
+			pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all, NamePattern: root.opts.name})
 			if err != nil {
 				return err
 			}
@@ -104,6 +105,7 @@ func newInstallCmd() *installCmd {
 	root.cmd.Flags().BoolVarP(&root.opts.force, "force", "f", false, "Force the installation even if the file already exists")
 	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
 	root.cmd.Flags().StringVarP(&root.opts.provider, "provider", "p", "", "Forces to use a specific provider")
+	root.cmd.Flags().StringVarP(&root.opts.name, "name", "n", "", "Glob pattern to select a specific asset (use asset/file for archive contents)")
 	return root
 }
 

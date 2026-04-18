@@ -154,7 +154,7 @@ func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 		return nil, err
 	}
 
-	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck})
+	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, NamePattern: opts.NamePattern})
 
 	gf, err := f.FilterAssets(g.repo, candidates)
 	if err != nil {

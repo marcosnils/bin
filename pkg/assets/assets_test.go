@@ -1,6 +1,9 @@
 package assets
 
 import (
+	"archive/tar"
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"strings"
 	"testing"
@@ -162,6 +165,142 @@ func TestFilterAssets(t *testing.T) {
 		}
 	}
 
+}
+
+func TestFilterAssetsNamePattern(t *testing.T) {
+	as := []*Asset{
+		{Name: "foo-linux-amd64"},
+		{Name: "foo-darwin-amd64"},
+		{Name: "foo-windows-amd64.exe"},
+		{Name: "bar-linux-amd64"},
+	}
+
+	cases := []struct {
+		pattern  string
+		wantName string
+		wantErr  bool
+	}{
+		{"foo-linux*", "foo-linux-amd64", false},
+		{"bar*", "bar-linux-amd64", false},
+		{"baz*", "", true}, // no match
+	}
+
+	for _, c := range cases {
+		f := NewFilter(&FilterOpts{NamePattern: c.pattern})
+		got, err := f.FilterAssets("repo", as)
+		if c.wantErr {
+			if err == nil {
+				t.Errorf("pattern %q: expected error, got nil", c.pattern)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("pattern %q: unexpected error: %v", c.pattern, err)
+			continue
+		}
+		if got.Name != c.wantName {
+			t.Errorf("pattern %q: got %q, want %q", c.pattern, got.Name, c.wantName)
+		}
+	}
+}
+
+// makeTar builds an in-memory tar archive where every entry has mode 0755.
+func makeTar(files map[string]string) []byte {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	for name, content := range files {
+		data := []byte(content)
+		_ = tw.WriteHeader(&tar.Header{Name: name, Size: int64(len(data)), Mode: 0755})
+		_, _ = tw.Write(data)
+	}
+	_ = tw.Close()
+	return buf.Bytes()
+}
+
+// makeZip builds an in-memory zip archive where every entry has mode 0755.
+func makeZip(files map[string]string) []byte {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for name, content := range files {
+		fh := &zip.FileHeader{Name: name, Method: zip.Store}
+		fh.SetMode(0755)
+		w, _ := zw.CreateHeader(fh)
+		_, _ = w.Write([]byte(content))
+	}
+	_ = zw.Close()
+	return buf.Bytes()
+}
+
+func TestProcessTarNamePattern(t *testing.T) {
+	data := makeTar(map[string]string{
+		"tool-v1.0/mytool":  "mytool binary",
+		"tool-v1.0/helper":  "helper binary",
+	})
+
+	cases := []struct {
+		pattern  string
+		wantName string
+		wantErr  bool
+	}{
+		{"foo*/mytool", "mytool", false},           // match by basename
+		{"foo*/tool-v1.0/mytool", "mytool", false}, // match by full path
+		{"foo*/missing", "", true},                 // no match
+	}
+
+	for _, c := range cases {
+		f := NewFilter(&FilterOpts{NamePattern: c.pattern})
+		f.namePatternUsed = true // simulate top-level asset already selected
+		result, err := f.processTar("repo", bytes.NewReader(data))
+		if c.wantErr {
+			if err == nil {
+				t.Errorf("pattern %q: expected error, got nil", c.pattern)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("pattern %q: unexpected error: %v", c.pattern, err)
+			continue
+		}
+		if result.Name != c.wantName {
+			t.Errorf("pattern %q: got name %q, want %q", c.pattern, result.Name, c.wantName)
+		}
+	}
+}
+
+func TestProcessZipNamePattern(t *testing.T) {
+	data := makeZip(map[string]string{
+		"tool-v1.0/mytool": "mytool binary",
+		"tool-v1.0/helper": "helper binary",
+	})
+
+	cases := []struct {
+		pattern  string
+		wantName string
+		wantErr  bool
+	}{
+		{"foo*/mytool", "mytool", false},           // match by basename
+		{"foo*/tool-v1.0/mytool", "mytool", false}, // match by full path
+		{"foo*/missing", "", true},                 // no match
+	}
+
+	for _, c := range cases {
+		f := NewFilter(&FilterOpts{NamePattern: c.pattern})
+		f.namePatternUsed = true // simulate top-level asset already selected
+		result, err := f.processZip("repo", bytes.NewReader(data))
+		if c.wantErr {
+			if err == nil {
+				t.Errorf("pattern %q: expected error, got nil", c.pattern)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("pattern %q: unexpected error: %v", c.pattern, err)
+			continue
+		}
+		if result.Name != c.wantName {
+			t.Errorf("pattern %q: got name %q, want %q", c.pattern, result.Name, c.wantName)
+		}
+	}
 }
 
 func TestIsSupportedExt(t *testing.T) {
