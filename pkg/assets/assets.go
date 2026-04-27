@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/caarlos0/log"
@@ -144,7 +145,7 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 		matches = f.scoreAssets(repoName, as)
 	}
 
-	return selectCandidate(matches)
+	return selectCandidate(matches, toFilteredAssets(repoName, as))
 }
 
 // applyNamePattern filters assets to those matching the asset portion of
@@ -246,7 +247,8 @@ func keepHighestScored(matches []*FilteredAsset) []*FilteredAsset {
 
 // selectCandidate returns the single best match, or prompts the user when
 // multiple candidates remain. Returns an error if there are no candidates.
-func selectCandidate(matches []*FilteredAsset) (*FilteredAsset, error) {
+// allAssets is the full unfiltered list offered as a fallback "List all" option.
+func selectCandidate(matches []*FilteredAsset, allAssets []*FilteredAsset) (*FilteredAsset, error) {
 	switch len(matches) {
 	case 0:
 		return nil, fmt.Errorf("Could not find any compatible files")
@@ -261,9 +263,25 @@ func selectCandidate(matches []*FilteredAsset) (*FilteredAsset, error) {
 	sort.SliceStable(generic, func(i, j int) bool {
 		return generic[i].String() < generic[j].String()
 	})
-	choice, err := options.Select("Multiple matches found, please select one:", generic)
+	if len(allAssets) > len(matches) {
+		generic = append(generic, options.LiteralStringer("Show all"))
+	}
+	choice, err := options.Select("Showing "+strconv.Itoa(len(matches))+" assets out of "+strconv.Itoa(len(allAssets))+". Select an option ", generic)
 	if err != nil {
 		return nil, err
+	}
+	if _, ok := choice.(options.LiteralStringer); ok {
+		all := make([]fmt.Stringer, len(allAssets))
+		for i, a := range allAssets {
+			all[i] = a
+		}
+		sort.SliceStable(all, func(i, j int) bool {
+			return all[i].String() < all[j].String()
+		})
+		choice, err = options.Select("Select from all available assets:", all)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return choice.(*FilteredAsset), nil
 }
