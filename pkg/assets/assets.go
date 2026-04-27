@@ -133,6 +133,15 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 		}
 	}
 
+	if f.opts.PackageName != "" {
+		for _, a := range as {
+			if a.Name == f.opts.PackageName {
+				log.Debugf("Asset %q matches PackageName exactly, selecting automatically", a.Name)
+				return &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL}, nil
+			}
+		}
+	}
+
 	var matches []*FilteredAsset
 	switch {
 	case len(as) == 1:
