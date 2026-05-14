@@ -20,6 +20,7 @@ import (
 	"github.com/h2non/filetype/types"
 	"github.com/krolaw/zipstream"
 	"github.com/marcosnils/bin/pkg/config"
+	"github.com/marcosnils/bin/pkg/httpclient"
 	"github.com/marcosnils/bin/pkg/options"
 	bstrings "github.com/marcosnils/bin/pkg/strings"
 	"github.com/xi2/xz"
@@ -345,7 +346,7 @@ func (f *Filter) ProcessURL(gf *FilteredAsset) (*finalFile, error) {
 		req.Header.Add(name, value)
 	}
 	log.Debugf("Checking binary from %s", gf.URL)
-	res, err := http.DefaultClient.Do(req)
+	res, err := httpclient.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}

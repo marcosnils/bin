@@ -12,6 +12,7 @@ import (
 	"github.com/caarlos0/log"
 	"github.com/coreos/go-semver/semver"
 	"github.com/marcosnils/bin/pkg/assets"
+	"github.com/marcosnils/bin/pkg/httpclient"
 	"github.com/marcosnils/bin/pkg/options"
 )
 
@@ -194,5 +195,5 @@ func newHashiCorp(u *url.URL) (Provider, error) {
 
 	baseURL, _ := url.Parse(releasesURLBase)
 
-	return &hashiCorp{url: u, client: http.DefaultClient, owner: "", repo: s[1], tag: tag, baseURL: baseURL}, nil
+	return &hashiCorp{url: u, client: httpclient.Client, owner: "", repo: s[1], tag: tag, baseURL: baseURL}, nil
 }
