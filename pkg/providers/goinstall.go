@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/caarlos0/log"
+	"github.com/marcosnils/bin/pkg/httpclient"
 )
 
 type goinstall struct {
@@ -97,7 +97,7 @@ func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
 }
 
 func (g *goinstall) GetLatestVersion() (string, string, error) {
-	resp, err := http.Get(g.latestURL)
+	resp, err := httpclient.Client.Get(g.latestURL)
 	if err != nil {
 		return "", "", err
 	}

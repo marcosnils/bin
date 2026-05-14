@@ -12,6 +12,7 @@ import (
 	"github.com/caarlos0/log"
 	"github.com/google/go-github/v31/github"
 	"github.com/marcosnils/bin/pkg/assets"
+	"github.com/marcosnils/bin/pkg/httpclient"
 	"golang.org/x/oauth2"
 )
 
@@ -177,14 +178,16 @@ func newGitHub(u *url.URL) (Provider, error) {
 	guu := os.Getenv("GHES_UPLOAD_URL")
 	gau := os.Getenv("GHES_AUTH_TOKEN")
 
+	oauthCtx := context.WithValue(context.Background(), oauth2.HTTPClient, httpclient.Client)
+
 	var tc *http.Client
 
 	if len(gbu) > 0 && len(guu) > 0 && len(gau) > 0 {
-		tc = oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(
+		tc = oauth2.NewClient(oauthCtx, oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: gau},
 		))
 	} else if token != "" {
-		tc = oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(
+		tc = oauth2.NewClient(oauthCtx, oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		))
 	}
