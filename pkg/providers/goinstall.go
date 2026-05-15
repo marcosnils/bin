@@ -14,7 +14,7 @@ import (
 )
 
 type goinstall struct {
-	name, repo, tag, latestURL string
+	name, repo, subPath, tag, latestURL string
 }
 
 func parseRepo(path string) (string, string, string, string) {
@@ -35,10 +35,38 @@ func parseRepo(path string) (string, string, string, string) {
 	return repo, tag, name, latestURL
 }
 
+func moduleRemoveVersion(mod string) string {
+	if i := strings.LastIndex(mod, "@"); i > -1 {
+		return mod[:i]
+	}
+	return mod
+}
+
+func baseModulePath(noVer string) (string, bool) {
+	parts := strings.Split(noVer, "/")
+	for len(parts) > 0 {
+		mod := strings.Join(parts, "/")
+		out, err := exec.Command("go", "list", "-m", "-f", "{{.Path}}", mod+"@latest").Output()
+		if err == nil {
+			return strings.TrimSpace(string(out)), true
+		}
+		parts = parts[:len(parts)-1]
+	}
+	return "", false
+}
+
 func newGoInstall(repo string) (Provider, error) {
 	repoUrl := strings.TrimPrefix(repo, "goinstall://")
+	subPath := ""
+	repoUrlNoVer := moduleRemoveVersion(repoUrl)
+	baseRepoUrl, found := baseModulePath(repoUrlNoVer)
+	subPath = strings.TrimPrefix(repoUrlNoVer, baseRepoUrl)
+	if found && subPath != "" {
+		repoUrl = baseRepoUrl
+		log.Debugf("Using base module %s with sub path \"%s\"", repoUrl, subPath)
+	}
 	repo, tag, name, latestURL := parseRepo(repoUrl)
-	return &goinstall{repo: repo, tag: tag, name: name, latestURL: latestURL}, nil
+	return &goinstall{repo: repo, subPath: subPath, tag: tag, name: name, latestURL: latestURL}, nil
 }
 
 func getGoPath() (string, error) {
@@ -71,7 +99,7 @@ func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
 		}
 	}
 
-	cmd := exec.Command("go", "install", fmt.Sprintf("%s@%s", g.repo, g.tag))
+	cmd := exec.Command("go", "install", fmt.Sprintf("%s%s@%s", g.repo, g.subPath, g.tag))
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
