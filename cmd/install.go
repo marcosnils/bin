@@ -83,13 +83,14 @@ func newInstallCmd() *installCmd {
 			}
 
 			err = config.UpsertBinary(&config.Binary{
-				RemoteName:  pResult.Name,
-				Path:        absPath,
-				Version:     pResult.Version,
-				Hash:        fmt.Sprintf("%x", hash),
-				URL:         u,
-				Provider:    p.GetID(),
-				PackagePath: pResult.PackagePath,
+				RemoteName:    pResult.Name,
+				Path:          absPath,
+				Version:       pResult.Version,
+				Hash:          fmt.Sprintf("%x", hash),
+				URL:           u,
+				Provider:      p.GetID(),
+				PackagePath:   pResult.PackagePath,
+				SelectedAsset: pResult.SelectedAsset,
 			})
 			if err != nil {
 				return err

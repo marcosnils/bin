@@ -204,6 +204,93 @@ func TestFilterAssetsNamePattern(t *testing.T) {
 	}
 }
 
+// TestFilterAssetsPreferred verifies that, on upgrades, the artefact chosen
+// previously is re-selected automatically even though release asset names embed
+// the (changing) version, and that scoring no longer drives the choice when a
+// preference uniquely identifies a candidate.
+func TestFilterAssetsPreferred(t *testing.T) {
+	resolver = testLinuxAMDResolver
+
+	cases := []struct {
+		name             string
+		as               []*Asset
+		preferredAsset   string
+		preferredVersion string
+		currentVersion   string
+		want             string
+	}{
+		{
+			// musl and gnu variants score identically (both linux+amd64); the
+			// previous musl choice is re-selected across the version bump.
+			name: "re-selects same variant across versions",
+			as: []*Asset{
+				{Name: "tool-1.1.0-linux-amd64-musl.tar.gz"},
+				{Name: "tool-1.1.0-linux-amd64-gnu.tar.gz"},
+			},
+			preferredAsset:   "tool-1.0.0-linux-amd64-musl.tar.gz",
+			preferredVersion: "1.0.0",
+			currentVersion:   "1.1.0",
+			want:             "tool-1.1.0-linux-amd64-musl.tar.gz",
+		},
+		{
+			// preference overrides scoring: the raw binary and the archive both
+			// match the platform, but the previously selected archive wins.
+			name: "preference overrides scoring tie",
+			as: []*Asset{
+				{Name: "tool_1.1.0_linux_amd64"},
+				{Name: "tool_1.1.0_linux_amd64.tar.gz"},
+			},
+			preferredAsset:   "tool_1.0.0_linux_amd64.tar.gz",
+			preferredVersion: "1.0.0",
+			currentVersion:   "1.1.0",
+			want:             "tool_1.1.0_linux_amd64.tar.gz",
+		},
+	}
+
+	for _, c := range cases {
+		f := NewFilter(&FilterOpts{
+			PreferredAsset:   c.preferredAsset,
+			PreferredVersion: c.preferredVersion,
+			CurrentVersion:   c.currentVersion,
+		})
+		got, err := f.FilterAssets("tool", c.as)
+		if err != nil {
+			t.Fatalf("%s: unexpected error: %v", c.name, err)
+		}
+		if got.Name != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got.Name, c.want)
+		}
+	}
+}
+
+// TestDefaultIndex verifies the default-selection helper used to pre-select the
+// previously used artefact in the interactive prompt.
+func TestDefaultIndex(t *testing.T) {
+	resolver = testLinuxAMDResolver
+
+	opts := []fmt.Stringer{
+		&FilteredAsset{Name: "tool-2.0.0-linux-amd64-gnu.tar.gz"},
+		&FilteredAsset{Name: "tool-2.0.0-linux-amd64-musl.tar.gz"},
+	}
+
+	// Preferred musl variant from a previous version resolves to index 1.
+	want := SanitizeName("tool-1.0.0-linux-amd64-musl.tar.gz", "1.0.0")
+	if got := defaultIndex(opts, want, "2.0.0"); got != 1 {
+		t.Errorf("defaultIndex match: got %d, want 1", got)
+	}
+
+	// No preference yields no default.
+	if got := defaultIndex(opts, "", "2.0.0"); got != -1 {
+		t.Errorf("defaultIndex no-preference: got %d, want -1", got)
+	}
+
+	// A preference that no longer exists yields no default.
+	gone := SanitizeName("tool-1.0.0-linux-amd64-static.tar.gz", "1.0.0")
+	if got := defaultIndex(opts, gone, "2.0.0"); got != -1 {
+		t.Errorf("defaultIndex missing: got %d, want -1", got)
+	}
+}
+
 // makeTar builds an in-memory tar archive where every entry has mode 0755.
 func makeTar(files map[string]string) []byte {
 	var buf bytes.Buffer
@@ -233,8 +320,8 @@ func makeZip(files map[string]string) []byte {
 
 func TestProcessTarNamePattern(t *testing.T) {
 	data := makeTar(map[string]string{
-		"tool-v1.0/mytool":  "mytool binary",
-		"tool-v1.0/helper":  "helper binary",
+		"tool-v1.0/mytool": "mytool binary",
+		"tool-v1.0/helper": "helper binary",
 	})
 
 	cases := []struct {

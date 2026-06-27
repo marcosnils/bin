@@ -18,6 +18,9 @@ type File struct {
 	Version     string
 	Length      int64
 	PackagePath string
+	// SelectedAsset is the top-level release asset name that was chosen,
+	// stored so the same artefact can be defaulted on the next upgrade
+	SelectedAsset string
 }
 
 func (f *File) Hash() ([]byte, error) {
@@ -34,7 +37,12 @@ type FetchOpts struct {
 	PackagePath    string
 	SkipPatchCheck bool
 	Version        string
-	NamePattern string
+	NamePattern    string
+	// PreviousAsset is the top-level asset name selected on the previous
+	// install/upgrade, and PreviousVersion is the version it was selected at.
+	// On upgrades these let bin re-select the same artefact across versions.
+	PreviousAsset   string
+	PreviousVersion string
 }
 
 type Provider interface {

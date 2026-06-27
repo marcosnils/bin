@@ -35,7 +35,10 @@ type Binary struct {
 	// the package path in config so we don't ask the user to select
 	// the path again when upgrading
 	PackagePath string `json:"package_path"`
-	Pinned      bool   `json:"pinned"`
+	// SelectedAsset is the top-level release asset name chosen on install,
+	// re-used to default the same artefact when upgrading
+	SelectedAsset string `json:"selected_asset"`
+	Pinned        bool   `json:"pinned"`
 }
 
 func CheckAndLoad() error {
