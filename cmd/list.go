@@ -61,8 +61,13 @@ func newListCmd() *listCmd {
 			}
 
 			pL, vL, uL := maxLengths[0], maxLengths[1], maxLengths[2]
+			// Reserve an extra column for the pin marker so that pinned and
+			// unpinned versions line up.
+			vL++
 			magentaItalic := color.New(color.FgMagenta, color.Italic).Sprint
-			p, v, u, s := magentaItalic(_rPad(("Path"), pL)), magentaItalic(_rPad("Version", vL)), magentaItalic(_rPad("URL", uL)), magentaItalic("Status")
+			// Leading space keeps the header aligned with the version text
+			// rather than the pin-marker column.
+			p, v, u, s := magentaItalic(_rPad(("Path"), pL)), magentaItalic(_rPad(" Version", vL)), magentaItalic(_rPad("URL", uL)), magentaItalic("Status")
 
 			fmt.Printf("\n%s  %s  %s  %s", p, v, u, s)
 
@@ -78,12 +83,12 @@ func newListCmd() *listCmd {
 					status = color.RedString("missing %s", p)
 				}
 
+				marker := " "
 				if b.Pinned {
-					fmt.Printf("\n%s  %s  %s  %s", _rPad(p, pL), "*"+_rPad(b.Version, vL), _rPad(b.URL, uL), status)
-					continue
+					marker = "*"
 				}
 
-				fmt.Printf("\n%s  %s  %s  %s", _rPad(p, pL), _rPad(b.Version, vL), _rPad(b.URL, uL), status)
+				fmt.Printf("\n%s  %s  %s  %s", _rPad(p, pL), _rPad(marker+b.Version, vL), _rPad(b.URL, uL), status)
 			}
 			fmt.Print("\n\n")
 			return nil
