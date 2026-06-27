@@ -76,10 +76,12 @@ func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 		tagVersion := strings.TrimPrefix(release.TagName, "v")
 		for _, v := range packages {
 			if strings.TrimPrefix(v.Version, "v") == tagVersion {
-				totalPages := -1
-				for page := 0; page != totalPages; page++ {
+				var totalPages int64 = -1
+				for page := int64(0); page != totalPages; page++ {
 					packageFiles, resp, err := g.client.Packages.ListPackageFiles(projectPath, v.ID, &gitlab.ListPackageFilesOptions{
-						Page: page + 1,
+						ListOptions: gitlab.ListOptions{
+							Page: page + 1,
+						},
 					})
 					if err != nil {
 						return nil, err
