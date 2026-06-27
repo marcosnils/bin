@@ -34,7 +34,7 @@ type FetchOpts struct {
 	PackagePath    string
 	SkipPatchCheck bool
 	Version        string
-	NamePattern string
+	NamePattern    string
 }
 
 type Provider interface {

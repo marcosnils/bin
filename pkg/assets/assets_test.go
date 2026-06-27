@@ -233,8 +233,8 @@ func makeZip(files map[string]string) []byte {
 
 func TestProcessTarNamePattern(t *testing.T) {
 	data := makeTar(map[string]string{
-		"tool-v1.0/mytool":  "mytool binary",
-		"tool-v1.0/helper":  "helper binary",
+		"tool-v1.0/mytool": "mytool binary",
+		"tool-v1.0/helper": "helper binary",
 	})
 
 	cases := []struct {
