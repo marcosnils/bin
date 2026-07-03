@@ -155,12 +155,13 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 		}
 	}
 
-	// On upgrades, try to re-select the artefact chosen previously. Asset
-	// names embed the version, so compare the version-stripped forms. The
-	// preference only applies to the top-level asset list (preferredUsed
-	// guards against the recursive call for files inside an archive, which
-	// is already handled by PackagePath).
+	// On upgrades, identify the artefact chosen previously so it can be
+	// offered as the default in the prompt. Asset names embed the version, so
+	// compare the version-stripped forms. The preference only applies to the
+	// top-level asset list (preferredUsed guards against the recursive call for
+	// files inside an archive, which is already handled by PackagePath).
 	var preferred string
+	var preferredAsset *Asset
 	if f.opts.PreferredAsset != "" && !f.preferredUsed {
 		f.preferredUsed = true
 		preferred = SanitizeName(f.opts.PreferredAsset, f.opts.PreferredVersion)
@@ -171,9 +172,8 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 			}
 		}
 		if len(prefMatches) == 1 {
-			a := prefMatches[0]
-			log.Debugf("Asset %q matches previously selected artefact, selecting automatically", a.Name)
-			return &FilteredAsset{RepoName: repoName, Name: a.Name, DisplayName: a.DisplayName, URL: a.URL}, nil
+			preferredAsset = prefMatches[0]
+			log.Debugf("Asset %q matches previously selected artefact, offering it as the default", preferredAsset.Name)
 		}
 	}
 
@@ -187,6 +187,21 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 		matches = toFilteredAssets(repoName, as)
 	default:
 		matches = f.scoreAssets(repoName, as)
+	}
+
+	// Make sure the previously selected artefact is always among the prompted
+	// options (scoring may otherwise drop it) so it can be shown as the default.
+	if preferredAsset != nil {
+		found := false
+		for _, m := range matches {
+			if m.Name == preferredAsset.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			matches = append(matches, &FilteredAsset{RepoName: repoName, Name: preferredAsset.Name, DisplayName: preferredAsset.DisplayName, URL: preferredAsset.URL})
+		}
 	}
 
 	return selectCandidate(matches, toFilteredAssets(repoName, as), preferred, f.opts.CurrentVersion)

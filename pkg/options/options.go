@@ -42,7 +42,7 @@ func SelectWithDefault(msg string, opts []fmt.Stringer, defaultIdx int) (interfa
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		if defaultIdx >= 0 {
-			fmt.Printf("\n Select an option [default %d]: ", defaultIdx+1)
+			fmt.Printf("\n Select an option [%d]: ", defaultIdx+1)
 		} else {
 			fmt.Printf("\n Select an option: ")
 		}

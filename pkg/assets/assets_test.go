@@ -205,9 +205,10 @@ func TestFilterAssetsNamePattern(t *testing.T) {
 }
 
 // TestFilterAssetsPreferred verifies that, on upgrades, the artefact chosen
-// previously is re-selected automatically even though release asset names embed
-// the (changing) version, and that scoring no longer drives the choice when a
-// preference uniquely identifies a candidate.
+// previously is offered as the prompt default even though release asset names
+// embed the (changing) version. The prompt still appears; with no input (EOF in
+// the test) SelectWithDefault returns the default, so FilterAssets yields the
+// previously selected artefact.
 func TestFilterAssetsPreferred(t *testing.T) {
 	resolver = testLinuxAMDResolver
 
