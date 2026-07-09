@@ -25,6 +25,7 @@ While this makes distribution easier, it creates challenges for updates and trac
   - [Codeberg Releases](#codeberg-releases)
   - [Docker Images](#docker-images)
   - [Hashicorp Releases](#hashicorp-releases)
+  - [Helm](#helm)
   - [Go Install](#go-install)
 
 For a comprehensive list, see the [Tools Wiki](https://github.com/marcosnils/bin/wiki/Tools-list).
@@ -201,6 +202,35 @@ If you need multiple versions, specify a destination
 ```shell
 bin install --provider hashicorp https://releases.hashicorp.com/terraform/1.5.7 ~/bin/terraform-1.5.7
 bin install --provider hashicorp https://releases.hashicorp.com/terraform/1.12.1 ~/bin/terraform-1.12.1
+```
+
+### Helm
+
+#### Configuration
+
+None.
+
+#### Usage
+
+[Helm](https://helm.sh) does not attach binaries to its GitHub releases (only
+signatures and checksums) and instead distributes them from
+[get.helm.sh](https://get.helm.sh), so it needs a dedicated provider. `bin`
+detects `github.com/helm/helm` automatically and installs the latest version.
+
+```shell
+bin install github.com/helm/helm
+```
+
+You can also target `get.helm.sh` directly or force the provider:
+
+```shell
+bin install --provider helm github.com/helm/helm
+```
+
+To install a specific version, use a release tag URL:
+
+```shell
+bin install github.com/helm/helm/releases/tag/v3.16.3 ~/bin/helm-3.16.3
 ```
 
 ### Go Install
