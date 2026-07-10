@@ -21,11 +21,8 @@ const (
 )
 
 type hashiCorp struct {
-	url     *url.URL
 	client  *http.Client
-	owner   string
 	repo    string
-	tag     string
 	baseURL *url.URL
 }
 
@@ -67,72 +64,15 @@ func (g *hashiCorp) listReleases(repoName string) (*hashiCorpRepo, error) {
 	return &repo, nil
 }
 
-func (g *hashiCorp) GetID() string {
-	return "hashicorp"
-}
-
-func (g *hashiCorp) Fetch(opts *FetchOpts) (*File, error) {
-	var release *hashiCorpRelease
-
-	// If we have a tag, let's fetch from there
-	var err error
-	if len(g.tag) > 0 || len(opts.Version) > 0 {
-		if len(opts.Version) > 0 {
-			// this is used by for the `ensure` command
-			g.tag = opts.Version
-		}
-		log.Infof("Getting %s release for %s", g.tag, g.repo)
-		release, err = g.getRelease(g.repo, g.tag)
-	} else {
-		var version string
-		version, _, err = g.GetLatestVersion()
-		if err != nil {
-			return nil, err
-		}
-		release, err = g.getRelease(g.repo, version)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	candidates := []*assets.Asset{}
-	for _, link := range release.Builds {
-		candidates = append(candidates, &assets.Asset{Name: link.Filename, URL: link.URL})
-	}
-
-	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, NamePattern: opts.NamePattern})
-	gf, err := f.FilterAssets(g.repo, candidates)
-	if err != nil {
-		return nil, err
-	}
-
-	outFile, err := f.ProcessURL(gf)
-	if err != nil {
-		return nil, err
-	}
-
-	version := release.Version
-
-	// TODO calculate file hash. Not sure if we can / should do it here
-	// since we don't want to read the file unnecessarily. Additionally, sometimes
-	// releases have .sha256 files, so it'd be nice to check for those also
-	file := &File{Data: outFile.Source, Name: outFile.Name, Version: version}
-
-	return file, nil
-}
-
-// GetLatestVersion checks the latest repo release and
-// returns the corresponding name and url to fetch the version
-func (g *hashiCorp) GetLatestVersion() (string, string, error) {
-	log.Debugf("Getting latest release for %s", g.repo)
-
+// latestRelease finds the highest non-prerelease semver version, asking the
+// user to disambiguate ties, and fetches its release metadata.
+func (g *hashiCorp) latestRelease() (*hashiCorpRelease, error) {
 	releases, err := g.listReleases(g.repo)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 	if len(releases.Versions) == 0 {
-		return "", "", fmt.Errorf("no releases found for %s", g.repo)
+		return nil, fmt.Errorf("no releases found for %s", g.repo)
 	}
 	var svs semver.Versions
 	for _, version := range releases.Versions {
@@ -146,7 +86,7 @@ func (g *hashiCorp) GetLatestVersion() (string, string, error) {
 		}
 	}
 	if len(svs) == 0 {
-		return "", "", fmt.Errorf("no semver versions found for %s", g.repo)
+		return nil, fmt.Errorf("no semver versions found for %s", g.repo)
 	}
 	sort.Sort(svs)
 	highestVersion := svs[len(svs)-1]
@@ -169,11 +109,39 @@ func (g *hashiCorp) GetLatestVersion() (string, string, error) {
 		}
 		choice, err := options.Select("Select file to download:", generic)
 		if err != nil {
-			return "", "", err
+			return nil, err
 		}
 		highestVersion = choice.(*semver.Version)
 	}
-	release, err := g.getRelease(g.repo, highestVersion.String())
+	return g.getRelease(g.repo, highestVersion.String())
+}
+
+func (g *hashiCorp) fetchRelease(version string) (string, []*assets.Asset, error) {
+	var release *hashiCorpRelease
+	var err error
+	if version == "" {
+		release, err = g.latestRelease()
+	} else {
+		release, err = g.getRelease(g.repo, version)
+	}
+	if err != nil {
+		return "", nil, err
+	}
+
+	candidates := make([]*assets.Asset, 0, len(release.Builds))
+	for _, link := range release.Builds {
+		candidates = append(candidates, &assets.Asset{Name: link.Filename, URL: link.URL})
+	}
+
+	return release.Version, candidates, nil
+}
+
+// latestVersion checks the latest repo release and
+// returns the corresponding name and url to fetch the version
+func (g *hashiCorp) latestVersion() (string, string, error) {
+	log.Debugf("Getting latest release for %s", g.repo)
+
+	release, err := g.latestRelease()
 	if err != nil {
 		return "", "", err
 	}
@@ -183,7 +151,7 @@ func (g *hashiCorp) GetLatestVersion() (string, string, error) {
 
 func newHashiCorp(u *url.URL) (Provider, error) {
 	s := strings.Split(u.Path, "/")
-	if len(s) < 1 {
+	if len(s) < 2 {
 		return nil, fmt.Errorf("Error parsing HashiCorp releases URL %s, can't find repo", u.String())
 	}
 
@@ -195,5 +163,6 @@ func newHashiCorp(u *url.URL) (Provider, error) {
 
 	baseURL, _ := url.Parse(releasesURLBase)
 
-	return &hashiCorp{url: u, client: httpclient.Client, owner: "", repo: s[1], tag: tag, baseURL: baseURL}, nil
+	src := &hashiCorp{client: httpclient.Client, repo: s[1], baseURL: baseURL}
+	return &httpReleaseProvider{id: "hashicorp", name: src.repo, tag: tag, src: src}, nil
 }

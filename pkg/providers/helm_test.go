@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"fmt"
 	"net/url"
 	"testing"
 )
@@ -39,21 +40,40 @@ func TestHelmProviderDoesNotHijackOtherRepos(t *testing.T) {
 }
 
 func TestHelmTagExtraction(t *testing.T) {
-	u, _ := url.Parse("https://github.com/helm/helm/releases/tag/v3.16.3")
-	p, err := newHelm(u)
-	if err != nil {
-		t.Fatal(err)
+	cases := map[string]string{
+		"https://github.com/helm/helm/releases/tag/v3.16.3": "v3.16.3",
+		// tags are normalized to carry the leading "v"
+		"https://github.com/helm/helm/releases/tag/3.16.3": "v3.16.3",
+		"https://github.com/helm/helm":                     "",
 	}
-	h := p.(*helm)
-	if h.tag != "v3.16.3" {
-		t.Errorf("tag = %q, want v3.16.3", h.tag)
+	for in, want := range cases {
+		u, _ := url.Parse(in)
+		if got := parseHelmTag(u); got != want {
+			t.Errorf("parseHelmTag(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// TestHelmLatestVersionURLRoundTrip ensures the URL shape returned by
+// latestVersion resolves back to the helm provider with the same tag, since
+// the update command re-instantiates providers from that URL.
+func TestHelmLatestVersionURLRoundTrip(t *testing.T) {
+	u := fmt.Sprintf("%s/%s", helmReleasesURL, "v4.2.2")
+	p, err := New(u, "")
+	if err != nil {
+		t.Fatalf("New(%q) returned error: %v", u, err)
+	}
+	hp, ok := p.(*httpReleaseProvider)
+	if !ok || hp.GetID() != "helm" {
+		t.Fatalf("New(%q) = %T (%s), want helm httpReleaseProvider", u, p, p.GetID())
+	}
+	if hp.tag != "v4.2.2" {
+		t.Errorf("tag = %q, want v4.2.2", hp.tag)
 	}
 }
 
 func TestHelmCandidates(t *testing.T) {
-	u, _ := url.Parse("https://get.helm.sh")
-	p, _ := newHelm(u)
-	h := p.(*helm)
+	h := &helm{}
 
 	cs := h.candidates("v3.16.3")
 	if len(cs) != len(helmPlatforms) {

@@ -46,14 +46,7 @@ var helmPlatforms = []helmPlatform{
 }
 
 type helm struct {
-	url    *url.URL
 	client *http.Client
-	repo   string
-	tag    string
-}
-
-func (h *helm) GetID() string {
-	return "helm"
 }
 
 // candidates builds the list of downloadable assets for a given version.
@@ -69,44 +62,24 @@ func (h *helm) candidates(version string) []*assets.Asset {
 	return cs
 }
 
-func (h *helm) Fetch(opts *FetchOpts) (*File, error) {
-	version := h.tag
-	if len(opts.Version) > 0 {
-		// this is used by the `ensure` command
-		version = opts.Version
-	}
-
+func (h *helm) fetchRelease(version string) (string, []*assets.Asset, error) {
+	version = normalizeHelmVersion(version)
 	if version == "" {
 		var err error
-		version, _, err = h.GetLatestVersion()
+		version, _, err = h.latestVersion()
 		if err != nil {
-			return nil, err
+			return "", nil, err
 		}
-	}
-	version = normalizeHelmVersion(version)
-
-	log.Infof("Getting %s release for %s", version, h.repo)
-
-	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName, NamePattern: opts.NamePattern})
-
-	gf, err := f.FilterAssets(h.repo, h.candidates(version))
-	if err != nil {
-		return nil, err
 	}
 
 	// The Helm archives contain an os-arch/ directory (e.g. linux-amd64/helm),
 	// which ProcessURL unpacks, keeping the executable file.
-	outFile, err := f.ProcessURL(gf)
-	if err != nil {
-		return nil, err
-	}
-
-	return &File{Data: outFile.Source, Name: outFile.Name, Version: version, PackagePath: outFile.PackagePath}, nil
+	return version, h.candidates(version), nil
 }
 
-// GetLatestVersion returns the latest Helm version and a URL to its release notes.
-func (h *helm) GetLatestVersion() (string, string, error) {
-	log.Debugf("Getting latest release for %s", h.repo)
+// latestVersion returns the latest Helm version and a URL to its release notes.
+func (h *helm) latestVersion() (string, string, error) {
+	log.Debugf("Getting latest release for helm")
 
 	resp, err := h.client.Get(helmLatestVersion)
 	if err != nil {
@@ -140,9 +113,9 @@ func normalizeHelmVersion(version string) string {
 	return "v" + version
 }
 
-func newHelm(u *url.URL) (Provider, error) {
-	// Support explicit release URLs such as
-	// github.com/helm/helm/releases/tag/v3.16.3
+// parseHelmTag extracts the version from explicit release URLs such as
+// github.com/helm/helm/releases/tag/v3.16.3.
+func parseHelmTag(u *url.URL) string {
 	var tag string
 	if strings.Contains(u.Path, "/releases/") {
 		ps := strings.Split(u.Path, "/")
@@ -152,6 +125,14 @@ func newHelm(u *url.URL) (Provider, error) {
 			}
 		}
 	}
+	return normalizeHelmVersion(tag)
+}
 
-	return &helm{url: u, client: httpclient.Client, repo: "helm", tag: tag}, nil
+func newHelm(u *url.URL) (Provider, error) {
+	return &httpReleaseProvider{
+		id:   "helm",
+		name: "helm",
+		tag:  parseHelmTag(u),
+		src:  &helm{client: httpclient.Client},
+	}, nil
 }
