@@ -76,7 +76,7 @@ func New(u, provider string) (Provider, error) {
 	// GitHub branch since github.com/helm/helm would otherwise be captured
 	// there.
 	helmPath := strings.TrimPrefix(purl.Path, "/")
-	if provider == "helm" || purl.Host == "get.helm.sh" || (purl.Host == "github.com" && (helmPath == "helm/helm" || strings.HasPrefix(helmPath, "helm/helm/")) {
+	if provider == "helm" || purl.Host == "get.helm.sh" || (purl.Host == "github.com" && (helmPath == "helm/helm" || strings.HasPrefix(helmPath, "helm/helm/"))) {
 		return newHelm(purl)
 	}
 

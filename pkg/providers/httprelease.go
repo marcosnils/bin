@@ -22,10 +22,9 @@ type httpSource interface {
 // the flow shared by all HTTP release sources: version selection, asset
 // scoring and archive processing.
 type httpReleaseProvider struct {
-	id   string // provider ID persisted in the config
-	name string // binary name used for asset scoring and logging
-	tag  string // version parsed from the install URL, if any
-	src  httpSource
+	id  string // provider ID persisted in the config, also used for asset scoring and logging
+	tag string // version parsed from the install URL, if any
+	src httpSource
 }
 
 func (p *httpReleaseProvider) GetID() string {
@@ -40,9 +39,9 @@ func (p *httpReleaseProvider) Fetch(opts *FetchOpts) (*File, error) {
 	}
 
 	if version == "" {
-		log.Infof("Getting latest release for %s", p.name)
+		log.Infof("Getting latest release for %s", p.id)
 	} else {
-		log.Infof("Getting %s release for %s", version, p.name)
+		log.Infof("Getting %s release for %s", version, p.id)
 	}
 
 	version, candidates, err := p.src.fetchRelease(version)
@@ -52,7 +51,7 @@ func (p *httpReleaseProvider) Fetch(opts *FetchOpts) (*File, error) {
 
 	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName, NamePattern: opts.NamePattern})
 
-	gf, err := f.FilterAssets(p.name, candidates)
+	gf, err := f.FilterAssets(p.id, candidates)
 	if err != nil {
 		return nil, err
 	}

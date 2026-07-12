@@ -164,5 +164,5 @@ func newHashiCorp(u *url.URL) (Provider, error) {
 	baseURL, _ := url.Parse(releasesURLBase)
 
 	src := &hashiCorp{client: httpclient.Client, repo: s[1], baseURL: baseURL}
-	return &httpReleaseProvider{id: "hashicorp", name: src.repo, tag: tag, src: src}, nil
+	return &httpReleaseProvider{id: "hashicorp", tag: tag, src: src}, nil
 }

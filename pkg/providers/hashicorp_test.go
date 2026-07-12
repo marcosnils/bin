@@ -125,9 +125,6 @@ func TestHashiCorpProviderURLRoundTrip(t *testing.T) {
 	if !ok || hp.GetID() != "hashicorp" {
 		t.Fatalf("got %T (%s), want hashicorp httpReleaseProvider", p, p.GetID())
 	}
-	if hp.name != "terraform" {
-		t.Errorf("name = %q, want terraform", hp.name)
-	}
 	if hp.tag != "1.5.7" {
 		t.Errorf("tag = %q, want 1.5.7", hp.tag)
 	}

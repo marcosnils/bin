@@ -130,9 +130,8 @@ func parseHelmTag(u *url.URL) string {
 
 func newHelm(u *url.URL) (Provider, error) {
 	return &httpReleaseProvider{
-		id:   "helm",
-		name: "helm",
-		tag:  parseHelmTag(u),
-		src:  &helm{client: httpclient.Client},
+		id:  "helm",
+		tag: parseHelmTag(u),
+		src: &helm{client: httpclient.Client},
 	}, nil
 }
