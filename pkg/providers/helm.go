@@ -15,7 +15,6 @@ import (
 const (
 	helmDownloadBase  = "https://get.helm.sh"
 	helmLatestVersion = "https://get.helm.sh/helm-latest-version"
-	helmReleasesURL   = "https://github.com/helm/helm/releases/tag"
 )
 
 // helmPlatform is a single os/arch combination published on get.helm.sh.
@@ -101,7 +100,7 @@ func (h *helm) latestVersion() (string, string, error) {
 		return "", "", fmt.Errorf("could not determine latest Helm version")
 	}
 
-	return version, fmt.Sprintf("%s/%s", helmReleasesURL, version), nil
+	return version, fmt.Sprintf("%s/%s", helmDownloadBase, version), nil
 }
 
 // normalizeHelmVersion ensures the version carries the leading "v" that Helm's
@@ -113,15 +112,21 @@ func normalizeHelmVersion(version string) string {
 	return "v" + version
 }
 
-// parseHelmTag extracts the version from explicit release URLs such as
-// github.com/helm/helm/releases/tag/v3.16.3.
+// parseHelmTag extracts the version from get.helm.sh URLs, either a bare
+// version path (get.helm.sh/v3.16.3) or a release download URL
+// (get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz).
 func parseHelmTag(u *url.URL) string {
-	var tag string
-	if strings.Contains(u.Path, "/releases/") {
-		ps := strings.Split(u.Path, "/")
-		for i, p := range ps {
-			if p == "releases" && i+2 < len(ps) {
-				tag = strings.Join(ps[i+2:], "/")
+	tag := strings.Trim(u.Path, "/")
+	if tag == "" || tag == "helm-latest-version" {
+		return ""
+	}
+	if strings.HasPrefix(tag, "helm-") {
+		tag = strings.TrimPrefix(tag, "helm-")
+		for _, p := range helmPlatforms {
+			suffix := fmt.Sprintf("-%s-%s.%s", p.os, p.arch, p.ext)
+			if strings.HasSuffix(tag, suffix) {
+				tag = strings.TrimSuffix(tag, suffix)
+				break
 			}
 		}
 	}

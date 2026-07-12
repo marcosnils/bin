@@ -71,15 +71,6 @@ func New(u, provider string) (Provider, error) {
 		return nil, err
 	}
 
-	// Helm publishes its binaries on get.helm.sh rather than as GitHub
-	// release assets, so it needs a dedicated provider. Match it before the
-	// GitHub branch since github.com/helm/helm would otherwise be captured
-	// there.
-	helmPath := strings.TrimPrefix(purl.Path, "/")
-	if provider == "helm" || purl.Host == "get.helm.sh" || (purl.Host == "github.com" && (helmPath == "helm/helm" || strings.HasPrefix(helmPath, "helm/helm/"))) {
-		return newHelm(purl)
-	}
-
 	if strings.Contains(purl.Host, "github") || provider == "github" {
 		return newGitHub(purl)
 	}
@@ -90,6 +81,10 @@ func New(u, provider string) (Provider, error) {
 
 	if strings.Contains(purl.Host, "codeberg") || provider == "codeberg" {
 		return newCodeberg(purl)
+	}
+
+	if strings.Contains(purl.Host, "get.helm.sh") || provider == "helm" {
+		return newHelm(purl)
 	}
 
 	if strings.Contains(purl.Host, "releases.hashicorp.com") || provider == "hashicorp" {

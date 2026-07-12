@@ -214,23 +214,19 @@ None.
 
 [Helm](https://helm.sh) does not attach binaries to its GitHub releases (only
 signatures and checksums) and instead distributes them from
-[get.helm.sh](https://get.helm.sh), so it needs a dedicated provider. `bin`
-detects `github.com/helm/helm` automatically and installs the latest version.
+[get.helm.sh](https://get.helm.sh), so it needs a dedicated provider that is
+selected automatically for that host.
 
 ```shell
-bin install github.com/helm/helm
+bin install get.helm.sh
 ```
 
-You can also target `get.helm.sh` directly or force the provider:
+To install a specific version, append it to the URL or use a release
+download URL (the binary matching your platform is selected either way):
 
 ```shell
-bin install --provider helm github.com/helm/helm
-```
-
-To install a specific version, use a release tag URL:
-
-```shell
-bin install github.com/helm/helm/releases/tag/v3.16.3 ~/bin/helm-3.16.3
+bin install get.helm.sh/v3.16.3 ~/bin/helm-3.16.3
+bin install https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz
 ```
 
 ### Go Install

@@ -10,11 +10,7 @@ import (
 // versions and enumerates downloadable assets; the shared asset-selection
 // and download flow lives in httpReleaseProvider.
 type httpSource interface {
-	// fetchRelease resolves version ("" means latest) to its canonical
-	// form and the list of downloadable assets for it.
 	fetchRelease(version string) (string, []*assets.Asset, error)
-	// latestVersion returns the latest version and a URL that, when
-	// passed back to providers.New, resolves to that same release.
 	latestVersion() (string, string, error)
 }
 
@@ -22,8 +18,8 @@ type httpSource interface {
 // the flow shared by all HTTP release sources: version selection, asset
 // scoring and archive processing.
 type httpReleaseProvider struct {
-	id  string // provider ID persisted in the config, also used for asset scoring and logging
-	tag string // version parsed from the install URL, if any
+	id  string
+	tag string
 	src httpSource
 }
 

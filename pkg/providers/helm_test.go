@@ -11,10 +11,10 @@ func TestHelmProviderRouting(t *testing.T) {
 		url      string
 		provider string
 	}{
-		{"github.com/helm/helm", ""},
-		{"https://github.com/helm/helm/releases/tag/v3.16.3", ""},
 		{"get.helm.sh", ""},
-		{"github.com/helm/helm", "helm"},
+		{"https://get.helm.sh/v3.16.3", ""},
+		{"https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz", ""},
+		{"get.helm.sh", "helm"},
 	}
 	for _, c := range cases {
 		p, err := New(c.url, c.provider)
@@ -27,24 +27,29 @@ func TestHelmProviderRouting(t *testing.T) {
 	}
 }
 
-func TestHelmProviderDoesNotHijackOtherRepos(t *testing.T) {
-	// Repos merely prefixed with "helm/helm" must not resolve to the helm
-	// provider (e.g. helm/helm-mapkubeapis ships assets on GitHub).
-	p, err := New("github.com/helm/helm-mapkubeapis", "")
+func TestHelmProviderDoesNotHijackGitHub(t *testing.T) {
+	// GitHub URLs stay on the github provider; only get.helm.sh (or an
+	// explicit --provider helm) selects the helm provider.
+	p, err := New("github.com/helm/helm", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if p.GetID() == "helm" {
-		t.Errorf("helm/helm-mapkubeapis incorrectly routed to helm provider")
+	if p.GetID() != "github" {
+		t.Errorf("github.com/helm/helm routed to %q, want github", p.GetID())
 	}
 }
 
 func TestHelmTagExtraction(t *testing.T) {
 	cases := map[string]string{
-		"https://github.com/helm/helm/releases/tag/v3.16.3": "v3.16.3",
+		"https://get.helm.sh/v3.16.3": "v3.16.3",
 		// tags are normalized to carry the leading "v"
-		"https://github.com/helm/helm/releases/tag/3.16.3": "v3.16.3",
-		"https://github.com/helm/helm":                     "",
+		"https://get.helm.sh/3.16.3": "v3.16.3",
+		// release download URLs pin their version, whatever the platform
+		"https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz":      "v3.16.3",
+		"https://get.helm.sh/helm-v3.16.3-windows-amd64.zip":       "v3.16.3",
+		"https://get.helm.sh/helm-v3.17.0-rc.1-linux-arm64.tar.gz": "v3.17.0-rc.1",
+		"https://get.helm.sh":                     "",
+		"https://get.helm.sh/helm-latest-version": "",
 	}
 	for in, want := range cases {
 		u, _ := url.Parse(in)
@@ -58,7 +63,7 @@ func TestHelmTagExtraction(t *testing.T) {
 // latestVersion resolves back to the helm provider with the same tag, since
 // the update command re-instantiates providers from that URL.
 func TestHelmLatestVersionURLRoundTrip(t *testing.T) {
-	u := fmt.Sprintf("%s/%s", helmReleasesURL, "v4.2.2")
+	u := fmt.Sprintf("%s/%s", helmDownloadBase, "v4.2.2")
 	p, err := New(u, "")
 	if err != nil {
 		t.Fatalf("New(%q) returned error: %v", u, err)
