@@ -483,6 +483,19 @@ func (f *Filter) processReader(r io.Reader) (*finalFile, error) {
 	return &finalFile{Source: outputFile, Name: f.name, PackagePath: f.packagePath}, err
 }
 
+// packagePathMatches reports whether an archive entry matches the package
+// path stored on a previous install. Paths often embed the release version
+// (e.g. tool-v1.0.0-linux-amd64/tool), so when the exact comparison fails the
+// version-stripped forms are compared: the stored path is stripped of the
+// version it was recorded at (PreferredVersion) and the entry of the version
+// being fetched (CurrentVersion).
+func (f *Filter) packagePathMatches(entryName string) bool {
+	if entryName == f.opts.PackagePath {
+		return true
+	}
+	return SanitizeName(entryName, f.opts.CurrentVersion) == SanitizeName(f.opts.PackagePath, f.opts.PreferredVersion)
+}
+
 // processGz receives a tar.gz file and returns the
 // correct file for bin to download
 func (f *Filter) processGz(name string, r io.Reader) (*finalFile, error) {
@@ -511,7 +524,7 @@ func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
 			continue
 		}
 
-		if !f.opts.SkipPathCheck && len(f.opts.PackagePath) > 0 && header.Name != f.opts.PackagePath {
+		if !f.opts.SkipPathCheck && len(f.opts.PackagePath) > 0 && !f.packagePathMatches(header.Name) {
 			continue
 		}
 
@@ -593,7 +606,7 @@ func (f *Filter) processZip(name string, r io.Reader) (*finalFile, error) {
 			continue
 		}
 
-		if !f.opts.SkipPathCheck && len(f.opts.PackagePath) > 0 && header.Name != f.opts.PackagePath {
+		if !f.opts.SkipPathCheck && len(f.opts.PackagePath) > 0 && !f.packagePathMatches(header.Name) {
 			continue
 		}
 

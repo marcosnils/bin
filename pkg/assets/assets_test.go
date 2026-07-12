@@ -391,6 +391,62 @@ func TestProcessZipNamePattern(t *testing.T) {
 	}
 }
 
+// TestProcessTarPackagePathAcrossVersions verifies that a stored package path
+// embedding the release version (e.g. ecapture-v2.5.2-linux-amd64/ecapture)
+// still matches the corresponding entry of a newer release by comparing
+// version-stripped forms.
+func TestProcessTarPackagePathAcrossVersions(t *testing.T) {
+	resolver = testLinuxAMDResolver
+
+	data := makeTar(map[string]string{
+		"tool-v2.5.3-linux-amd64/tool":   "tool binary",
+		"tool-v2.5.3-linux-amd64/helper": "helper binary",
+	})
+
+	f := NewFilter(&FilterOpts{
+		PackagePath:      "tool-v2.5.2-linux-amd64/tool",
+		PreferredVersion: "v2.5.2",
+		CurrentVersion:   "v2.5.3",
+	})
+	result, err := f.processTar("repo", bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.PackagePath != "tool-v2.5.3-linux-amd64/tool" {
+		t.Errorf("got package path %q, want %q", result.PackagePath, "tool-v2.5.3-linux-amd64/tool")
+	}
+	if result.Name != "tool" {
+		t.Errorf("got name %q, want %q", result.Name, "tool")
+	}
+}
+
+// TestProcessZipPackagePathAcrossVersions is the zip counterpart of
+// TestProcessTarPackagePathAcrossVersions.
+func TestProcessZipPackagePathAcrossVersions(t *testing.T) {
+	resolver = testLinuxAMDResolver
+
+	data := makeZip(map[string]string{
+		"tool-v2.5.3-linux-amd64/tool":   "tool binary",
+		"tool-v2.5.3-linux-amd64/helper": "helper binary",
+	})
+
+	f := NewFilter(&FilterOpts{
+		PackagePath:      "tool-v2.5.2-linux-amd64/tool",
+		PreferredVersion: "v2.5.2",
+		CurrentVersion:   "v2.5.3",
+	})
+	result, err := f.processZip("repo", bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.PackagePath != "tool-v2.5.3-linux-amd64/tool" {
+		t.Errorf("got package path %q, want %q", result.PackagePath, "tool-v2.5.3-linux-amd64/tool")
+	}
+	if result.Name != "tool" {
+		t.Errorf("got name %q, want %q", result.Name, "tool")
+	}
+}
+
 func TestIsSupportedExt(t *testing.T) {
 	cases := []struct {
 		in  string
