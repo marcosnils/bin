@@ -221,12 +221,12 @@ selected automatically for that host.
 bin install get.helm.sh
 ```
 
-To install a specific version, append it to the URL or use a release
-download URL (the binary matching your platform is selected either way):
+To install a specific version, use the full release download URL (the
+binary matching your platform is selected regardless of the one in the
+URL):
 
 ```shell
-bin install get.helm.sh/v3.16.3 ~/bin/helm-3.16.3
-bin install https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz
+bin install https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz ~/bin/helm-3.16.3
 ```
 
 ### Go Install

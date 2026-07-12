@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"fmt"
 	"net/url"
 	"testing"
 )
@@ -12,7 +11,6 @@ func TestHelmProviderRouting(t *testing.T) {
 		provider string
 	}{
 		{"get.helm.sh", ""},
-		{"https://get.helm.sh/v3.16.3", ""},
 		{"https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz", ""},
 		{"get.helm.sh", "helm"},
 	}
@@ -41,20 +39,35 @@ func TestHelmProviderDoesNotHijackGitHub(t *testing.T) {
 
 func TestHelmTagExtraction(t *testing.T) {
 	cases := map[string]string{
-		"https://get.helm.sh/v3.16.3": "v3.16.3",
-		// tags are normalized to carry the leading "v"
-		"https://get.helm.sh/3.16.3": "v3.16.3",
 		// release download URLs pin their version, whatever the platform
 		"https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz":      "v3.16.3",
 		"https://get.helm.sh/helm-v3.16.3-windows-amd64.zip":       "v3.16.3",
 		"https://get.helm.sh/helm-v3.17.0-rc.1-linux-arm64.tar.gz": "v3.17.0-rc.1",
-		"https://get.helm.sh":                     "",
-		"https://get.helm.sh/helm-latest-version": "",
+		"https://get.helm.sh": "",
 	}
 	for in, want := range cases {
 		u, _ := url.Parse(in)
-		if got := parseHelmTag(u); got != want {
+		got, err := parseHelmTag(u)
+		if err != nil {
+			t.Errorf("parseHelmTag(%q) returned error: %v", in, err)
+		} else if got != want {
 			t.Errorf("parseHelmTag(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestHelmTagExtractionRejectsInvalidURLs(t *testing.T) {
+	// get.helm.sh only serves release download URLs; anything else must be
+	// rejected instead of silently installing the latest version.
+	cases := []string{
+		"https://get.helm.sh/v3.16.3",
+		"https://get.helm.sh/3.16.3",
+		"https://get.helm.sh/helm-latest-version",
+		"https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz.sha256sum",
+	}
+	for _, in := range cases {
+		if _, err := New(in, ""); err == nil {
+			t.Errorf("New(%q) succeeded, want error", in)
 		}
 	}
 }
@@ -63,7 +76,7 @@ func TestHelmTagExtraction(t *testing.T) {
 // latestVersion resolves back to the helm provider with the same tag, since
 // the update command re-instantiates providers from that URL.
 func TestHelmLatestVersionURLRoundTrip(t *testing.T) {
-	u := fmt.Sprintf("%s/%s", helmDownloadBase, "v4.2.2")
+	u := helmDownloadURL("v4.2.2")
 	p, err := New(u, "")
 	if err != nil {
 		t.Fatalf("New(%q) returned error: %v", u, err)

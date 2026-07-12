@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strings"
 
 	"github.com/caarlos0/log"
@@ -48,17 +49,36 @@ type helm struct {
 	client *http.Client
 }
 
+// downloadName builds the release archive filename for a version and platform.
+func (p helmPlatform) downloadName(version string) string {
+	return fmt.Sprintf("helm-%s-%s-%s.%s", version, p.os, p.arch, p.ext)
+}
+
 // candidates builds the list of downloadable assets for a given version.
 func (h *helm) candidates(version string) []*assets.Asset {
 	cs := make([]*assets.Asset, 0, len(helmPlatforms))
 	for _, p := range helmPlatforms {
-		name := fmt.Sprintf("helm-%s-%s-%s.%s", version, p.os, p.arch, p.ext)
+		name := p.downloadName(version)
 		cs = append(cs, &assets.Asset{
 			Name: name,
 			URL:  fmt.Sprintf("%s/%s", helmDownloadBase, name),
 		})
 	}
 	return cs
+}
+
+// downloadURL returns the release download URL for the running platform,
+// falling back to linux/amd64. It is the URL shape latestVersion hands back
+// for updates, which re-resolve the platform when installing anyway.
+func helmDownloadURL(version string) string {
+	platform := helmPlatforms[3] // linux/amd64
+	for _, p := range helmPlatforms {
+		if p.os == runtime.GOOS && p.arch == runtime.GOARCH {
+			platform = p
+			break
+		}
+	}
+	return fmt.Sprintf("%s/%s", helmDownloadBase, platform.downloadName(version))
 }
 
 func (h *helm) fetchRelease(version string) (string, []*assets.Asset, error) {
@@ -76,7 +96,7 @@ func (h *helm) fetchRelease(version string) (string, []*assets.Asset, error) {
 	return version, h.candidates(version), nil
 }
 
-// latestVersion returns the latest Helm version and a URL to its release notes.
+// latestVersion returns the latest Helm version and its download URL.
 func (h *helm) latestVersion() (string, string, error) {
 	log.Debugf("Getting latest release for helm")
 
@@ -100,7 +120,7 @@ func (h *helm) latestVersion() (string, string, error) {
 		return "", "", fmt.Errorf("could not determine latest Helm version")
 	}
 
-	return version, fmt.Sprintf("%s/%s", helmDownloadBase, version), nil
+	return version, helmDownloadURL(version), nil
 }
 
 // normalizeHelmVersion ensures the version carries the leading "v" that Helm's
@@ -112,31 +132,33 @@ func normalizeHelmVersion(version string) string {
 	return "v" + version
 }
 
-// parseHelmTag extracts the version from get.helm.sh URLs, either a bare
-// version path (get.helm.sh/v3.16.3) or a release download URL
-// (get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz).
-func parseHelmTag(u *url.URL) string {
+// parseHelmTag extracts the pinned version from a release download URL such
+// as get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz. get.helm.sh serves no
+// other installable URLs, so any other non-empty path is rejected.
+func parseHelmTag(u *url.URL) (string, error) {
 	tag := strings.Trim(u.Path, "/")
-	if tag == "" || tag == "helm-latest-version" {
-		return ""
+	if tag == "" {
+		return "", nil
 	}
-	if strings.HasPrefix(tag, "helm-") {
-		tag = strings.TrimPrefix(tag, "helm-")
+	if v, ok := strings.CutPrefix(tag, "helm-"); ok {
 		for _, p := range helmPlatforms {
 			suffix := fmt.Sprintf("-%s-%s.%s", p.os, p.arch, p.ext)
-			if strings.HasSuffix(tag, suffix) {
-				tag = strings.TrimSuffix(tag, suffix)
-				break
+			if strings.HasSuffix(v, suffix) {
+				return normalizeHelmVersion(strings.TrimSuffix(v, suffix)), nil
 			}
 		}
 	}
-	return normalizeHelmVersion(tag)
+	return "", fmt.Errorf("invalid get.helm.sh URL %s, to install a specific version use the full release URL, e.g. %s", u.String(), helmDownloadURL("v3.16.3"))
 }
 
 func newHelm(u *url.URL) (Provider, error) {
+	tag, err := parseHelmTag(u)
+	if err != nil {
+		return nil, err
+	}
 	return &httpReleaseProvider{
 		id:  "helm",
-		tag: parseHelmTag(u),
+		tag: tag,
 		src: &helm{client: httpclient.Client},
 	}, nil
 }
