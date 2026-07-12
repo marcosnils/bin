@@ -24,7 +24,7 @@ While this makes distribution easier, it creates challenges for updates and trac
   - [Gitlab Releases](#gitlab-releases)
   - [Codeberg Releases](#codeberg-releases)
   - [Docker Images](#docker-images)
-  - [Hashicorp Releases](#hashicorp-releases)
+  - [HTTP Releases (Hashicorp, Helm)](#http-releases)
   - [Go Install](#go-install)
 
 For a comprehensive list, see the [Tools Wiki](https://github.com/marcosnils/bin/wiki/Tools-list).
@@ -182,7 +182,7 @@ export DOCKER_HOST="unix:///path/to/unix/socket"
 bin install docker://quay.io/calico/node
 ```
 
-### Hashicorp Releases
+### HTTP Releases
 
 #### Configuration
 
@@ -190,17 +190,24 @@ None.
 
 #### Usage
 
-Hashicorp have a [dedicated releases](https://releases.hashicorp.com) page and don't use github/lab releases, `bin` support it.
+Some projects distribute their binaries from a plain HTTP download page
+instead of GitHub-style release assets. `bin` supports these through
+dedicated HTTP providers, selected automatically by host:
+
+- [releases.hashicorp.com](https://releases.hashicorp.com) (Terraform, Vault, ...)
+- [get.helm.sh](https://get.helm.sh) (Helm)
 
 ```shell
-bin install --provider hashicorp https://releases.hashicorp.com/terraform/1.12.1
+bin install releases.hashicorp.com/terraform
+bin install get.helm.sh
 ```
 
-If you need multiple versions, specify a destination
+To install a specific version, use the versioned URL (the binary matching
+your platform is selected automatically):
 
 ```shell
-bin install --provider hashicorp https://releases.hashicorp.com/terraform/1.5.7 ~/bin/terraform-1.5.7
-bin install --provider hashicorp https://releases.hashicorp.com/terraform/1.12.1 ~/bin/terraform-1.12.1
+bin install https://releases.hashicorp.com/terraform/1.5.7 ~/bin/terraform-1.5.7
+bin install https://get.helm.sh/helm-v3.16.3-linux-amd64.tar.gz ~/bin/helm-3.16.3
 ```
 
 ### Go Install

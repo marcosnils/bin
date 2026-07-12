@@ -91,6 +91,10 @@ func New(u, provider string) (Provider, error) {
 		return newCodeberg(purl)
 	}
 
+	if strings.Contains(purl.Host, "get.helm.sh") || provider == "helm" {
+		return newHelm(purl)
+	}
+
 	if strings.Contains(purl.Host, "releases.hashicorp.com") || provider == "hashicorp" {
 		return newHashiCorp(purl)
 	}
