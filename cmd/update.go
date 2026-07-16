@@ -24,6 +24,7 @@ type updateOpts struct {
 	all             bool
 	skipPathCheck   bool
 	continueOnError bool
+	exclude         []string
 }
 
 type updateInfo struct{ version, url string }
@@ -65,9 +66,22 @@ func newUpdateCmd() *updateCmd {
 				binsToProcess = cfg.Bins
 			}
 
+			excluded := map[string]bool{}
+			for _, e := range root.opts.exclude {
+				bin, err := getBinPath(e)
+				if err != nil {
+					return err
+				}
+				excluded[bin] = true
+			}
+
 			updateFailures := map[*config.Binary]error{}
 
 			for p, b := range binsToProcess {
+				if excluded[p] {
+					log.Infof("%s is excluded from updates", p)
+					continue
+				}
 				if cfg.Bins[p].Pinned {
 					log.Infof("%s is a pinned binary", p)
 					continue
@@ -164,6 +178,7 @@ func newUpdateCmd() *updateCmd {
 	root.cmd.Flags().BoolVarP(&root.opts.all, "all", "a", false, "Show all possible download options (skip scoring & filtering)")
 	root.cmd.Flags().BoolVarP(&root.opts.skipPathCheck, "skip-path-check", "p", false, "Skips path checking when looking into packages")
 	root.cmd.Flags().BoolVarP(&root.opts.continueOnError, "continue-on-error", "c", false, "Continues to update next package if an error is encountered")
+	root.cmd.Flags().StringSliceVarP(&root.opts.exclude, "exclude", "x", nil, "Exclude binaries from the update (can be repeated)")
 	return root
 }
 

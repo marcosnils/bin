@@ -53,7 +53,7 @@ scoop install extras/bin
 | --------------------------- | ------------------------------------------ | -------------------------------- |
 | `bin install <repo> [path]` | Install binary from GitHub or Docker       | `bin install github.com/cli/cli` |
 | `bin list`                  | List installed binaries and versions       | `bin list`                       |
-| `bin update [binary...]`    | Update binaries (all or specified)         | `bin update`                     |
+| `bin update [binary...]`    | Update binaries (all or specified); use `-x` to exclude | `bin update -x kubectl` |
 | `bin remove <binary...>`    | Remove one or more binaries                | `bin remove gh kubectl`          |
 | `bin ensure`                | Ensure all configured binaries are present | `bin ensure`                     |
 | `bin pin <binary...>`       | Pin current version (prevent updates)      | `bin pin terraform`              |
