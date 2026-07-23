@@ -110,7 +110,7 @@ func (g *gitHub) GetLatestVersion() (string, string, time.Time, error) {
 // releasePublishedAt returns the release's published time, falling back to its
 // creation time when the published time is not set.
 func releasePublishedAt(r *github.RepositoryRelease) time.Time {
-	if t := r.GetPublishedAt(); !t.Time.IsZero() {
+	if t := r.GetPublishedAt(); !t.IsZero() {
 		return t.Time
 	}
 	return r.GetCreatedAt().Time
