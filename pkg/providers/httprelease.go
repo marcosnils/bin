@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"time"
+
 	"github.com/caarlos0/log"
 	"github.com/marcosnils/bin/pkg/assets"
 )
@@ -63,6 +65,9 @@ func (p *httpReleaseProvider) Fetch(opts *FetchOpts) (*File, error) {
 	return &File{Data: outFile.Source, Name: outFile.Name, Version: version, PackagePath: outFile.PackagePath, SelectedAsset: gf.Name}, nil
 }
 
-func (p *httpReleaseProvider) GetLatestVersion() (string, string, error) {
-	return p.src.latestVersion()
+func (p *httpReleaseProvider) GetLatestVersion() (string, string, time.Time, error) {
+	// HTTP release sources (helm, hashicorp) don't expose a publish date, so
+	// cooldowns are not enforced for them.
+	v, u, err := p.src.latestVersion()
+	return v, u, time.Time{}, err
 }

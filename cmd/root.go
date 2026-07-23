@@ -90,6 +90,7 @@ func newRootCmd(version string, exit func(int)) *rootCmd {
 		newRemoveCmd().cmd,
 		newListCmd().cmd,
 		newPruneCmd().cmd,
+		newCooldownCmd().cmd,
 	)
 
 	root.cmd = cmd

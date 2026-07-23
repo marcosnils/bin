@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var ErrInvalidProvider = errors.New("invalid provider")
@@ -49,12 +50,28 @@ type Provider interface {
 	// Fetch returns the file metadata to retrieve a specific binary given
 	// for a provider
 	Fetch(*FetchOpts) (*File, error)
-	// GetLatestVersion returns the version and the URL of the
-	// latest version for this binary
-	GetLatestVersion() (string, string, error)
+	// GetLatestVersion returns the version, the URL and the publish time of
+	// the latest version for this binary. Providers that cannot determine a
+	// publish time return the zero time.Time, in which case cooldowns are not
+	// enforced for them.
+	GetLatestVersion() (string, string, time.Time, error)
 
 	// GetID returns the unique identiifer of this provider
 	GetID() string
+}
+
+// SupportsPublishDate reports whether the provider identified by id exposes a
+// publish date for its releases. When false, cooldowns cannot be enforced for
+// binaries installed with that provider (GetLatestVersion returns the zero
+// time). This is a static lookup so callers (e.g. `bin ls`) can label
+// enforceability without performing a network request.
+func SupportsPublishDate(id string) bool {
+	switch id {
+	case "github", "gitlab", "codeberg", "goinstall":
+		return true
+	default:
+		return false
+	}
 }
 
 var (

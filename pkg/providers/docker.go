@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/caarlos0/log"
 	"github.com/docker/docker/api/types/image"
@@ -47,8 +48,10 @@ func (d *docker) Fetch(opts *FetchOpts) (*File, error) {
 }
 
 // TODO: missing implementation here
-func (d *docker) GetLatestVersion() (string, string, error) {
-	return d.tag, "", nil
+func (d *docker) GetLatestVersion() (string, string, time.Time, error) {
+	// A docker tag has no meaningful publish date here, so cooldowns are not
+	// enforced for docker binaries.
+	return d.tag, "", time.Time{}, nil
 }
 
 func (d *docker) GetID() string {

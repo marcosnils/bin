@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/caarlos0/log"
 	"github.com/marcosnils/bin/pkg/httpclient"
@@ -64,7 +65,7 @@ func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
 		log.Infof("Getting %s release for %s", g.tag, g.repo)
 	} else {
 		log.Infof("Getting latest release for %s", g.repo)
-		if name, _, err := g.GetLatestVersion(); err != nil {
+		if name, _, _, err := g.GetLatestVersion(); err != nil {
 			return nil, fmt.Errorf("failed to get latest version: %w", err)
 		} else {
 			g.tag = name
@@ -96,29 +97,37 @@ func (g *goinstall) Fetch(opts *FetchOpts) (*File, error) {
 	}, nil
 }
 
-func (g *goinstall) GetLatestVersion() (string, string, error) {
+func (g *goinstall) GetLatestVersion() (string, string, time.Time, error) {
 	resp, err := httpclient.Client.Get(g.latestURL)
 	if err != nil {
-		return "", "", err
+		return "", "", time.Time{}, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", "", err
+		return "", "", time.Time{}, err
 	}
 
 	var result map[string]interface{}
 	if err := json.Unmarshal(body, &result); err != nil {
-		return "", "", err
+		return "", "", time.Time{}, err
 	}
 
 	version, ok := result["Version"].(string)
 	if !ok {
-		return "", "", fmt.Errorf("version not found in response")
+		return "", "", time.Time{}, fmt.Errorf("version not found in response")
 	}
 
-	return version, g.repo, nil
+	// The go module proxy @latest response includes an RFC3339 "Time" field.
+	var published time.Time
+	if ts, ok := result["Time"].(string); ok {
+		if t, perr := time.Parse(time.RFC3339, ts); perr == nil {
+			published = t
+		}
+	}
+
+	return version, g.repo, published, nil
 }
 
 func (g *goinstall) GetID() string {
