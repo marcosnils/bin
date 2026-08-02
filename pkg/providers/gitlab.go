@@ -158,7 +158,7 @@ func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 
 	version := release.TagName
 
-	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, NamePattern: opts.NamePattern, PreferredAsset: opts.PreviousAsset, PreferredVersion: opts.PreviousVersion, CurrentVersion: version})
+	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, NamePattern: opts.NamePattern, PreferredAsset: opts.PreviousAsset, PreferredVersion: opts.PreviousVersion, CurrentVersion: version, AutoSelectPreferred: opts.AutoSelectPrevious})
 
 	gf, err := f.FilterAssets(g.repo, candidates)
 	if err != nil {

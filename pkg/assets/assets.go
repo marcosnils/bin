@@ -106,6 +106,11 @@ type FilterOpts struct {
 	PreferredAsset   string
 	PreferredVersion string
 	CurrentVersion   string
+
+	// AutoSelectPreferred selects the asset matching PreferredAsset without
+	// prompting when exactly one candidate matches. Used by `ensure`, which
+	// re-installs an already-chosen artefact at a known version.
+	AutoSelectPreferred bool
 }
 
 type runtimeResolver struct{}
@@ -173,6 +178,10 @@ func (f *Filter) FilterAssets(repoName string, as []*Asset) (*FilteredAsset, err
 		}
 		if len(prefMatches) == 1 {
 			preferredAsset = prefMatches[0]
+			if f.opts.AutoSelectPreferred {
+				log.Debugf("Asset %q matches previously selected artefact, selecting automatically", preferredAsset.Name)
+				return &FilteredAsset{RepoName: repoName, Name: preferredAsset.Name, DisplayName: preferredAsset.DisplayName, URL: preferredAsset.URL}, nil
+			}
 			log.Debugf("Asset %q matches previously selected artefact, offering it as the default", preferredAsset.Name)
 		}
 	}

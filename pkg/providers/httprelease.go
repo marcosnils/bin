@@ -45,7 +45,7 @@ func (p *httpReleaseProvider) Fetch(opts *FetchOpts) (*File, error) {
 		return nil, err
 	}
 
-	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName, NamePattern: opts.NamePattern, PreferredAsset: opts.PreviousAsset, PreferredVersion: opts.PreviousVersion, CurrentVersion: version})
+	f := assets.NewFilter(&assets.FilterOpts{SkipScoring: opts.All, PackagePath: opts.PackagePath, SkipPathCheck: opts.SkipPatchCheck, PackageName: opts.PackageName, NamePattern: opts.NamePattern, PreferredAsset: opts.PreviousAsset, PreferredVersion: opts.PreviousVersion, CurrentVersion: version, AutoSelectPreferred: opts.AutoSelectPrevious})
 
 	gf, err := f.FilterAssets(p.id, candidates)
 	if err != nil {

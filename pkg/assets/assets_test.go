@@ -264,6 +264,32 @@ func TestFilterAssetsPreferred(t *testing.T) {
 	}
 }
 
+// TestFilterAssetsAutoSelectPreferred verifies that with AutoSelectPreferred
+// set (used by `ensure`), a unique match for the previously selected artefact
+// is returned directly, with no prompt involved.
+func TestFilterAssetsAutoSelectPreferred(t *testing.T) {
+	resolver = testLinuxAMDResolver
+
+	as := []*Asset{
+		{Name: "tool-1.0.0-linux-amd64-musl.tar.gz"},
+		{Name: "tool-1.0.0-linux-amd64-gnu.tar.gz"},
+	}
+
+	f := NewFilter(&FilterOpts{
+		PreferredAsset:      "tool-1.0.0-linux-amd64-musl.tar.gz",
+		PreferredVersion:    "1.0.0",
+		CurrentVersion:      "1.0.0",
+		AutoSelectPreferred: true,
+	})
+	got, err := f.FilterAssets("tool", as)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.Name != "tool-1.0.0-linux-amd64-musl.tar.gz" {
+		t.Errorf("got %q, want %q", got.Name, "tool-1.0.0-linux-amd64-musl.tar.gz")
+	}
+}
+
 // TestDefaultIndex verifies the default-selection helper used to pre-select the
 // previously used artefact in the interactive prompt.
 func TestDefaultIndex(t *testing.T) {

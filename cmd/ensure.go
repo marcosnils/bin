@@ -77,7 +77,14 @@ func newEnsureCmd() *ensureCmd {
 				}
 				log.Debugf("Using provider '%s' for '%s'", p.GetID(), binCfg.URL)
 
-				pResult, err := p.Fetch(&providers.FetchOpts{Version: binCfg.Version})
+				pResult, err := p.Fetch(&providers.FetchOpts{
+					Version:            binCfg.Version,
+					PackageName:        binCfg.RemoteName,
+					PackagePath:        binCfg.PackagePath,
+					PreviousAsset:      binCfg.SelectedAsset,
+					PreviousVersion:    binCfg.Version,
+					AutoSelectPrevious: true,
+				})
 				if err != nil {
 					return err
 				}
@@ -88,13 +95,15 @@ func newEnsureCmd() *ensureCmd {
 				}
 
 				err = config.UpsertBinary(&config.Binary{
-					RemoteName:  pResult.Name,
-					Path:        binCfg.Path,
-					Version:     pResult.Version,
-					Hash:        fmt.Sprintf("%x", hash),
-					URL:         binCfg.URL,
-					Provider:    p.GetID(),
-					PackagePath: binCfg.PackagePath,
+					RemoteName:    pResult.Name,
+					Path:          binCfg.Path,
+					Version:       pResult.Version,
+					Hash:          fmt.Sprintf("%x", hash),
+					URL:           binCfg.URL,
+					Provider:      p.GetID(),
+					PackagePath:   pResult.PackagePath,
+					SelectedAsset: pResult.SelectedAsset,
+					Pinned:        binCfg.Pinned,
 				})
 				if err != nil {
 					return err

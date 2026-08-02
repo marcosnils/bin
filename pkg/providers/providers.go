@@ -43,6 +43,10 @@ type FetchOpts struct {
 	// On upgrades these let bin re-select the same artefact across versions.
 	PreviousAsset   string
 	PreviousVersion string
+	// AutoSelectPrevious selects the asset matching PreviousAsset without
+	// prompting when exactly one candidate matches. Used by `ensure`, which
+	// re-installs an already-chosen artefact at a known version.
+	AutoSelectPrevious bool
 }
 
 type Provider interface {
