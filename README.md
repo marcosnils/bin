@@ -59,6 +59,7 @@ scoop install extras/bin
 | `bin pin <binary...>`       | Pin current version (prevent updates)      | `bin pin terraform`              |
 | `bin unpin <binary...>`     | Unpin binaries (allow updates)             | `bin unpin terraform`            |
 | `bin prune`                 | Remove missing binaries from database      | `bin prune`                      |
+| `bin cooldown ...`          | Manage update cooldown periods             | `bin cooldown set 24h`           |
 | `bin help`                  | Show help for any command                  | `bin help install`               |
 
 **Tips**: if `bin` is unable to found the right package, try `bin install -a` to show all possible download options (skip scoring & filtering).
@@ -223,6 +224,54 @@ Ensure `go` is present in your `PATH`.
 ```shell
 bin install goinstall://github.com/jrhouston/tfk8s@v0.1.8
 ```
+
+## ❄️ Cooldowns
+
+A **cooldown** delays updating a binary until a configured period has elapsed
+since the target version was published. This mitigates supply-chain attacks that
+rely on quick adoption of a freshly published (malicious) release: `bin update`
+will skip a new version until it has been public for at least the cooldown
+duration, giving the community time to detect problems.
+
+Cooldowns are **opt-in** (disabled by default) and are only enforced for
+providers that expose a publish date: **GitHub**, **GitLab**, **Codeberg** and
+**Go Install**. For other providers (Docker, HTTP releases such as Helm and
+HashiCorp) a configured cooldown is displayed but not enforced.
+
+### Duration format
+
+Durations accept a friendly format: `24h`, `90m`, `1h30m`, `7d`, `2w`. Use `0`
+to disable.
+
+### Usage
+
+```bash
+# set the global default cooldown (applies to all binaries)
+bin cooldown set 24h
+
+# set a per-package override
+bin cooldown set fzf 7d
+
+# show the effective cooldown for the default, or a specific binary
+bin cooldown get
+bin cooldown get fzf
+
+# show the default plus all per-package overrides
+bin cooldown
+
+# clear a per-package override (revert to the default)
+bin cooldown unset fzf
+
+# clear the global default (revert to built-in default: disabled)
+bin cooldown unset
+```
+
+Cooldowns also appear in `bin ls` under the `Cooldown` column. A trailing `*`
+marks a per-package override; `n/a` means the binary's provider has no publish
+date, so the cooldown cannot be enforced.
+
+The effective cooldown is resolved in order: per-package override → global
+default → built-in default (disabled).
 
 ## 🔧 Configuration
 

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/caarlos0/log"
 	"github.com/fatih/color"
@@ -183,9 +184,13 @@ func newUpdateCmd() *updateCmd {
 	return root
 }
 
+// timeNow is a package-level clock indirection so cooldown enforcement can be
+// tested deterministically.
+var timeNow = time.Now
+
 func getLatestVersion(b *config.Binary, p providers.Provider) (*updateInfo, error) {
 	log.Debugf("Checking updates for %s", b.Path)
-	v, u, err := p.GetLatestVersion()
+	v, u, publishedAt, err := p.GetLatestVersion()
 	if err != nil {
 		return nil, fmt.Errorf("Error checking updates for %s, %w", b.Path, err)
 	}
@@ -198,6 +203,22 @@ func getLatestVersion(b *config.Binary, p providers.Provider) (*updateInfo, erro
 	vSemver, vSemverErr := version.NewVersion(v)
 	if bSemverErr == nil && vSemverErr == nil && vSemver.LessThanOrEqual(bSemver) {
 		return nil, nil
+	}
+
+	// Cooldown: hold back versions that were published more recently than the
+	// effective cooldown. Only enforced when the provider supplies a publish
+	// date; an unknown (zero) date is never gated.
+	cd, err := config.EffectiveCooldown(b)
+	if err != nil {
+		return nil, fmt.Errorf("invalid cooldown for %s: %w", b.Path, err)
+	}
+	if cd > 0 && !publishedAt.IsZero() {
+		if age := timeNow().Sub(publishedAt); age < cd {
+			log.Infof("%s %s -> %s held back by cooldown (published %s ago, cooldown %s, available in ~%s)",
+				b.Path, color.YellowString(b.Version), color.GreenString(v),
+				age.Round(time.Hour), config.FormatCooldown(cd), (cd - age).Round(time.Hour))
+			return nil, nil
+		}
 	}
 
 	log.Debugf("Found new version %s for %s at %s", v, b.Path, u)

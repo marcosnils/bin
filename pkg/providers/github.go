@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/caarlos0/log"
 	"github.com/google/go-github/v31/github"
@@ -87,23 +88,32 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 
 // GetLatestVersion checks the latest repo release and
 // returns the corresponding name and url to fetch the version
-func (g *gitHub) GetLatestVersion() (string, string, error) {
+func (g *gitHub) GetLatestVersion() (string, string, time.Time, error) {
 	if g.filter != "" {
 		log.Debugf("Getting latest release matching %q for %s/%s", g.filter, g.owner, g.repo)
 		release, err := g.findLatestMatchingRelease()
 		if err != nil {
-			return "", "", err
+			return "", "", time.Time{}, err
 		}
-		return release.GetTagName(), release.GetHTMLURL(), nil
+		return release.GetTagName(), release.GetHTMLURL(), releasePublishedAt(release), nil
 	}
 
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
 	release, _, err := g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
 	if err != nil {
-		return "", "", err
+		return "", "", time.Time{}, err
 	}
 
-	return release.GetTagName(), release.GetHTMLURL(), nil
+	return release.GetTagName(), release.GetHTMLURL(), releasePublishedAt(release), nil
+}
+
+// releasePublishedAt returns the release's published time, falling back to its
+// creation time when the published time is not set.
+func releasePublishedAt(r *github.RepositoryRelease) time.Time {
+	if t := r.GetPublishedAt(); !t.IsZero() {
+		return t.Time
+	}
+	return r.GetCreatedAt().Time
 }
 
 // findLatestMatchingRelease pages through releases and returns the first one

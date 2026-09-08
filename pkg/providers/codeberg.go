@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/caarlos0/log"
@@ -79,14 +80,18 @@ func (c *codeberg) Fetch(opts *FetchOpts) (*File, error) {
 
 // GetLatestVersion checks the latest repo release and
 // returns the corresponding name and url to fetch the version
-func (c *codeberg) GetLatestVersion() (string, string, error) {
+func (c *codeberg) GetLatestVersion() (string, string, time.Time, error) {
 	log.Debugf("Getting latest release for %s/%s", c.owner, c.repo)
 	release, _, err := c.client.GetLatestRelease(c.owner, c.repo)
 	if err != nil {
-		return "", "", err
+		return "", "", time.Time{}, err
 	}
 
-	return release.TagName, release.HTMLURL, nil
+	published := release.PublishedAt
+	if published.IsZero() {
+		published = release.CreatedAt
+	}
+	return release.TagName, release.HTMLURL, published, nil
 }
 
 func (c *codeberg) GetID() string {

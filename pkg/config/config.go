@@ -20,8 +20,11 @@ type config struct {
 	// DefaultPath might not be expanded so it's important that
 	// the caller expands this variable with os.ExpandEnv(string)
 	// if necessary
-	DefaultPath string             `json:"default_path"`
-	Bins        map[string]*Binary `json:"bins"`
+	DefaultPath string `json:"default_path"`
+	// DefaultCooldown is the global cooldown applied before updating to a
+	// newly published version (e.g. "24h", "7d"). Empty means unset.
+	DefaultCooldown string             `json:"default_cooldown,omitempty"`
+	Bins            map[string]*Binary `json:"bins"`
 }
 
 type Binary struct {
@@ -39,6 +42,9 @@ type Binary struct {
 	// re-used to default the same artefact when upgrading
 	SelectedAsset string `json:"selected_asset"`
 	Pinned        bool   `json:"pinned"`
+	// Cooldown is a per-binary override of the global DefaultCooldown
+	// (e.g. "24h", "7d"). Empty means inherit the default.
+	Cooldown string `json:"cooldown,omitempty"`
 }
 
 func CheckAndLoad() error {

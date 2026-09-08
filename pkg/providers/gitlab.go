@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/caarlos0/log"
 	"github.com/coreos/go-semver/semver"
@@ -44,7 +45,7 @@ func (g *gitLab) Fetch(opts *FetchOpts) (*File, error) {
 		// TODO: handle case when repo doesn't have releases?
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
 		var name string
-		name, _, err = g.GetLatestVersion()
+		name, _, _, err = g.GetLatestVersion()
 		if err != nil {
 			return nil, err
 		}
@@ -191,7 +192,7 @@ func (g *gitLab) GetID() string {
 
 // GetLatestVersion checks the latest repo release and
 // returns the corresponding name and url to fetch the version
-func (g *gitLab) GetLatestVersion() (string, string, error) {
+func (g *gitLab) GetLatestVersion() (string, string, time.Time, error) {
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
 	projectPath := fmt.Sprintf("%s/%s", g.owner, g.repo)
 
@@ -199,10 +200,10 @@ func (g *gitLab) GetLatestVersion() (string, string, error) {
 		ListOptions: gitlab.ListOptions{PerPage: 100},
 	})
 	if err != nil {
-		return "", "", err
+		return "", "", time.Time{}, err
 	}
 	if len(releases) == 0 {
-		return "", "", fmt.Errorf("no releases found for %s/%s", g.owner, g.repo)
+		return "", "", time.Time{}, fmt.Errorf("no releases found for %s/%s", g.owner, g.repo)
 	}
 	highestTagName := releases[0].TagName
 	var svs semver.Versions
@@ -225,7 +226,23 @@ func (g *gitLab) GetLatestVersion() (string, string, error) {
 		highestTagName = svToTagName[svs[len(svs)-1].String()]
 	}
 
-	return highestTagName, tagNameToRelease[highestTagName].Commit.WebURL, nil
+	rel := tagNameToRelease[highestTagName]
+	return highestTagName, rel.Commit.WebURL, gitlabReleaseTime(rel), nil
+}
+
+// gitlabReleaseTime returns the release's published time, preferring ReleasedAt
+// and falling back to CreatedAt. Both are pointers and may be nil.
+func gitlabReleaseTime(r *gitlab.Release) time.Time {
+	if r == nil {
+		return time.Time{}
+	}
+	if r.ReleasedAt != nil {
+		return *r.ReleasedAt
+	}
+	if r.CreatedAt != nil {
+		return *r.CreatedAt
+	}
+	return time.Time{}
 }
 
 func newGitLab(u *url.URL) (Provider, error) {
