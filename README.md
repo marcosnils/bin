@@ -34,9 +34,10 @@ For a comprehensive list, see the [Tools Wiki](https://github.com/marcosnils/bin
 ### Quick Install
 
 1. Download `bin` from the [releases](https://github.com/marcosnils/bin/releases)
-2. Run `./bin install github.com/marcosnils/bin` so `bin` is managed by `bin` itself
-3. Run `bin ls` to make sure bin has been installed correctly. You can now remove the first file you downloaded.
-4. Enjoy!
+2. Make the binary executable (chmod +x bin_..)
+3. Run `./bin install github.com/marcosnils/bin` so `bin` is managed by `bin` itself (replace bin with the actual file name)
+4. Run `bin ls` to make sure bin has been installed correctly. You can now remove the first file you downloaded.
+5. Enjoy!
 
 ### Quick install from Scoop (Windows)
 
