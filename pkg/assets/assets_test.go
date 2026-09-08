@@ -473,6 +473,56 @@ func TestProcessZipPackagePathAcrossVersions(t *testing.T) {
 	}
 }
 
+// TestProcessReaderJar verifies that a .jar asset is kept intact instead of
+// being unpacked as a zip archive (https://github.com/marcosnils/bin/issues/197).
+func TestProcessReaderJar(t *testing.T) {
+	data := makeZip(map[string]string{
+		"META-INF/MANIFEST.MF": "Main-Class: Foo",
+		"Foo.class":            "class bytes",
+	})
+
+	f := NewFilter(&FilterOpts{})
+	f.name = "procyon-decompiler-0.6.0.jar"
+	result, err := f.processReader(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Name != "procyon-decompiler-0.6.0.jar" {
+		t.Fatalf("got name %q, want jar to be kept intact", result.Name)
+	}
+	var out bytes.Buffer
+	if _, err := out.ReadFrom(result.Source); err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if !bytes.Equal(out.Bytes(), data) {
+		t.Fatalf("jar contents were modified")
+	}
+}
+
+// TestProcessReaderJarInsideArchive verifies that a jar nested inside a zip
+// (e.g. app.zip -> app.jar) is unpacked one level and then kept intact.
+func TestProcessReaderJarInsideArchive(t *testing.T) {
+	jar := makeZip(map[string]string{"Foo.class": "class bytes"})
+	data := makeZip(map[string]string{"dist/app.jar": string(jar)})
+
+	f := NewFilter(&FilterOpts{})
+	f.name = "app.zip"
+	result, err := f.processReader(bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Name != "app.jar" {
+		t.Fatalf("got name %q, want app.jar", result.Name)
+	}
+	var out bytes.Buffer
+	if _, err := out.ReadFrom(result.Source); err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if !bytes.Equal(out.Bytes(), jar) {
+		t.Fatalf("nested jar contents were modified")
+	}
+}
+
 func TestIsSupportedExt(t *testing.T) {
 	cases := []struct {
 		in  string

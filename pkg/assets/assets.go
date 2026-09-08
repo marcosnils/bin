@@ -458,6 +458,13 @@ func (f *Filter) processReader(r io.Reader) (*finalFile, error) {
 
 	outputFile := io.MultiReader(&buf, r)
 
+	// A .jar is a zip archive by magic, but it's an executable unit on its own
+	// (java -jar) so it must be kept intact rather than unpacked.
+	if t == matchers.TypeZip && isJar(f.name) {
+		log.Debugf("Treating %s as a jar file, skipping extraction", f.name)
+		return &finalFile{Source: outputFile, Name: f.name, PackagePath: f.packagePath}, nil
+	}
+
 	type processorFunc func(repoName string, r io.Reader) (*finalFile, error)
 	var processor processorFunc
 	switch t {
@@ -714,6 +721,11 @@ var nonBinaryExts = map[string]bool{
 	"yaml":   true,
 	"yml":    true,
 	"sbom":   true,
+}
+
+// isJar reports whether the file name denotes a Java archive.
+func isJar(filename string) bool {
+	return strings.EqualFold(filepath.Ext(filename), ".jar")
 }
 
 func isSupportedExt(filename string) bool {
