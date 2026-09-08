@@ -66,3 +66,38 @@ func TestNewGitHub(t *testing.T) {
 		})
 	}
 }
+
+// TestGitHubWithFilter verifies that the URL returned for a filtered release
+// keeps the ?filter= parameter, so `bin update` doesn't lose it after the
+// first upgrade (https://github.com/marcosnils/bin/issues/302).
+func TestGitHubWithFilter(t *testing.T) {
+	cases := []struct {
+		name   string
+		filter string
+		in     string
+		want   string
+	}{
+		{name: "no filter", in: "https://github.com/o/r/releases/tag/v1.0", want: "https://github.com/o/r/releases/tag/v1.0"},
+		{name: "filter", filter: "sessfind-v*", in: "https://github.com/o/r/releases/tag/sessfind-v0.9.2", want: "https://github.com/o/r/releases/tag/sessfind-v0.9.2?filter=sessfind-v%2A"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			g := &gitHub{filter: c.filter}
+			if got := g.withFilter(c.in); got != c.want {
+				t.Fatalf("got %q, want %q", got, c.want)
+			}
+			// the produced URL must round-trip through newGitHub with the same filter
+			u, err := url.Parse(g.withFilter(c.in))
+			if err != nil {
+				t.Fatal(err)
+			}
+			p, err := newGitHub(u)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := p.(*gitHub).filter; got != c.filter {
+				t.Fatalf("round-trip filter: got %q, want %q", got, c.filter)
+			}
+		})
+	}
+}

@@ -94,7 +94,7 @@ func (g *gitHub) GetLatestVersion() (string, string, error) {
 		if err != nil {
 			return "", "", err
 		}
-		return release.GetTagName(), release.GetHTMLURL(), nil
+		return release.GetTagName(), g.withFilter(release.GetHTMLURL()), nil
 	}
 
 	log.Debugf("Getting latest release for %s/%s", g.owner, g.repo)
@@ -104,6 +104,23 @@ func (g *gitHub) GetLatestVersion() (string, string, error) {
 	}
 
 	return release.GetTagName(), release.GetHTMLURL(), nil
+}
+
+// withFilter re-attaches the release filter as a query parameter so the URL
+// persisted by callers (e.g. `bin update`) keeps selecting the same product
+// on subsequent runs instead of falling back to the repo's latest release.
+func (g *gitHub) withFilter(rawURL string) string {
+	if g.filter == "" {
+		return rawURL
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	q := u.Query()
+	q.Set("filter", g.filter)
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 // findLatestMatchingRelease pages through releases and returns the first one
