@@ -45,7 +45,7 @@ func (g *gitHub) Fetch(opts *FetchOpts) (*File, error) {
 	} else {
 		log.Infof("Getting latest release for %s/%s", g.owner, g.repo)
 		release, resp, err = g.client.Repositories.GetLatestRelease(context.TODO(), g.owner, g.repo)
-		if resp.StatusCode == http.StatusNotFound {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			err = fmt.Errorf("repository %s/%s does not have releases", g.owner, g.repo)
 		}
 	}
