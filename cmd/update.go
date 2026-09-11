@@ -91,6 +91,9 @@ func newUpdateCmd() *updateCmd {
 					return err
 				}
 				log.Debugf("Using provider '%s' for '%s'", p.GetID(), b.URL)
+				if s, ok := p.(providers.BinaryPathSetter); ok {
+					s.SetBinaryPath(os.ExpandEnv(b.Path))
+				}
 
 				if ui, err := getLatestVersion(b, p); err != nil {
 					if root.opts.continueOnError {
