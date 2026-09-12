@@ -520,7 +520,19 @@ func (f *Filter) processGz(name string, r io.Reader) (*finalFile, error) {
 		return nil, err
 	}
 
-	return &finalFile{Source: gr, Name: gr.Name}, nil
+	name = gr.Name
+	if name == "" {
+		name = f.decompressedName()
+	}
+
+	return &finalFile{Source: gr, Name: name}, nil
+}
+
+// decompressedName derives the name of a bare compressed binary from the
+// asset name by dropping the compression extension, as bzip2 and xz streams
+// (and gzip streams written without a header name) carry no file name.
+func (f *Filter) decompressedName() string {
+	return strings.TrimSuffix(f.name, filepath.Ext(f.name))
 }
 
 func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
@@ -592,7 +604,7 @@ func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
 func (f *Filter) processBz2(name string, r io.Reader) (*finalFile, error) {
 	br := bzip2.NewReader(r)
 
-	return &finalFile{Source: br, Name: name}, nil
+	return &finalFile{Source: br, Name: f.decompressedName()}, nil
 }
 
 func (f *Filter) processXz(name string, r io.Reader) (*finalFile, error) {
@@ -601,7 +613,7 @@ func (f *Filter) processXz(name string, r io.Reader) (*finalFile, error) {
 		return nil, err
 	}
 
-	return &finalFile{Source: xr, Name: name}, nil
+	return &finalFile{Source: xr, Name: f.decompressedName()}, nil
 }
 
 func (f *Filter) processZip(name string, r io.Reader) (*finalFile, error) {
