@@ -520,12 +520,12 @@ func (f *Filter) processGz(name string, r io.Reader) (*finalFile, error) {
 		return nil, err
 	}
 
-	name = gr.Name
-	if name == "" {
-		name = f.decompressedName()
+	outName := gr.Name
+	if outName == "" {
+		outName = f.decompressedName()
 	}
 
-	return &finalFile{Source: gr, Name: name}, nil
+	return &finalFile{Source: gr, Name: outName}, nil
 }
 
 // decompressedName derives the name of a bare compressed binary from the
