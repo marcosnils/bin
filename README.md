@@ -218,11 +218,22 @@ Ensure `go` is present in your `PATH`.
 
 #### Usage
 
-`bin` will run go install, and copy the file from `GOPATH` to your dest.
+`bin` runs `go install <path>@<ref>` into a private `GOBIN`, reads the
+installed version from the binary's build info and copies it to your dest.
+Your own `GOPATH/bin` or `GOBIN` is not touched.
+
+The path can point at a package inside a module (for example `cmd/<name>`),
+`go` resolves the containing module. The ref defaults to `latest` and can be a
+tag, branch or commit; `bin update` follows that ref, so `@main` tracks the
+branch and `@v0.1.8` stays put.
 
 ```shell
 bin install goinstall://github.com/jrhouston/tfk8s@v0.1.8
+bin install goinstall://github.com/googleapis/api-linter/v2/cmd/api-linter
 ```
+
+Version resolution goes through the `go` toolchain, so `GOPROXY`, `GOPRIVATE`
+and `GOFLAGS` are honoured.
 
 ## 🔧 Configuration
 

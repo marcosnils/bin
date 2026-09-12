@@ -105,3 +105,10 @@ func New(u, provider string) (Provider, error) {
 
 	return nil, fmt.Errorf("Can't find provider for url %s", u)
 }
+
+// BinaryPathSetter is implemented by providers that need the path of the
+// binary already installed on disk, e.g. to read metadata from it before
+// checking for updates.
+type BinaryPathSetter interface {
+	SetBinaryPath(path string)
+}
