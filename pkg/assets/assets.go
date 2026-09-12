@@ -514,18 +514,18 @@ func (f *Filter) packagePathMatches(entryName string) bool {
 
 // processGz receives a tar.gz file and returns the
 // correct file for bin to download
-func (f *Filter) processGz(name string, r io.Reader) (*finalFile, error) {
+func (f *Filter) processGz(_ string, r io.Reader) (*finalFile, error) {
 	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return nil, err
 	}
 
-	name = gr.Name
-	if name == "" {
-		name = f.decompressedName()
+	var n string
+	if gr.Name == "" {
+		n = f.decompressedName()
 	}
 
-	return &finalFile{Source: gr, Name: name}, nil
+	return &finalFile{Source: gr, Name: n}, nil
 }
 
 // decompressedName derives the name of a bare compressed binary from the
