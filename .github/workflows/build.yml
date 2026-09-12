@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9.3
+        uses: golangci/golangci-lint-action@v9.3.0
   build:
     runs-on: ubuntu-latest
     steps:
