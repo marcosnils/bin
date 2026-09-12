@@ -5,6 +5,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -546,3 +548,49 @@ func TestIsSupportedExt(t *testing.T) {
 	}
 
 }
+
+// TestProcessURLCompressedBinaryName verifies that a bare bzip2/xz compressed
+// binary gets its name from the asset name, since those streams carry no file
+// name (https://github.com/marcosnils/bin/issues/160).
+func TestProcessURLCompressedBinaryName(t *testing.T) {
+	cases := []struct {
+		asset string
+		data  []byte
+	}{
+		{"restic_0.15.1_linux_amd64.bz2", resticBz2},
+		{"restic_0.15.1_linux_amd64.xz", resticXz},
+	}
+	for _, c := range cases {
+		t.Run(c.asset, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write(c.data)
+			}))
+			defer srv.Close()
+
+			f := NewFilter(&FilterOpts{})
+			result, err := f.ProcessURL(&FilteredAsset{RepoName: "restic", Name: c.asset, URL: srv.URL})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Name != "restic_0.15.1_linux_amd64" {
+				t.Fatalf("got name %q, want %q", result.Name, "restic_0.15.1_linux_amd64")
+			}
+			if n := SanitizeName(result.Name, "0.15.1"); n != "restic" {
+				t.Fatalf("got sanitized name %q, want %q", n, "restic")
+			}
+			var out bytes.Buffer
+			if _, err := out.ReadFrom(result.Source); err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			if out.String() != "restic binary" {
+				t.Fatalf("got contents %q, want %q", out.String(), "restic binary")
+			}
+		})
+	}
+}
+
+// "restic binary" compressed with bzip2 and xz respectively.
+var (
+	resticBz2 = []byte{66, 90, 104, 57, 49, 65, 89, 38, 83, 89, 24, 11, 14, 155, 0, 0, 4, 17, 128, 64, 0, 58, 33, 28, 32, 32, 0, 49, 0, 211, 77, 4, 13, 13, 52, 12, 156, 40, 142, 213, 199, 197, 220, 145, 78, 20, 36, 6, 2, 195, 166, 192}
+	resticXz  = []byte{253, 55, 122, 88, 90, 0, 0, 4, 230, 214, 180, 70, 2, 0, 33, 1, 22, 0, 0, 0, 116, 47, 229, 163, 1, 0, 12, 114, 101, 115, 116, 105, 99, 32, 98, 105, 110, 97, 114, 121, 0, 0, 0, 0, 66, 239, 118, 192, 237, 71, 78, 43, 0, 1, 37, 13, 113, 25, 196, 182, 31, 182, 243, 125, 1, 0, 0, 0, 0, 4, 89, 90}
+)
