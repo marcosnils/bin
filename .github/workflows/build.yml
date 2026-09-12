@@ -4,7 +4,7 @@ on:
       - master
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 name: Go
 jobs:
@@ -14,17 +14,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9.3
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    - name: Set up Go
-      id: go
-      uses: actions/setup-go@v4
-      with:
-        go-version-file: 'go.mod'
-        check-latest: true
-    - name: Test
-      run: go test ./...
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Go
+        id: go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+      - name: Test
+        run: go test ./...
