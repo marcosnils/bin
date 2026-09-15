@@ -1,0 +1,8 @@
+[modules.go]
+source = "dagger.io/go"
+
+[modules.golangci-lint]
+source = "github.com/dagger/golangci-lint"
+
+[modules.go.settings]
+generate = "!**"
