@@ -1,0 +1,5 @@
+[modules.go]
+source = "dagger.io/go"
+
+[modules.golangci-lint]
+source = "dagger.io/go/golangci-lint"
