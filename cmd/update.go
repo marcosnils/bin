@@ -138,7 +138,7 @@ func newUpdateCmd() *updateCmd {
 				}
 				log.Debugf("Using provider '%s' for '%s'", p.GetID(), ui.url)
 
-				pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all, PackagePath: b.PackagePath, SkipPatchCheck: root.opts.skipPathCheck, PackageName: b.RemoteName, PreviousAsset: b.SelectedAsset, PreviousVersion: b.Version})
+				pResult, err := p.Fetch(&providers.FetchOpts{All: root.opts.all, PackagePath: b.PackagePath, SkipPatchCheck: root.opts.skipPathCheck, PackageName: b.RemoteName, PreviousAsset: b.SelectedAsset, PreviousVersion: b.Version, AutoSelectPrevious: !root.opts.all})
 				if err != nil {
 					if root.opts.continueOnError {
 						updateFailures[b] = fmt.Errorf("Error while fetching %v: %w", ui.url, err)
