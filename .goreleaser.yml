@@ -4,7 +4,8 @@ before:
   hooks:
     - go mod download
 builds:
-  - env:
+  - id: bin
+    env:
     - CGO_ENABLED=0
     goos:
       - darwin
@@ -12,6 +13,17 @@ builds:
       - windows
     goarch:
       - amd64
+      - arm64
+  # Android needs cgo and the NDK's clang (android API 28). Set
+  # ANDROID_NDK_HOME or use `make release`, which installs the NDK.
+  - id: android
+    env:
+    - CGO_ENABLED=1
+    - CC={{ .Env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/{{ .Runtime.Goos }}-x86_64/bin/aarch64-linux-android28-clang
+    - CXX={{ .Env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/{{ .Runtime.Goos }}-x86_64/bin/aarch64-linux-android28-clang++
+    goos:
+      - android
+    goarch:
       - arm64
 archives:
   - format: binary
