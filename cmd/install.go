@@ -145,7 +145,11 @@ func saveToDisk(f *providers.File, path string, overwrite bool) ([]byte, error) 
 	// This is required on Windows where in-place writes to running binaries fail.
 	newPath := filepath.Join(dir, fmt.Sprintf(".%s.new", base))
 
-	file, err := os.OpenFile(newPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o766)
+	// Remove leftovers from an interrupted run so the mode below is applied;
+	// OpenFile only sets permissions on creation.
+	_ = os.Remove(newPath)
+
+	file, err := os.OpenFile(newPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o755)
 	if err != nil {
 		return nil, err
 	}
