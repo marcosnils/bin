@@ -307,3 +307,4 @@ In addition to that, I was also looking for something that doesn't require `sudo
 After I finished the first MVP, a friend pointed out that [brew](https://brew.sh) was now supported in linux which almost made me abandon the project. After checking out brew (never been an osx user), I found it a bit bloated and seems to be doing way more than what I'm actually needing. So, I've decided to continue `bin` and hopefully add more features that could result useful to someone else.
 
 
+
