@@ -1,0 +1,37 @@
+# Depot CI Migration
+# Source: .github/workflows/build.yml
+#
+# Changes made:
+# - Changed GitHub runs-on labels to their Depot equivalents
+
+on:
+  push:
+    branches:
+      - master
+      - depot
+  pull_request:
+    branches:
+      - "**"
+
+name: Go
+jobs:
+  golangci:
+    name: lint
+    runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
+    steps:
+      - uses: actions/checkout@v3
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9.3.0
+  build:
+    runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Go
+        id: go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+      - name: Test
+        run: go test ./...
