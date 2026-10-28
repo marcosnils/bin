@@ -26,6 +26,7 @@ While this makes distribution easier, it creates challenges for updates and trac
   - [Docker Images](#docker-images)
   - [HTTP Releases (Hashicorp, Helm)](#http-releases)
   - [Go Install](#go-install)
+  - [Cargo Install](#cargo-install)
 
 For a comprehensive list, see the [Tools Wiki](https://github.com/marcosnils/bin/wiki/Tools-list).
 
@@ -234,6 +235,37 @@ bin install goinstall://github.com/googleapis/api-linter/v2/cmd/api-linter
 
 Version resolution goes through the `go` toolchain, so `GOPROXY`, `GOPRIVATE`
 and `GOFLAGS` are honoured.
+
+### Cargo Install
+
+#### Configuration
+
+Ensure `cargo` is present in your `PATH`.
+
+#### Usage
+
+`bin` runs `cargo install <crate>@<version> --root <tmpdir>` and copies the
+binary to your dest. Your `CARGO_HOME` binaries are untouched; sources are
+cached in the shared registry, so re-installing a known version is fast.
+
+The version after `@` is latest when omitted, `^1.2.3` as a caret req, `~1.2.3`
+for patch-only updates, and `1.2.3`/`=1.2.3` to pin. As with `cargo install`, a
+bare version is exact rather than a caret req, so ranges need their operator.
+Ranges need a full `x.y.z`: `^14`, `~14.1`, `1.*` and `>=1.2.3, <2.0.0` are
+rejected rather than passed through. Prereleases must be pinned
+(`=1.2.3-beta.1`), and names are case- and hyphen-sensitive as in cargo —
+`serde-json` is not `serde_json`.
+
+```shell
+bin install cargoinstall://ripgrep          # like: cargo install ripgrep
+bin install cargoinstall://ripgrep@^14.1.0  # caret req: tracks 14.x
+bin install cargoinstall://ripgrep@~14.1.0  # patch-only within 14.1
+bin install cargoinstall://ripgrep@14.1.0   # exact: update won't move it
+```
+
+The resolved version is read back from cargo's own install manifest, so
+`bin update` compares against what is really installed. Version checks use the
+crates.io API without a toolchain round-trip; a pinned version is not checked.
 
 ## 🔧 Configuration
 
