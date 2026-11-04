@@ -556,7 +556,7 @@ func (f *Filter) processTar(name string, r io.Reader) (*finalFile, error) {
 			continue
 		}
 
-		if header.Typeflag == tar.TypeReg {
+		if header.Typeflag == tar.TypeReg || header.Typeflag == tar.TypeGNUSparse {
 			// TODO we're basically reading all the files
 			// isn't there a way just to store the reference
 			// where this data is so we don't have to do this or
