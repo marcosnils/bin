@@ -6,8 +6,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/caarlos0/log"
 	"github.com/google/go-github/v31/github"
@@ -154,6 +157,26 @@ func (g *gitHub) GetID() string {
 	return "github"
 }
 
+// ghCLIToken returns the github.com token of a logged-in gh CLI, or "" if gh
+// is not installed or not logged in. It's cached so commands that create many
+// providers, like `bin update`, run gh only once.
+var ghCLIToken = sync.OnceValue(readGHCLIToken)
+
+func readGHCLIToken() string {
+	if _, err := exec.LookPath("gh"); err != nil {
+		return ""
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "gh", "auth", "token", "--hostname", "github.com").Output()
+	if err != nil {
+		log.Debugf("Not using gh CLI token: %v", err)
+		return ""
+	}
+	log.Debugf("Using GitHub token from gh CLI")
+	return strings.TrimSpace(string(out))
+}
+
 func newGitHub(u *url.URL) (Provider, error) {
 	s := strings.Split(u.Path, "/")
 	if len(s) < 3 {
@@ -194,12 +217,17 @@ func newGitHub(u *url.URL) (Provider, error) {
 	gbu := os.Getenv("GHES_BASE_URL")
 	guu := os.Getenv("GHES_UPLOAD_URL")
 	gau := os.Getenv("GHES_AUTH_TOKEN")
+	ghes := len(gbu) > 0 && len(guu) > 0 && len(gau) > 0
+
+	if len(token) == 0 && !ghes {
+		token = ghCLIToken()
+	}
 
 	oauthCtx := context.WithValue(context.Background(), oauth2.HTTPClient, httpclient.Client)
 
 	var tc *http.Client
 
-	if len(gbu) > 0 && len(guu) > 0 && len(gau) > 0 {
+	if ghes {
 		tc = oauth2.NewClient(oauthCtx, oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: gau},
 		))
@@ -212,7 +240,7 @@ func newGitHub(u *url.URL) (Provider, error) {
 	var client *github.Client
 	var err error
 
-	if len(gbu) > 0 && len(guu) > 0 && len(gau) > 0 {
+	if ghes {
 		if client, err = github.NewEnterpriseClient(gbu, guu, tc); err != nil {
 			return nil, fmt.Errorf("error initializing GHES client %v", err)
 		}

@@ -1,8 +1,18 @@
 package providers
 
 import (
+	"fmt"
+	"io"
+	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
 	"testing"
+
+	"github.com/marcosnils/bin/pkg/httpclient"
 )
 
 func TestNewGitHub(t *testing.T) {
@@ -97,6 +107,113 @@ func TestGitHubWithFilter(t *testing.T) {
 			}
 			if got := p.(*gitHub).filter; got != c.filter {
 				t.Fatalf("round-trip filter: got %q, want %q", got, c.filter)
+			}
+		})
+	}
+}
+
+type headerRecorder struct{ auth []string }
+
+func (h *headerRecorder) RoundTrip(r *http.Request) (*http.Response, error) {
+	h.auth = append(h.auth, r.Header.Get("Authorization"))
+	return &http.Response{
+		StatusCode: http.StatusNotFound,
+		Body:       io.NopCloser(strings.NewReader(`{"message":"Not Found"}`)),
+		Header:     http.Header{"Content-Type": {"application/json"}},
+		Request:    r,
+	}, nil
+}
+
+func TestGitHubAuthToken(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake gh is a shell script")
+	}
+	cases := []struct {
+		name       string
+		env        map[string]string
+		gh         string // fake gh script body; "" means gh is not on PATH
+		wantAuth   string
+		wantGHArgs string // "" means gh must not run
+	}{
+		{
+			name:       "gh logged in",
+			gh:         "echo gho_fromgh",
+			wantAuth:   "Bearer gho_fromgh",
+			wantGHArgs: "auth token --hostname github.com",
+		},
+		{
+			name:     "GITHUB_AUTH_TOKEN wins over gh",
+			env:      map[string]string{"GITHUB_AUTH_TOKEN": "fromenv"},
+			gh:       "echo gho_fromgh",
+			wantAuth: "Bearer fromenv",
+		},
+		{
+			name:     "GITHUB_TOKEN wins over gh",
+			env:      map[string]string{"GITHUB_TOKEN": "fromenv"},
+			gh:       "echo gho_fromgh",
+			wantAuth: "Bearer fromenv",
+		},
+		{
+			name:       "gh not logged in",
+			gh:         "echo 'no oauth token found for github.com' >&2; exit 1",
+			wantGHArgs: "auth token --hostname github.com",
+		},
+		{
+			name: "gh not installed",
+		},
+		{
+			name: "GHES does not use gh's github.com token",
+			env: map[string]string{
+				"GHES_BASE_URL":   "https://ghes.example.com/api/v3/",
+				"GHES_UPLOAD_URL": "https://ghes.example.com/api/uploads/",
+				"GHES_AUTH_TOKEN": "ghes",
+			},
+			gh:       "echo gho_fromgh",
+			wantAuth: "Bearer ghes",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, k := range []string{"GITHUB_AUTH_TOKEN", "GITHUB_TOKEN", "GHES_BASE_URL", "GHES_UPLOAD_URL", "GHES_AUTH_TOKEN"} {
+				t.Setenv(k, tc.env[k])
+			}
+			dir := t.TempDir()
+			argsFile := filepath.Join(dir, "gh-args")
+			if tc.gh != "" {
+				script := fmt.Sprintf("#!/bin/sh\necho \"$@\" > %q\n%s\n", argsFile, tc.gh)
+				if err := os.WriteFile(filepath.Join(dir, "gh"), []byte(script), 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			t.Setenv("PATH", dir)
+			ghCLIToken = sync.OnceValue(readGHCLIToken)
+
+			rec := &headerRecorder{}
+			// unauthenticated go-github clients use http.DefaultTransport
+			origBin, origDefault := httpclient.Client.Transport, http.DefaultTransport
+			httpclient.Client.Transport, http.DefaultTransport = rec, rec
+			t.Cleanup(func() {
+				httpclient.Client.Transport, http.DefaultTransport = origBin, origDefault
+			})
+
+			u, _ := url.Parse("https://github.com/owner/repo")
+			p, err := newGitHub(u)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := p.Fetch(&FetchOpts{}); err == nil {
+				t.Fatal("expected Fetch to fail against the 404 transport")
+			}
+
+			if len(rec.auth) == 0 {
+				t.Fatal("no request reached the transport")
+			}
+			if rec.auth[0] != tc.wantAuth {
+				t.Errorf("Authorization: want %q, got %q", tc.wantAuth, rec.auth[0])
+			}
+			gotArgs, _ := os.ReadFile(argsFile)
+			if got := strings.TrimSpace(string(gotArgs)); got != tc.wantGHArgs {
+				t.Errorf("gh args: want %q, got %q", tc.wantGHArgs, got)
 			}
 		})
 	}
