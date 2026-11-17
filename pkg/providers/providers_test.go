@@ -16,6 +16,8 @@ func TestNew(t *testing.T) {
 		{name: "docker", u: "docker://postgres:1.2.3", expectedID: "docker"},
 		{name: "goinstall scheme", u: "goinstall://github.com/foo/bar@v1.0", expectedID: "goinstall"},
 		{name: "goinstall hint", u: "github.com/foo/bar@v1.0", provider: "goinstall", expectedID: "goinstall"},
+		{name: "cargoinstall scheme", u: "cargoinstall://ripgrep@14.1.0", expectedID: "cargoinstall"},
+		{name: "cargoinstall hint", u: "ripgrep", provider: "cargoinstall", expectedID: "cargoinstall"},
 		{name: "github bare host", u: "github.com/owner/repo", expectedID: "github"},
 		{name: "github https", u: "https://github.com/owner/repo", expectedID: "github"},
 		{name: "github hint", u: "example.com/owner/repo", provider: "github", expectedID: "github"},

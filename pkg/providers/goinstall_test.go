@@ -142,6 +142,9 @@ func TestMain(m *testing.M) {
 	if os.Getenv("BIN_TEST_GO_STUB") == "1" {
 		goStubMain()
 	}
+	if os.Getenv("BIN_TEST_CARGOINSTALL_STUB") == "1" {
+		cargoinstallStubMain()
+	}
 	os.Exit(m.Run())
 }
 
