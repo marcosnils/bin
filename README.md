@@ -84,6 +84,8 @@ You _can_ however install a specific pre-release by specifying the URL for the p
 | `GHES_UPLOAD_URL`    | no        | [github enterprise](https://github.com/github/gh-es) upload URL (often is your GitHub Enterprise hostname).                                                                                                                                |
 | `GHES_AUTH_TOKEN`    | no        | [github enterprise](https://github.com/github/gh-es) auth token similar to `GITHUB_AUTH_TOKEN`.                                                                                                                                            |
 
+If neither `GITHUB_AUTH_TOKEN` nor `GITHUB_TOKEN` is set and the [GitHub CLI](https://cli.github.com/) is installed and logged in, `bin` uses its token (`gh auth token --hostname github.com`). GHES always uses `GHES_AUTH_TOKEN`.
+
 #### Usage
 
 ```shell
