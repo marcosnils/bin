@@ -28,3 +28,19 @@ jobs:
           check-latest: true
       - name: Test
         run: go test ./...
+  install-script:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install with docs/install.sh
+        run: |
+          latest=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/marcosnils/bin/releases/latest)
+          BIN_INSTALL_DIR="$RUNNER_TEMP/bin" sh docs/install.sh
+          "$RUNNER_TEMP/bin/bin" --version | tee version.txt
+          grep -qx "bin version ${latest##*/v}" version.txt
