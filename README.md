@@ -33,6 +33,14 @@ For a comprehensive list, see the [Tools Wiki](https://github.com/marcosnils/bin
 
 ### Quick Install
 
+```shell
+curl -fsSL https://marcosnils.github.io/bin/install.sh | sh
+```
+
+This installs the latest release for your OS and architecture into a directory on your `PATH`, verifying its checksum. Set `BIN_VERSION` to pin a release or `BIN_INSTALL_DIR` to choose the directory, e.g. `curl -fsSL https://marcosnils.github.io/bin/install.sh | BIN_INSTALL_DIR=~/bin sh`. Then run `bin install github.com/marcosnils/bin` so `bin` manages its own updates.
+
+### Manual Install
+
 1. Download `bin` from the [releases](https://github.com/marcosnils/bin/releases)
 2. Run `./bin install github.com/marcosnils/bin` so `bin` is managed by `bin` itself
 3. Run `bin ls` to make sure bin has been installed correctly. You can now remove the first file you downloaded.
